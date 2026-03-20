@@ -257,7 +257,7 @@ export default function ProfilDuzenle() {
   async function handleSifreDegistir(e) {
     e.preventDefault()
     if (sifreForm.yeni !== sifreForm.tekrar) { setHata('Şifreler eşleşmiyor.'); return }
-    if (sifreForm.yeni.length < 6) { setHata('Şifre en az 6 karakter olmalı.'); return }
+    if (sifreForm.yeni.length < 8) { setHata('Şifre en az 8 karakter olmalı.'); return }
     setYukleniyor(true); setHata(''); setMesaj('')
     const { error } = await supabase.auth.updateUser({ password: sifreForm.yeni })
     if (error) setHata(error.message)
@@ -346,7 +346,7 @@ export default function ProfilDuzenle() {
             <div style={{ fontSize: '14px', fontWeight: 600 }}>Şifre Değiştir</div>
             <div>
               <label style={L}>Yeni Şifre</label>
-              <input type="password" value={sifreForm.yeni} onChange={e => setSifreForm(f => ({ ...f, yeni: e.target.value }))} placeholder="En az 6 karakter" style={I} />
+              <input type="password" value={sifreForm.yeni} onChange={e => setSifreForm(f => ({ ...f, yeni: e.target.value }))} placeholder="En az 8 karakter" style={I} />
             </div>
             <div>
               <label style={L}>Şifre Tekrar</label>

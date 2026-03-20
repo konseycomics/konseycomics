@@ -1,14 +1,35 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function middleware(req) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+  let res = NextResponse.next({
+    request: { headers: req.headers },
+  })
 
-  // Session'ı yenile
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            req.cookies.set(name, value)
+          )
+          res = NextResponse.next({ request: req })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
   const { data: { session } } = await supabase.auth.getSession()
 
-  // /admin rotasini koru
+  // /admin rotasini koru - giris yoksa /giris'e yonlendir
   if (req.nextUrl.pathname.startsWith('/admin')) {
     if (!session) {
       const loginUrl = new URL('/giris', req.url)
@@ -28,7 +49,7 @@ export async function middleware(req) {
     }
   }
 
-  // /profil/duzenle rotasini koru
+  // /profil/duzenle - giris olmadan erisim engelle
   if (req.nextUrl.pathname.startsWith('/profil/duzenle')) {
     if (!session) {
       return NextResponse.redirect(new URL('/giris', req.url))
@@ -39,5 +60,9 @@ export async function middleware(req) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/profil/duzenle'],
+  matcher: [
+    '/admin/:path*',
+    '/profil/duzenle',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 }

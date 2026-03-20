@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ADMIN_USER = 'admin'
-const ADMIN_PASS = 'konsey2026'
+const ADMIN_PASS = process.env.NEXT_PUBLIC_ADMIN_PASS || 'konsey2026'
 
 const L = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: '#888', marginBottom: '6px' }
 const I = { width: '100%', padding: '9px 12px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
@@ -78,12 +78,80 @@ function AramaSecim({ liste, secili, onChange, placeholder }) {
   )
 }
 
+function IstatistikSayfasi() {
+  const [istat, setIstat] = useState(null)
+  const [topSeriler, setTopSeriler] = useState([])
+  const [topBolumler, setTopBolumler] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      const [seriRes, bolumRes, topSeriRes, topBolumRes] = await Promise.all([
+        supabase.from('seriler').select('id', { count: 'exact', head: true }),
+        supabase.from('bolumler').select('id', { count: 'exact', head: true }),
+        supabase.from('seriler').select('baslik, slug, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(5),
+        supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik, slug)').order('goruntuleme_sayisi', { ascending: false }).limit(5),
+      ])
+      setIstat({ seri: seriRes.count || 0, bolum: bolumRes.count || 0 })
+      setTopSeriler(topSeriRes.data || [])
+      setTopBolumler(topBolumRes.data || [])
+      setLoading(false)
+    }
+    fetchData()
+  }, [])
+
+  const kart = { background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px 24px' }
+
+  if (loading) return <div style={{ color: '#888' }}>Yükleniyor...</div>
+
+  return (
+    <div style={{ maxWidth: '720px' }}>
+      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>İstatistikler</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '28px' }}>
+        {[{ etiket: 'Toplam Seri', deger: istat?.seri }, { etiket: 'Toplam Bölüm', deger: istat?.bolum }].map(k => (
+          <div key={k.etiket} style={kart}>
+            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: '#888', marginBottom: '8px' }}>{k.etiket}</div>
+            <div style={{ fontSize: '32px', fontFamily: "'Bebas Neue', sans-serif" }}>{k.deger}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div style={kart}>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>En Çok Okunan Seriler</div>
+          {topSeriler.length === 0 ? <div style={{ fontSize: '13px', color: '#888' }}>Henüz veri yok.</div> : topSeriler.map((s, i) => (
+            <div key={s.slug} style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', marginBottom: '10px', borderBottom: i < topSeriler.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#ccc', width: '16px' }}>{i + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</div>
+              </div>
+              <span style={{ fontSize: '12px', color: '#888' }}>{s.goruntuleme_sayisi || 0} görüntüleme</span>
+            </div>
+          ))}
+        </div>
+        <div style={kart}>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>En Çok Okunan Bölümler</div>
+          {topBolumler.length === 0 ? <div style={{ fontSize: '13px', color: '#888' }}>Henüz veri yok.</div> : topBolumler.map((b, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', marginBottom: '10px', borderBottom: i < topBolumler.length - 1 ? '1px solid #f0ede8' : 'none' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#ccc', width: '16px' }}>{i + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '12px', color: '#aaa' }}>{b.seriler?.baslik}</div>
+                <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} {b.baslik}</div>
+              </div>
+              <span style={{ fontSize: '12px', color: '#888' }}>{b.goruntuleme_sayisi || 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [giris, setGiris] = useState(false)
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [loginErr, setLoginErr] = useState('')
-  const [aktif, setAktif] = useState('seriler')
+  const [aktif, setAktif] = useState('istatistik')
 
   useEffect(() => { if (sessionStorage.getItem('admin')) setGiris(true) }, [])
 
@@ -106,6 +174,7 @@ export default function Admin() {
   )
 
   const menu = [
+    { key: 'istatistik', label: '📊 İstatistikler' },
     { key: 'seriler', label: '📚 Seriler' },
     { key: 'bolumler', label: '📖 Bölümler' },
     { key: 'konsey', label: '🎨 Konsey Ekibi' },
@@ -133,6 +202,7 @@ export default function Admin() {
           ))}
         </div>
         <div style={{ flex: 1, padding: '28px 32px', overflow: 'auto' }}>
+          {aktif === 'istatistik' && <IstatistikSayfasi />}
           {aktif === 'seriler' && <SerilerSayfasi />}
           {aktif === 'bolumler' && <BolumlerSayfasi />}
           {aktif === 'konsey' && <KonseySayfasi />}
@@ -157,6 +227,7 @@ function SerilerSayfasi() {
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [kapakOnizleme, setKapakOnizleme] = useState(null)
+  const [aramaMetni, setAramaMetni] = useState('')
 
   const bos = { baslik: '', slug: '', tur: 'seri', kategori: 'manga', kategori_id: '', ozet: '', durum: 'Devam Eden', kapak_url: '', turler: [], yazar_ids: [], cizer_ids: [], yil: '' }
   const [form, setForm] = useState(bos)
@@ -245,6 +316,10 @@ function SerilerSayfasi() {
     setDuzenleId(s.id); setMod('form')
   }
 
+  const filtrelenmis = aramaMetni
+    ? seriler.filter(s => s.baslik.toLowerCase().includes(aramaMetni.toLowerCase()))
+    : seriler
+
   if (mod === 'form') return (
     <div style={{ maxWidth: '680px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -253,7 +328,6 @@ function SerilerSayfasi() {
       </div>
       <Msg text={msg} />
       <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
         <div>
           <div style={L}>Tür</div>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -263,26 +337,22 @@ function SerilerSayfasi() {
             ))}
           </div>
         </div>
-
         <div>
           <div style={L}>Başlık *</div>
           <input value={form.baslik} onChange={e => setForm(f => ({ ...f, baslik: e.target.value, slug: slugOlustur(e.target.value) }))} placeholder="Seri başlığı" style={I} />
         </div>
-
         <div>
           <div style={L}>Slug (URL)</div>
           <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} style={I} />
           <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px' }}>konseycomics.com/seri/{form.slug || '...'}</div>
         </div>
-
         <div>
           <div style={L}>Kapak Resmi</div>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
             <KapakYukle onizleme={kapakOnizleme} onChange={(url, p) => { setForm(f => ({ ...f, kapak_url: url })); setKapakOnizleme(p) }} bucket="kapaklar" />
-            <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.7, paddingTop: '8px' }}>Bilgisayardan veya telefondan yükle.<br />JPG, PNG, WEBP desteklenir.<br />Önerilen oran: 2:3</div>
+            <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.7, paddingTop: '8px' }}>JPG, PNG, WEBP desteklenir.<br />Önerilen oran: 2:3</div>
           </div>
         </div>
-
         <div>
           <div style={L}>Kategori</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -292,7 +362,6 @@ function SerilerSayfasi() {
             ))}
           </div>
         </div>
-
         <div>
           <div style={L}>Yayıncı</div>
           <select value={form.kategori_id} onChange={e => setForm(f => ({ ...f, kategori_id: e.target.value }))} style={S}>
@@ -300,12 +369,10 @@ function SerilerSayfasi() {
             {kategoriler.map(k => <option key={k.id} value={k.id}>{k.isim}</option>)}
           </select>
         </div>
-
         <div>
           <div style={L}>Yayın Yılı</div>
           <input type="number" value={form.yil} onChange={e => setForm(f => ({ ...f, yil: e.target.value }))} placeholder="2024" style={I} />
         </div>
-
         <div style={{ background: '#f9f8f5', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Orijinal Yapımcılar</div>
           <div>
@@ -317,12 +384,10 @@ function SerilerSayfasi() {
             <AramaSecim liste={cizerler} secili={form.cizer_ids} onChange={v => setForm(f => ({ ...f, cizer_ids: v }))} placeholder="Çizer ara veya seç..." />
           </div>
         </div>
-
         <div>
           <div style={L}>Özet</div>
           <textarea value={form.ozet} onChange={e => setForm(f => ({ ...f, ozet: e.target.value }))} placeholder="Seri hakkında açıklama..." rows={6} style={{ ...I, resize: 'vertical', lineHeight: 1.65 }} />
         </div>
-
         <div>
           <div style={L}>Türler</div>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -332,7 +397,6 @@ function SerilerSayfasi() {
             ))}
           </div>
         </div>
-
         {form.tur === 'seri' && (
           <div>
             <div style={L}>Yayın Durumu</div>
@@ -344,7 +408,6 @@ function SerilerSayfasi() {
             </div>
           </div>
         )}
-
         <button onClick={kaydet} disabled={yukleniyor} style={{ ...BP, padding: '13px', fontSize: '14px' }}>
           {yukleniyor ? 'Kaydediliyor...' : duzenleId ? '✓ Güncelle' : '+ Seri Ekle'}
         </button>
@@ -354,19 +417,22 @@ function SerilerSayfasi() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>Seriler ({seriler.length})</div>
-        <button onClick={() => setMod('form')} style={BP}>+ Yeni Seri</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: '16px', fontWeight: 600 }}>Seriler ({filtrelenmis.length})</div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Seri ara..." style={{ ...I, width: '200px' }} />
+          <button onClick={() => setMod('form')} style={BP}>+ Yeni Seri</button>
+        </div>
       </div>
       <Msg text={msg} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {seriler.map(s => (
+        {filtrelenmis.map(s => (
           <div key={s.id} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div style={{ width: '44px', height: '58px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#f0ede8' }}>
               {s.kapak_url ? <img src={s.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📚</div>}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '3px' }}>{s.baslik}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</div>
               <div style={{ fontSize: '11px', color: '#888' }}>{s.kategoriler?.isim} · {s.kategori} · {s.yil && `${s.yil} ·`} /{s.slug}</div>
             </div>
             <select value={s.durum} onChange={e => durumDegistir(s.id, e.target.value)} style={{ padding: '5px 10px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
@@ -376,6 +442,7 @@ function SerilerSayfasi() {
             <button onClick={() => sil(s.id)} style={BD}>Sil</button>
           </div>
         ))}
+        {filtrelenmis.length === 0 && <div style={{ color: '#888', fontSize: '13px', padding: '20px 0' }}>Sonuç bulunamadı.</div>}
       </div>
     </div>
   )
@@ -467,7 +534,6 @@ function BolumlerSayfasi() {
           <div style={L}>İndirme Linki</div>
           <input value={form.indirme_link} onChange={e => setForm(f => ({ ...f, indirme_link: e.target.value }))} placeholder="https://mediafire.com/..." style={I} />
         </div>
-
         <div style={{ background: '#f9f8f5', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Konsey Ekibi</div>
           {[['cevirmen_id', 'Çevirmen'], ['balonlama_id', 'Balonlama'], ['grafik_id', 'Grafik']].map(([field, lbl]) => (
@@ -481,7 +547,6 @@ function BolumlerSayfasi() {
           ))}
           {ekip.length === 0 && <div style={{ fontSize: '12px', color: '#aaa' }}>Önce "Konsey Ekibi" sayfasından ekip üyesi ekle.</div>}
         </div>
-
         <button onClick={kaydet} disabled={yukleniyor} style={{ ...BP, padding: '13px', fontSize: '14px' }}>
           {yukleniyor ? 'Kaydediliyor...' : duzenleId ? '✓ Güncelle' : '+ Bölüm Ekle'}
         </button>
@@ -508,9 +573,9 @@ function BolumlerSayfasi() {
               <div style={{ width: '36px', height: '48px', borderRadius: '6px', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
                 {b.kapak_url ? <img src={b.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>📖</div>}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500 }}>#{b.sayi} — {b.baslik}</div>
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{b.drive_link ? '✓ Drive linki var' : 'Drive linki yok'}{b.indirme_link ? ' · ✓ İndirme linki var' : ''}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} — {b.baslik}</div>
+                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{b.drive_link ? '✓ Drive' : '✗ Drive'}{b.indirme_link ? ' · ✓ İndirme' : ''}</div>
               </div>
               <button onClick={() => duzenleAc(b)} style={BS}>Düzenle</button>
               <button onClick={() => sil(b.id)} style={BD}>Sil</button>

@@ -46,7 +46,7 @@ export default function GirisKayit() {
     e.preventDefault()
     setHata('')
     if (form.sifre !== form.sifreTekrar) { setHata('Şifreler eşleşmiyor.'); return }
-    if (form.sifre.length < 6) { setHata('Şifre en az 6 karakter olmalı.'); return }
+    if (form.sifre.length < 8) { setHata('Şifre en az 8 karakter olmalı.'); return }
     if (form.kullaniciAdi.length < 3) { setHata('Kullanıcı adı en az 3 karakter olmalı.'); return }
     if (!/^[a-zA-Z0-9_]+$/.test(form.kullaniciAdi)) {
       setHata('Kullanıcı adı sadece harf, rakam ve _ içerebilir.')
@@ -182,7 +182,7 @@ export default function GirisKayit() {
             <div style={{ marginBottom: '14px' }}>
               <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Şifre</label>
               <input type="password" value={form.sifre} onChange={e => setForm(f => ({ ...f, sifre: e.target.value }))}
-                placeholder="En az 6 karakter" required minLength={6} style={I} />
+                placeholder="En az 8 karakter" required minLength={8} style={I} />
             </div>
           )}
           {mod === 'kayit' && (

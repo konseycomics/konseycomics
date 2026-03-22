@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { useRouter } from 'next/navigation'
 
 const LB = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: '#888', marginBottom: '6px' }
 const I = { width: '100%', padding: '9px 12px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
@@ -9,7 +8,6 @@ const S = { width: '100%', padding: '9px 12px', background: '#f5f4f0', border: '
 const BP = { padding: '10px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }
 const BS = { padding: '6px 12px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }
 const BD = { padding: '6px 12px', background: '#fff0f0', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }
-const L = LB
 
 function Msg({ text }) {
   if (!text) return null
@@ -17,12 +15,12 @@ function Msg({ text }) {
   return <div style={{ background: err ? '#fff0f0' : '#f0fdf4', border: `1px solid ${err ? '#fecaca' : '#bbf7d0'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: err ? '#dc2626' : '#166534' }}>{text}</div>
 }
 
-function KapakYukle({ onizleme, onChange, bucket = 'kapaklar' }) {
+function ResimYukle({ onizleme, onChange, bucket = 'kapaklar', width = '100px', height = '133px' }) {
   async function handle(e) {
     const file = e.target.files[0]
     if (!file) return
     const preview = URL.createObjectURL(file)
-    const path = `kapak-${Date.now()}.${file.name.split('.').pop()}`
+    const path = `resim-${Date.now()}.${file.name.split('.').pop()}`
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
     if (!error) {
       const { data } = supabase.storage.from(bucket).getPublicUrl(path)
@@ -30,35 +28,30 @@ function KapakYukle({ onizleme, onChange, bucket = 'kapaklar' }) {
     }
   }
   return (
-    <label style={{ width: '100px', height: '133px', border: '2px dashed #e8e6e0', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f5f4f0', flexShrink: 0 }}>
+    <label style={{ width, height, border: '2px dashed #e8e6e0', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f5f4f0', flexShrink: 0 }}>
       {onizleme ? <img src={onizleme} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '28px', color: '#ccc' }}>+</span>}
       <input type="file" accept="image/*" onChange={handle} style={{ display: 'none' }} />
     </label>
   )
 }
 
-// Çoklu seçim için arama bileşeni
 function AramaSecim({ liste, secili, onChange, placeholder }) {
   const [ara, setAra] = useState('')
   const [acik, setAcik] = useState(false)
   const ref = useRef()
-
   useEffect(() => {
     function kapat(e) { if (ref.current && !ref.current.contains(e.target)) setAcik(false) }
     document.addEventListener('mousedown', kapat)
     return () => document.removeEventListener('mousedown', kapat)
   }, [])
-
   const filtrelendi = liste.filter(x => x.isim.toLowerCase().includes(ara.toLowerCase()) && !secili.includes(x.id))
   const seciliOlanlar = liste.filter(x => secili.includes(x.id))
-
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '8px', minHeight: '42px', cursor: 'text' }} onClick={() => setAcik(true)}>
         {seciliOlanlar.map(x => (
           <span key={x.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#111', color: '#fff', borderRadius: '100px', padding: '3px 10px', fontSize: '12px' }}>
-            {x.isim}
-            <span onClick={e => { e.stopPropagation(); onChange(secili.filter(id => id !== x.id)) }} style={{ cursor: 'pointer', opacity: 0.6 }}>×</span>
+            {x.isim}<span onClick={e => { e.stopPropagation(); onChange(secili.filter(id => id !== x.id)) }} style={{ cursor: 'pointer', opacity: 0.6 }}>×</span>
           </span>
         ))}
         <input value={ara} onChange={e => setAra(e.target.value)} onFocus={() => setAcik(true)} placeholder={seciliOlanlar.length === 0 ? placeholder : ''} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontFamily: 'inherit', minWidth: '120px', flex: 1 }} />
@@ -66,11 +59,7 @@ function AramaSecim({ liste, secili, onChange, placeholder }) {
       {acik && filtrelendi.length > 0 && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e8e6e0', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', zIndex: 50, maxHeight: '200px', overflowY: 'auto', marginTop: '4px' }}>
           {filtrelendi.map(x => (
-            <div key={x.id} onClick={() => { onChange([...secili, x.id]); setAra('') }} style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f5f4f0'}
-              onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-              {x.isim}
-            </div>
+            <div key={x.id} onClick={() => { onChange([...secili, x.id]); setAra('') }} style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f4f0'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>{x.isim}</div>
           ))}
         </div>
       )}
@@ -78,39 +67,75 @@ function AramaSecim({ liste, secili, onChange, placeholder }) {
   )
 }
 
-// Tek seçim için arama bileşeni (Bölümler > Seri Seç)
 function AramaSecimTek({ liste, secili, onChange, placeholder }) {
   const [ara, setAra] = useState('')
   const [acik, setAcik] = useState(false)
   const ref = useRef()
-
   useEffect(() => {
     function kapat(e) { if (ref.current && !ref.current.contains(e.target)) setAcik(false) }
     document.addEventListener('mousedown', kapat)
     return () => document.removeEventListener('mousedown', kapat)
   }, [])
-
   const seciliOlan = liste.find(x => x.id === secili)
   const filtrelendi = liste.filter(x => x.isim.toLowerCase().includes(ara.toLowerCase()))
-
   return (
     <div ref={ref} style={{ position: 'relative', maxWidth: '320px' }}>
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '8px', cursor: 'pointer', gap: '8px' }} onClick={() => { setAcik(!acik); setAra('') }}>
-        {acik
-          ? <input autoFocus value={ara} onChange={e => { setAra(e.target.value); setAcik(true) }} onClick={e => e.stopPropagation()} placeholder="Ara..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontFamily: 'inherit', flex: 1 }} />
-          : <span style={{ fontSize: '13px', flex: 1, color: seciliOlan ? '#111' : '#aaa' }}>{seciliOlan ? seciliOlan.isim : placeholder}</span>
-        }
+        {acik ? <input autoFocus value={ara} onChange={e => { setAra(e.target.value); setAcik(true) }} onClick={e => e.stopPropagation()} placeholder="Ara..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', fontFamily: 'inherit', flex: 1 }} />
+          : <span style={{ fontSize: '13px', flex: 1, color: seciliOlan ? '#111' : '#aaa' }}>{seciliOlan ? seciliOlan.isim : placeholder}</span>}
         <span style={{ color: '#aaa', fontSize: '10px' }}>▼</span>
       </div>
       {acik && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e8e6e0', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', zIndex: 50, maxHeight: '240px', overflowY: 'auto', marginTop: '4px' }}>
           {filtrelendi.length === 0 && <div style={{ padding: '12px 14px', fontSize: '13px', color: '#aaa' }}>Sonuç yok</div>}
           {filtrelendi.map(x => (
-            <div key={x.id} onClick={() => { onChange(x.id); setAcik(false); setAra('') }}
-              style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer', background: secili === x.id ? '#f0ede8' : '#fff', fontWeight: secili === x.id ? 600 : 400 }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f5f4f0'}
-              onMouseLeave={e => e.currentTarget.style.background = secili === x.id ? '#f0ede8' : '#fff'}>
-              {x.isim}
+            <div key={x.id} onClick={() => { onChange(x.id); setAcik(false); setAra('') }} style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer', background: secili === x.id ? '#f0ede8' : '#fff', fontWeight: secili === x.id ? 600 : 400 }} onMouseEnter={e => e.currentTarget.style.background = '#f5f4f0'} onMouseLeave={e => e.currentTarget.style.background = secili === x.id ? '#f0ede8' : '#fff'}>{x.isim}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BarChart({ data, renk = '#111', yukseklik = 160 }) {
+  if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
+  const max = Math.max(...data.map(d => d.deger), 1)
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: (yukseklik + 30) + 'px', paddingBottom: '24px', position: 'relative' }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '4px', position: 'relative' }}>
+          <span style={{ fontSize: '10px', color: '#888' }}>{d.deger}</span>
+          <div style={{ width: '100%', background: renk, borderRadius: '4px 4px 0 0', height: `${(d.deger / max) * yukseklik}px`, minHeight: d.deger > 0 ? '4px' : '2px', transition: 'height 0.3s', opacity: d.deger === 0 ? 0.2 : 1 }} />
+          <span style={{ fontSize: '9px', color: '#aaa', position: 'absolute', bottom: 0, whiteSpace: 'nowrap' }}>{d.etiket}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function GlobalArama({ seriler, bolumler, kullanicilar, onSec }) {
+  const [ara, setAra] = useState('')
+  const [acik, setAcik] = useState(false)
+  const ref = useRef()
+  useEffect(() => {
+    function kapat(e) { if (ref.current && !ref.current.contains(e.target)) setAcik(false) }
+    document.addEventListener('mousedown', kapat)
+    return () => document.removeEventListener('mousedown', kapat)
+  }, [])
+  const q = ara.toLowerCase()
+  const sonuclar = ara.length < 2 ? [] : [
+    ...seriler.filter(x => x.baslik.toLowerCase().includes(q)).slice(0, 3).map(x => ({ tip: 'Seri', isim: x.baslik, key: 'seriler' })),
+    ...bolumler.filter(x => x.baslik.toLowerCase().includes(q)).slice(0, 3).map(x => ({ tip: 'Bölüm', isim: x.baslik, key: 'bolumler' })),
+    ...kullanicilar.filter(x => x.kullanici_adi?.toLowerCase().includes(q)).slice(0, 3).map(x => ({ tip: 'Kullanıcı', isim: x.kullanici_adi, key: 'kullanicilar' })),
+  ]
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '260px' }}>
+      <input value={ara} onChange={e => { setAra(e.target.value); setAcik(true) }} onFocus={() => setAcik(true)} placeholder="🔍 Ara..." style={{ width: '100%', padding: '7px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+      {acik && sonuclar.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e8e6e0', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 200, marginTop: '4px' }}>
+          {sonuclar.map((s, i) => (
+            <div key={i} onClick={() => { onSec(s.key); setAra(''); setAcik(false) }} style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onMouseEnter={e => e.currentTarget.style.background = '#f5f4f0'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+              <span style={{ fontSize: '10px', background: '#f0ede8', padding: '2px 6px', borderRadius: '4px', color: '#666' }}>{s.tip}</span>{s.isim}
             </div>
           ))}
         </div>
@@ -126,38 +151,47 @@ export default function Admin() {
   const [loginErr, setLoginErr] = useState('')
   const [email, setEmail] = useState('')
   const [sifre, setSifre] = useState('')
+  const [bildirimSayisi, setBildirimSayisi] = useState(0)
+  const [bildirimAcik, setBildirimAcik] = useState(false)
+  const [bildirimler, setBildirimler] = useState([])
+  const [globalSeriler, setGlobalSeriler] = useState([])
+  const [globalBolumler, setGlobalBolumler] = useState([])
+  const [globalKullanicilar, setGlobalKullanicilar] = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { setYukleniyor(false); return }
       const { data: profil } = await supabase.from('profiller').select('rol').eq('id', session.user.id).single()
-      if (profil?.rol === 'admin' || profil?.rol === 'yonetici') setGiris(true)
+      if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
       setYukleniyor(false)
     })
   }, [])
 
+  async function yukleGlobal() {
+    const [s, b, k, bil] = await Promise.all([
+      supabase.from('seriler').select('id, baslik'),
+      supabase.from('bolumler').select('id, baslik'),
+      supabase.from('profiller').select('id, kullanici_adi'),
+      supabase.from('bildirimler').select('*').eq('okundu', false).order('created_at', { ascending: false }).limit(10),
+    ])
+    setGlobalSeriler(s.data || [])
+    setGlobalBolumler(b.data || [])
+    setGlobalKullanicilar(k.data || [])
+    setBildirimler(bil.data || [])
+    setBildirimSayisi(bil.data?.length || 0)
+  }
+
   async function handleLogin(e) {
-    e.preventDefault()
-    setLoginErr('')
-    setYukleniyor(true)
+    e.preventDefault(); setLoginErr(''); setYukleniyor(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: sifre })
     if (error) { setLoginErr('E-posta veya şifre hatalı.'); setYukleniyor(false); return }
     const { data: profil } = await supabase.from('profiller').select('rol').eq('id', data.user.id).single()
-    if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true) }
+    if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
     else { setLoginErr('Admin yetkisi yok.'); await supabase.auth.signOut() }
     setYukleniyor(false)
   }
 
-  async function handleCikis() {
-    await supabase.auth.signOut()
-    setGiris(false)
-  }
-
-  if (yukleniyor) return (
-    <div style={{ minHeight: '100vh', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ color: '#888' }}>Yükleniyor...</div>
-    </div>
-  )
+  if (yukleniyor) return <div style={{ minHeight: '100vh', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}><div style={{ color: '#888' }}>Yükleniyor...</div></div>
 
   if (!giris) return (
     <div style={{ minHeight: '100vh', background: '#f5f4f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}>
@@ -184,7 +218,7 @@ export default function Admin() {
     { key: 'turler', label: '🏷️ Türler' },
     { key: 'kullanicilar', label: '👥 Kullanıcılar' },
     { key: 'yorumlar', label: '💬 Yorumlar' },
-    { key: 'anasayfa', label: '🖼️ Ana Sayfa' },
+    { key: 'anasayfa', label: '🖼️ Ana Sayfa & SEO' },
     { key: 'sayfalar', label: '📄 Sayfalar' },
     { key: 'sosyalmedya', label: '🌐 Sosyal Medya' },
   ]
@@ -194,15 +228,31 @@ export default function Admin() {
       <div style={{ background: '#111', padding: '0 32px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <span style={{ color: '#fff', fontWeight: 600, fontSize: '16px' }}>KonseyComics <span style={{ fontWeight: 300 }}>Admin</span></span>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <GlobalArama seriler={globalSeriler} bolumler={globalBolumler} kullanicilar={globalKullanicilar} onSec={setAktif} />
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setBildirimAcik(!bildirimAcik)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '16px', cursor: 'pointer', position: 'relative' }}>
+              🔔{bildirimSayisi > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '100px', fontSize: '10px', padding: '1px 5px', fontWeight: 700 }}>{bildirimSayisi}</span>}
+            </button>
+            {bildirimAcik && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, width: '300px', background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', zIndex: 200, marginTop: '8px', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid #f0ede8', fontWeight: 600, fontSize: '13px' }}>Bildirimler</div>
+                {bildirimler.length === 0 ? <div style={{ padding: '20px', color: '#aaa', fontSize: '13px', textAlign: 'center' }}>Yeni bildirim yok</div> : bildirimler.map(b => (
+                  <div key={b.id} style={{ padding: '12px 16px', borderBottom: '1px solid #f5f4f0', fontSize: '13px' }}>
+                    <div style={{ fontWeight: 500 }}>{b.baslik}</div>
+                    <div style={{ color: '#888', fontSize: '12px' }}>{b.mesaj}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <a href="/" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none' }}>← Siteye Dön</a>
-          <button onClick={handleCikis} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Çıkış</button>
+          <button onClick={async () => { await supabase.auth.signOut(); setGiris(false) }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Çıkış</button>
         </div>
       </div>
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 56px)' }}>
         <div style={{ width: '210px', background: '#fff', borderRight: '1px solid #e8e6e0', padding: '20px 12px', flexShrink: 0 }}>
           {menu.map(item => (
-            <button key={item.key} onClick={() => setAktif(item.key)}
-              style={{ width: '100%', padding: '9px 12px', textAlign: 'left', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 500, marginBottom: '4px', background: aktif === item.key ? '#f0ede8' : 'transparent', color: aktif === item.key ? '#111' : '#888' }}>
+            <button key={item.key} onClick={() => setAktif(item.key)} style={{ width: '100%', padding: '9px 12px', textAlign: 'left', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 500, marginBottom: '4px', background: aktif === item.key ? '#f0ede8' : 'transparent', color: aktif === item.key ? '#111' : '#888' }}>
               {item.label}
             </button>
           ))}
@@ -229,69 +279,125 @@ export default function Admin() {
 // ---- İSTATİSTİK ----
 function IstatistikSayfasi() {
   const [istat, setIstat] = useState(null)
+  const [zamanFiltre, setZamanFiltre] = useState('hafta')
   const [topSeriler, setTopSeriler] = useState([])
   const [topBolumler, setTopBolumler] = useState([])
+  const [katDagilim, setKatDagilim] = useState([])
+  const [kayitGrafik, setKayitGrafik] = useState([])
+  const [ziyaretGrafik, setZiyaretGrafik] = useState([])
 
-  useEffect(() => {
-    async function fetchData() {
-      const [s, b, u, y] = await Promise.all([
-        supabase.from('seriler').select('id', { count: 'exact', head: true }),
-        supabase.from('bolumler').select('id', { count: 'exact', head: true }),
-        supabase.from('profiller').select('id', { count: 'exact', head: true }),
-        supabase.from('yorumlar').select('id', { count: 'exact', head: true }).eq('silindi', false),
-      ])
-      setIstat({ seri: s.count || 0, bolum: b.count || 0, kullanici: u.count || 0, yorum: y.count || 0 })
+  useEffect(() => { fetchData() }, [zamanFiltre])
 
-      const { data: ts } = await supabase.from('seriler').select('baslik, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(5)
-      const { data: tb } = await supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik)').order('goruntuleme_sayisi', { ascending: false }).limit(5)
-      setTopSeriler(ts || [])
-      setTopBolumler(tb || [])
+  async function fetchData() {
+    const simdi = new Date()
+    const bugunBaslangic = new Date(simdi); bugunBaslangic.setHours(0,0,0,0)
+    const haftaBaslangic = new Date(simdi); haftaBaslangic.setDate(simdi.getDate() - 7)
+    const ayBaslangic = new Date(simdi); ayBaslangic.setDate(simdi.getDate() - 30)
+    const filtreTarih = zamanFiltre === 'bugun' ? bugunBaslangic : zamanFiltre === 'hafta' ? haftaBaslangic : ayBaslangic
+
+    const [s, u, y, kat, topS, topB, kayitlar, ziyaretler] = await Promise.all([
+      supabase.from('seriler').select('id', { count: 'exact', head: true }),
+      supabase.from('profiller').select('id', { count: 'exact', head: true }),
+      supabase.from('yorumlar').select('id', { count: 'exact', head: true }).eq('silindi', false),
+      supabase.from('seriler').select('kategori_id, kategoriler(isim)'),
+      supabase.from('seriler').select('baslik, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(5),
+      supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik)').order('goruntuleme_sayisi', { ascending: false }).limit(5),
+      supabase.from('profiller').select('created_at').gte('created_at', filtreTarih.toISOString()),
+      supabase.from('ziyaretler').select('created_at, oturum_id').gte('created_at', filtreTarih.toISOString()),
+    ])
+
+    setIstat({ seri: s.count||0, kullanici: u.count||0, yorum: y.count||0 })
+    setTopSeriler(topS.data||[])
+    setTopBolumler(topB.data||[])
+
+    const katMap = {}
+    kat.data?.forEach(s => { const isim = s.kategoriler?.isim||'Diğer'; katMap[isim] = (katMap[isim]||0)+1 })
+    setKatDagilim(Object.entries(katMap).map(([isim,sayi]) => ({isim,sayi})).sort((a,b)=>b.sayi-a.sayi))
+
+    const gunler = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i)
+      const label = `${d.getDate()}/${d.getMonth()+1}`
+      const sayi = kayitlar.data?.filter(k => { const kd = new Date(k.created_at); return kd.getDate()===d.getDate()&&kd.getMonth()===d.getMonth() }).length||0
+      gunler.push({ etiket: label, deger: sayi })
     }
-    fetchData()
-  }, [])
+    setKayitGrafik(gunler)
 
-  const kartlar = [
-    { label: 'Toplam Seri', deger: istat?.seri, emoji: '📚' },
-    { label: 'Toplam Bölüm', deger: istat?.bolum, emoji: '📖' },
-    { label: 'Toplam Kullanıcı', deger: istat?.kullanici, emoji: '👥' },
-    { label: 'Toplam Yorum', deger: istat?.yorum, emoji: '💬' },
-  ]
+    const zGunler = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i)
+      const label = `${d.getDate()}/${d.getMonth()+1}`
+      const benzersiz = new Set(ziyaretler.data?.filter(z => { const zd = new Date(z.created_at); return zd.getDate()===d.getDate()&&zd.getMonth()===d.getMonth() }).map(z=>z.oturum_id))
+      zGunler.push({ etiket: label, deger: benzersiz.size })
+    }
+    setZiyaretGrafik(zGunler)
+  }
 
   return (
     <div>
       <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>İstatistikler</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-        {kartlar.map(k => (
+        {[{label:'Toplam Seri',deger:istat?.seri,emoji:'📚'},{label:'Toplam Kullanıcı',deger:istat?.kullanici,emoji:'👥'},{label:'Toplam Yorum',deger:istat?.yorum,emoji:'💬'}].map(k => (
           <div key={k.label} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px' }}>
             <div style={{ fontSize: '20px', marginBottom: '8px' }}>{k.emoji}</div>
             <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>{k.label}</div>
-            <div style={{ fontSize: '28px', fontWeight: 700 }}>{istat ? k.deger : '—'}</div>
+            <div style={{ fontSize: '28px', fontWeight: 700 }}>{istat ? k.deger : '–'}</div>
           </div>
         ))}
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        {[['bugun','Bugün'],['hafta','Bu Hafta'],['ay','Bu Ay']].map(([val,label]) => (
+          <button key={val} onClick={() => setZamanFiltre(val)} style={{ ...BS, background: zamanFiltre===val?'#111':'#f5f4f0', color: zamanFiltre===val?'#fff':'#111', border: zamanFiltre===val?'none':'1px solid #e8e6e0' }}>{label}</button>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>Yeni Kayıtlar (Son 7 Gün)</div>
+          <BarChart data={kayitGrafik} renk="#111" />
+        </div>
+        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>Ziyaretçiler (Son 7 Gün)</div>
+          <BarChart data={ziyaretGrafik} renk="#6366f1" />
+        </div>
+      </div>
+      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>Kategoriye Göre Seri Dağılımı</div>
+        {katDagilim.map((k,i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '13px', width: '100px', flexShrink: 0 }}>{k.isim}</span>
+            <div style={{ flex: 1, background: '#f5f4f0', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+              <div style={{ width: `${(k.sayi/(katDagilim[0]?.sayi||1))*100}%`, background: '#111', height: '100%', borderRadius: '4px', transition: 'width 0.3s' }} />
+            </div>
+            <span style={{ fontSize: '13px', color: '#888', width: '30px', textAlign: 'right' }}>{k.sayi}</span>
+          </div>
+        ))}
+        {katDagilim.length === 0 && <div style={{ color: '#aaa', fontSize: '13px' }}>Veri yok</div>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>En Çok Okunan Seriler</div>
-          {topSeriler.map((s, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i < topSeriler.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-              <span style={{ color: '#aaa', fontSize: '12px', width: '16px' }}>{i + 1}</span>
+          {topSeriler.map((s,i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i<topSeriler.length-1?'1px solid #f0ede8':'none' }}>
+              <span style={{ color: '#aaa', fontSize: '12px', width: '16px' }}>{i+1}</span>
               <span style={{ flex: 1, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</span>
-              <span style={{ fontSize: '12px', color: '#888' }}>{s.goruntuleme_sayisi || 0}</span>
+              <span style={{ fontSize: '12px', color: '#888' }}>{s.goruntuleme_sayisi||0}</span>
             </div>
           ))}
+          {topSeriler.length===0 && <div style={{ color: '#aaa', fontSize: '13px' }}>Veri yok</div>}
         </div>
         <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '20px' }}>
           <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>En Çok Okunan Bölümler</div>
-          {topBolumler.map((b, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i < topBolumler.length - 1 ? '1px solid #f0ede8' : 'none' }}>
-              <span style={{ color: '#aaa', fontSize: '12px', width: '16px' }}>{i + 1}</span>
+          {topBolumler.map((b,i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i<topBolumler.length-1?'1px solid #f0ede8':'none' }}>
+              <span style={{ color: '#aaa', fontSize: '12px', width: '16px' }}>{i+1}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '11px', color: '#aaa' }}>{b.seriler?.baslik}</div>
                 <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} {b.baslik}</div>
               </div>
-              <span style={{ fontSize: '12px', color: '#888' }}>{b.goruntuleme_sayisi || 0}</span>
+              <span style={{ fontSize: '12px', color: '#888' }}>{b.goruntuleme_sayisi||0}</span>
             </div>
           ))}
+          {topBolumler.length===0 && <div style={{ color: '#aaa', fontSize: '13px' }}>Veri yok</div>}
         </div>
       </div>
     </div>
@@ -306,352 +412,286 @@ function SerilerSayfasi() {
   const [yazarlar, setYazarlar] = useState([])
   const [cizerler, setCizerler] = useState([])
   const [mod, setMod] = useState('liste')
+  const [gorunum, setGorunum] = useState('liste')
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [kapakOnizleme, setKapakOnizleme] = useState(null)
   const [aramaMetni, setAramaMetni] = useState('')
-
-  const bos = { baslik: '', slug: '', tur: 'seri', kategori: 'manga', kategori_id: '', ozet: '', durum: 'Devam Eden', kapak_url: '', turler: [], yazar_ids: [], cizer_ids: [], yil: '' }
+  const [katFiltre, setKatFiltre] = useState('tumu')
+  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
-
   async function fetchHepsi() {
-    const [s, k, t, y, c] = await Promise.all([
-      supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
+    const [s,k,t,y,c] = await Promise.all([
+      supabase.from('seriler').select('*, kategoriler(isim)').order('created_at',{ascending:false}),
       supabase.from('kategoriler').select('*').order('isim'),
       supabase.from('turler').select('*').order('isim'),
       supabase.from('yazarlar').select('*').order('isim'),
       supabase.from('cizerler').select('*').order('isim'),
     ])
-    setSeriler(s.data || [])
-    setKategoriler(k.data || [])
-    setTurler(t.data || [])
-    setYazarlar(y.data || [])
-    setCizerler(c.data || [])
+    setSeriler(s.data||[]); setKategoriler(k.data||[]); setTurler(t.data||[]); setYazarlar(y.data||[]); setCizerler(c.data||[])
   }
 
   function slugOlustur(v) {
-    return v.toLowerCase()
-      .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
-      .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-      .replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    return v.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')
   }
-
-  function toggleTur(id) { setForm(f => ({ ...f, turler: f.turler.includes(id) ? f.turler.filter(x => x !== id) : [...f.turler, id] })) }
 
   async function kaydet() {
     if (!form.baslik) { setMsg('❌ Başlık zorunlu!'); return }
     setYukleniyor(true)
-    const payload = {
-      baslik: form.baslik, slug: form.slug || slugOlustur(form.baslik),
-      tur: form.tur, kategori: form.kategori,
-      kategori_id: form.kategori_id || null,
-      ozet: form.ozet,
-      durum: form.tur === 'tek' ? 'Tek Sayılık' : form.durum,
-      kapak_url: form.kapak_url, turler: form.turler,
-      yil: form.yil ? parseInt(form.yil) : null,
-    }
+    const payload = { baslik:form.baslik, slug:form.slug||slugOlustur(form.baslik), tur:form.tur, kategori:form.kategori, kategori_id:form.kategori_id||null, ozet:form.ozet, durum:form.tur==='tek'?'Tek Sayılık':form.durum, kapak_url:form.kapak_url, turler:form.turler, yil:form.yil?parseInt(form.yil):null, one_cikan:form.one_cikan }
     let seriId = duzenleId
-    if (duzenleId) {
-      await supabase.from('seriler').update(payload).eq('id', duzenleId)
-    } else {
-      const { data } = await supabase.from('seriler').insert([payload]).select().single()
-      seriId = data?.id
-    }
+    if (duzenleId) { await supabase.from('seriler').update(payload).eq('id',duzenleId) }
+    else { const { data } = await supabase.from('seriler').insert([payload]).select().single(); seriId = data?.id }
     if (seriId) {
-      await supabase.from('seri_yazarlar').delete().eq('seri_id', seriId)
-      if (form.yazar_ids.length > 0) await supabase.from('seri_yazarlar').insert(form.yazar_ids.map(id => ({ seri_id: seriId, yazar_id: id })))
-      await supabase.from('seri_cizerler').delete().eq('seri_id', seriId)
-      if (form.cizer_ids.length > 0) await supabase.from('seri_cizerler').insert(form.cizer_ids.map(id => ({ seri_id: seriId, cizer_id: id })))
+      await supabase.from('seri_yazarlar').delete().eq('seri_id',seriId)
+      if (form.yazar_ids.length>0) await supabase.from('seri_yazarlar').insert(form.yazar_ids.map(id=>({seri_id:seriId,yazar_id:id})))
+      await supabase.from('seri_cizerler').delete().eq('seri_id',seriId)
+      if (form.cizer_ids.length>0) await supabase.from('seri_cizerler').insert(form.cizer_ids.map(id=>({seri_id:seriId,cizer_id:id})))
     }
-    setMsg(duzenleId ? '✅ Güncellendi!' : '✅ Seri eklendi!')
-    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi()
-    setYukleniyor(false)
+    setMsg(duzenleId?'✅ Güncellendi!':'✅ Seri eklendi!')
+    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
   async function sil(id) {
     if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from('seriler').delete().eq('id', id)
-    fetchHepsi()
+    await supabase.from('seriler').delete().eq('id',id); fetchHepsi()
   }
 
-  async function durumDegistir(id, d) {
-    await supabase.from('seriler').update({ durum: d }).eq('id', id)
-    fetchHepsi()
+  async function toggleOneCikan(id, mevcut) {
+    await supabase.from('seriler').update({one_cikan:!mevcut}).eq('id',id); fetchHepsi()
   }
 
-  async function duzenleAc(s) {
-    const [y, c] = await Promise.all([
-      supabase.from('seri_yazarlar').select('yazar_id').eq('seri_id', s.id),
-      supabase.from('seri_cizerler').select('cizer_id').eq('seri_id', s.id),
-    ])
-    setForm({
-      baslik: s.baslik, slug: s.slug, tur: s.tur || 'seri', kategori: s.kategori || 'manga',
-      kategori_id: s.kategori_id || '', ozet: s.ozet || '', durum: s.durum || 'Devam Eden',
-      kapak_url: s.kapak_url || '', turler: s.turler || [],
-      yazar_ids: y.data?.map(x => x.yazar_id) || [],
-      cizer_ids: c.data?.map(x => x.cizer_id) || [],
-      yil: s.yil || '',
-    })
-    setKapakOnizleme(s.kapak_url || null)
-    setDuzenleId(s.id); setMod('form')
+  async function duzenle(s) {
+    setDuzenleId(s.id); setKapakOnizleme(s.kapak_url)
+    const [yz,cz] = await Promise.all([supabase.from('seri_yazarlar').select('yazar_id').eq('seri_id',s.id),supabase.from('seri_cizerler').select('cizer_id').eq('seri_id',s.id)])
+    setForm({...bos,...s,yazar_ids:yz.data?.map(x=>x.yazar_id)||[],cizer_ids:cz.data?.map(x=>x.cizer_id)||[]}); setMod('form')
   }
 
-  const filtrelenmis = aramaMetni ? seriler.filter(s => s.baslik.toLowerCase().includes(aramaMetni.toLowerCase())) : seriler
+  const filtreli = seriler.filter(s=>katFiltre==='tumu'||s.kategori_id===katFiltre).filter(s=>!aramaMetni||s.baslik.toLowerCase().includes(aramaMetni.toLowerCase()))
 
-  if (mod === 'form') return (
-    <div style={{ maxWidth: '680px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => { setMod('liste'); setDuzenleId(null); setForm(bos); setKapakOnizleme(null) }} style={{ ...BS, padding: '7px 14px' }}>← Geri</button>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>{duzenleId ? 'Seri Düzenle' : 'Yeni Seri Ekle'}</div>
+  if (mod==='form') return (
+    <div style={{ maxWidth:'700px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null);setKapakOnizleme(null)}} style={BS}>← Geri</button>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Seri Düzenle':'Yeni Seri'}</div>
       </div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div>
-          <div style={L}>Tür</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[['seri', 'Seri'], ['tek', 'Tek Sayılık']].map(([val, lbl]) => (
-              <button key={val} onClick={() => setForm(f => ({ ...f, tur: val, durum: val === 'tek' ? 'Tek Sayılık' : 'Devam Eden' }))}
-                style={{ padding: '7px 18px', borderRadius: '100px', border: `1px solid ${form.tur === val ? '#111' : '#e8e6e0'}`, background: form.tur === val ? '#111' : '#fff', color: form.tur === val ? '#fff' : '#888', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>{lbl}</button>
-            ))}
+      <div style={{ display:'flex',gap:'20px',marginBottom:'20px' }}>
+        <ResimYukle onizleme={kapakOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,kapak_url:url}));setKapakOnizleme(prev)}} />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Başlık</div><input value={form.baslik} onChange={e=>setForm(f=>({...f,baslik:e.target.value,slug:slugOlustur(e.target.value)}))} style={I} /></div>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Slug</div><input value={form.slug} onChange={e=>setForm(f=>({...f,slug:e.target.value}))} style={I} /></div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px' }}>
+            <div><div style={LB}>Tür</div><select value={form.tur} onChange={e=>setForm(f=>({...f,tur:e.target.value}))} style={S}><option value="seri">Seri</option><option value="tek">Tek Sayılık</option></select></div>
+            <div><div style={LB}>Yıl</div><input value={form.yil} onChange={e=>setForm(f=>({...f,yil:e.target.value}))} style={I} type="number" placeholder="2024" /></div>
           </div>
         </div>
-        <div>
-          <div style={L}>Başlık *</div>
-          <input value={form.baslik} onChange={e => setForm(f => ({ ...f, baslik: e.target.value, slug: slugOlustur(e.target.value) }))} placeholder="Seri başlığı" style={I} />
+      </div>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'12px' }}>
+        <div><div style={LB}>Kategori</div><AramaSecimTek liste={kategoriler.map(k=>({id:k.id,isim:k.isim}))} secili={form.kategori_id} onChange={v=>setForm(f=>({...f,kategori_id:v}))} placeholder="Kategori seç" /></div>
+        <div><div style={LB}>Durum</div><select value={form.durum} onChange={e=>setForm(f=>({...f,durum:e.target.value}))} style={S}><option>Devam Eden</option><option>Tamamlandı</option><option>Askıya Alındı</option><option>Tek Sayılık</option></select></div>
+      </div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Özet</div><textarea value={form.ozet} onChange={e=>setForm(f=>({...f,ozet:e.target.value}))} style={{...I,height:'80px',resize:'vertical'}} /></div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Yazarlar</div><AramaSecim liste={yazarlar.map(y=>({id:y.id,isim:y.isim}))} secili={form.yazar_ids} onChange={v=>setForm(f=>({...f,yazar_ids:v}))} placeholder="Yazar ekle..." /></div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Çizerler</div><AramaSecim liste={cizerler.map(c=>({id:c.id,isim:c.isim}))} secili={form.cizer_ids} onChange={v=>setForm(f=>({...f,cizer_ids:v}))} placeholder="Çizer ekle..." /></div>
+      <div style={{ marginBottom:'12px' }}>
+        <div style={LB}>Türler</div>
+        <div style={{ display:'flex',flexWrap:'wrap',gap:'8px' }}>
+          {turler.map(t=>(
+            <button key={t.id} onClick={()=>setForm(f=>({...f,turler:f.turler.includes(t.id)?f.turler.filter(x=>x!==t.id):[...f.turler,t.id]}))} style={{...BS,background:form.turler.includes(t.id)?'#111':'#f5f4f0',color:form.turler.includes(t.id)?'#fff':'#111',border:form.turler.includes(t.id)?'none':'1px solid #e8e6e0'}}>{t.isim}</button>
+          ))}
         </div>
-        <div>
-          <div style={L}>Slug (URL)</div>
-          <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} style={I} />
-          <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px' }}>konseycomics.com/seri/{form.slug || '...'}</div>
-        </div>
-        <div>
-          <div style={L}>Kapak Resmi</div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-            <KapakYukle onizleme={kapakOnizleme} onChange={(url, prev) => { setForm(f => ({ ...f, kapak_url: url })); setKapakOnizleme(prev) }} />
-            <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.7, paddingTop: '8px' }}>JPG, PNG, WEBP desteklenir.<br />Önerilen oran: 2:3</div>
-          </div>
-        </div>
-        <div>
-          <div style={L}>Kategori</div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {['manga', 'çizgi roman', 'webtoon'].map(k => (
-              <button key={k} onClick={() => setForm(f => ({ ...f, kategori: k }))}
-                style={{ padding: '6px 16px', borderRadius: '100px', border: `1px solid ${form.kategori === k ? '#111' : '#e8e6e0'}`, background: form.kategori === k ? '#111' : '#fff', color: form.kategori === k ? '#fff' : '#888', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' }}>{k}</button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div style={L}>Yayıncı</div>
-          <select value={form.kategori_id} onChange={e => setForm(f => ({ ...f, kategori_id: e.target.value }))} style={S}>
-            <option value="">Seçiniz</option>
-            {kategoriler.map(k => <option key={k.id} value={k.id}>{k.isim}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={L}>Yayın Yılı</div>
-          <input type="number" value={form.yil} onChange={e => setForm(f => ({ ...f, yil: e.target.value }))} placeholder="2024" style={I} />
-        </div>
-        <div style={{ background: '#f9f8f5', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Orijinal Yapımcılar</div>
-          <div>
-            <div style={L}>Yazar(lar)</div>
-            <AramaSecim liste={yazarlar} secili={form.yazar_ids} onChange={v => setForm(f => ({ ...f, yazar_ids: v }))} placeholder="Yazar ara veya seç..." />
-          </div>
-          <div>
-            <div style={L}>Çizer(ler)</div>
-            <AramaSecim liste={cizerler} secili={form.cizer_ids} onChange={v => setForm(f => ({ ...f, cizer_ids: v }))} placeholder="Çizer ara veya seç..." />
-          </div>
-        </div>
-        <div>
-          <div style={L}>Özet</div>
-          <textarea value={form.ozet} onChange={e => setForm(f => ({ ...f, ozet: e.target.value }))} placeholder="Seri hakkında açıklama..." rows={6} style={{ ...I, resize: 'vertical', lineHeight: 1.65 }} />
-        </div>
-        <div>
-          <div style={L}>Türler</div>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {turler.map(t => (
-              <button key={t.id} onClick={() => toggleTur(t.id)}
-                style={{ padding: '6px 14px', borderRadius: '100px', border: `1px solid ${form.turler.includes(t.id) ? '#111' : '#e8e6e0'}`, background: form.turler.includes(t.id) ? '#111' : '#fff', color: form.turler.includes(t.id) ? '#fff' : '#555', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>{t.isim}</button>
-            ))}
-          </div>
-        </div>
-        {form.tur !== 'tek' && (
-          <div>
-            <div style={L}>Yayın Durumu</div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['Devam Eden', 'Tamamlandı'].map(d => (
-                <button key={d} onClick={() => setForm(f => ({ ...f, durum: d }))}
-                  style={{ padding: '7px 18px', borderRadius: '100px', border: `1px solid ${form.durum === d ? '#111' : '#e8e6e0'}`, background: form.durum === d ? '#111' : '#fff', color: form.durum === d ? '#fff' : '#888', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>{d}</button>
-              ))}
-            </div>
-          </div>
-        )}
-        <button onClick={kaydet} disabled={yukleniyor} style={{ ...BP, padding: '13px', fontSize: '14px' }}>
-          {yukleniyor ? 'Kaydediliyor...' : duzenleId ? '✓ Güncelle' : '+ Seri Ekle'}
-        </button>
+      </div>
+      <div style={{ marginBottom:'20px' }}>
+        <label style={{ display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'13px' }}>
+          <input type="checkbox" checked={form.one_cikan} onChange={e=>setForm(f=>({...f,one_cikan:e.target.checked}))} /> Öne Çıkan Seri
+        </label>
+      </div>
+      <div style={{ display:'flex',gap:'10px' }}>
+        <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button>
       </div>
     </div>
   )
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>Seriler ({filtrelenmis.length})</div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Seri ara..." style={{ ...I, width: '200px' }} />
-          <button onClick={() => setMod('form')} style={BP}>+ Yeni Seri</button>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>Seriler</div>
+        <div style={{ display:'flex',gap:'8px' }}>
+          <button onClick={()=>setGorunum(gorunum==='liste'?'grid':'liste')} style={BS}>{gorunum==='liste'?'⊞ Grid':'☰ Liste'}</button>
+          <button onClick={()=>setMod('form')} style={BP}>+ Yeni Seri</button>
         </div>
       </div>
-      <Msg text={msg} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {filtrelenmis.map(s => (
-          <div key={s.id} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '44px', height: '58px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: '#f0ede8' }}>
-              {s.kapak_url ? <img src={s.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📚</div>}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</div>
-              <div style={{ fontSize: '11px', color: '#aaa' }}>{s.kategoriler?.isim || s.kategori} · {s.yil || '—'}</div>
-            </div>
-            <select value={s.durum} onChange={e => durumDegistir(s.id, e.target.value)} style={{ padding: '5px 10px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
-              <option>Devam Eden</option><option>Tamamlandı</option><option>Tek Sayılık</option>
-            </select>
-            <button onClick={() => duzenleAc(s)} style={BS}>Düzenle</button>
-            <button onClick={() => sil(s.id)} style={BD}>Sil</button>
-          </div>
-        ))}
+      <div style={{ display:'flex',gap:'8px',marginBottom:'16px',flexWrap:'wrap' }}>
+        <button onClick={()=>setKatFiltre('tumu')} style={{...BS,background:katFiltre==='tumu'?'#111':'#f5f4f0',color:katFiltre==='tumu'?'#fff':'#111',border:'none'}}>Tümü ({seriler.length})</button>
+        {kategoriler.map(k=>{const sayi=seriler.filter(s=>s.kategori_id===k.id).length;return<button key={k.id} onClick={()=>setKatFiltre(k.id)} style={{...BS,background:katFiltre===k.id?'#111':'#f5f4f0',color:katFiltre===k.id?'#fff':'#111',border:'none'}}>{k.isim} ({sayi})</button>})}
       </div>
+      <input value={aramaMetni} onChange={e=>setAramaMetni(e.target.value)} placeholder="Seri ara..." style={{...I,marginBottom:'16px',maxWidth:'300px'}} />
+      {gorunum==='grid' ? (
+        <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',gap:'16px' }}>
+          {filtreli.map(s=>(
+            <div key={s.id} style={{ background:'#fff',borderRadius:'12px',overflow:'hidden',border:'1px solid #e8e6e0' }}>
+              <div style={{ width:'100%',paddingTop:'133%',position:'relative',background:'#f5f4f0' }}>
+                {s.kapak_url&&<img src={s.kapak_url} style={{ position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover' }} />}
+                {s.one_cikan&&<span style={{ position:'absolute',top:'8px',right:'8px',background:'#f59e0b',color:'#fff',fontSize:'10px',padding:'2px 6px',borderRadius:'4px' }}>⭐</span>}
+              </div>
+              <div style={{ padding:'10px' }}>
+                <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{s.baslik}</div>
+                <div style={{ fontSize:'11px',color:'#888',marginBottom:'8px' }}>{s.kategoriler?.isim}</div>
+                <div style={{ display:'flex',gap:'6px' }}>
+                  <button onClick={()=>duzenle(s)} style={{...BS,flex:1,textAlign:'center'}}>Düzenle</button>
+                  <button onClick={()=>sil(s.id)} style={BD}>Sil</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+          {filtreli.map((s,i)=>(
+            <div key={s.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<filtreli.length-1?'1px solid #f0ede8':'none' }}>
+              {s.kapak_url?<img src={s.kapak_url} style={{ width:'40px',height:'53px',objectFit:'cover',borderRadius:'4px',flexShrink:0 }} />:<div style={{ width:'40px',height:'53px',background:'#f5f4f0',borderRadius:'4px',flexShrink:0 }} />}
+              <div style={{ flex:1,minWidth:0 }}>
+                <div style={{ fontSize:'14px',fontWeight:500 }}>{s.baslik} {s.one_cikan&&<span style={{ fontSize:'11px',background:'#fef3c7',color:'#d97706',padding:'1px 6px',borderRadius:'4px' }}>⭐ Öne Çıkan</span>}</div>
+                <div style={{ fontSize:'12px',color:'#888' }}>{s.kategoriler?.isim} · {s.durum} · {s.goruntuleme_sayisi||0} görüntülenme</div>
+              </div>
+              <button onClick={()=>toggleOneCikan(s.id,s.one_cikan)} style={{...BS,fontSize:'11px'}}>{s.one_cikan?'★ Kaldır':'☆ Öne Çıkar'}</button>
+              <button onClick={()=>duzenle(s)} style={BS}>Düzenle</button>
+              <button onClick={()=>sil(s.id)} style={BD}>Sil</button>
+            </div>
+          ))}
+          {filtreli.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Seri bulunamadı</div>}
+        </div>
+      )}
     </div>
   )
 }
 
 // ---- BÖLÜMLER ----
 function BolumlerSayfasi() {
+  const [bolumler, setBolumler] = useState([])
   const [seriler, setSeriler] = useState([])
   const [ekip, setEkip] = useState([])
-  const [seciliSeri, setSeciliSeri] = useState('')
-  const [bolumler, setBolumler] = useState([])
   const [mod, setMod] = useState('liste')
+  const [gorunum, setGorunum] = useState('liste')
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [kapakOnizleme, setKapakOnizleme] = useState(null)
-
-  const bos = { sayi: '', baslik: '', drive_link: '', indirme_link: '', kapak_url: '', cevirmen_id: '', balonlama_id: '', grafik_id: '' }
+  const [seriFiltre, setSeriFiltre] = useState('tumu')
+  const [aramaMetni, setAramaMetni] = useState('')
+  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'' }
   const [form, setForm] = useState(bos)
 
-  useEffect(() => {
-    supabase.from('seriler').select('id, baslik').order('baslik').then(({ data }) => setSeriler(data || []))
-    supabase.from('ekip').select('*').order('isim').then(({ data }) => setEkip(data || []))
-  }, [])
-
-  useEffect(() => {
-    if (!seciliSeri) return
-    supabase.from('bolumler').select('*').eq('seri_id', seciliSeri).order('sayi').then(({ data }) => setBolumler(data || []))
-  }, [seciliSeri])
-
-  async function refreshBolumler() {
-    const { data } = await supabase.from('bolumler').select('*').eq('seri_id', seciliSeri).order('sayi')
-    setBolumler(data || [])
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() {
+    const [b,s,e] = await Promise.all([
+      supabase.from('bolumler').select('*, seriler(baslik)').order('created_at',{ascending:false}),
+      supabase.from('seriler').select('id, baslik').order('baslik'),
+      supabase.from('ekip').select('*').order('isim'),
+    ])
+    setBolumler(b.data||[]); setSeriler(s.data||[]); setEkip(e.data||[])
   }
 
   async function kaydet() {
-    if (!seciliSeri || !form.baslik) { setMsg('❌ Seri ve başlık zorunlu!'); return }
+    if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     setYukleniyor(true)
-    const payload = {
-      seri_id: seciliSeri, sayi: parseInt(form.sayi) || 0,
-      baslik: form.baslik, drive_link: form.drive_link,
-      indirme_link: form.indirme_link, kapak_url: form.kapak_url,
-      cevirmen_id: form.cevirmen_id || null,
-      balonlama_id: form.balonlama_id || null,
-      grafik_id: form.grafik_id || null,
-    }
-    if (duzenleId) await supabase.from('bolumler').update(payload).eq('id', duzenleId)
+    const payload = { seri_id:form.seri_id, sayi:parseInt(form.sayi), baslik:form.baslik, kapak_url:form.kapak_url, drive_link:form.drive_link, indirme_link:form.indirme_link, cevirmen_id:form.cevirmen_id||null, balonlama_id:form.balonlama_id||null, grafik_id:form.grafik_id||null }
+    if (duzenleId) await supabase.from('bolumler').update(payload).eq('id',duzenleId)
     else await supabase.from('bolumler').insert([payload])
-    setMsg(duzenleId ? '✅ Güncellendi!' : '✅ Bölüm eklendi!')
-    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste')
-    await refreshBolumler()
-    setYukleniyor(false)
+    setMsg(duzenleId?'✅ Güncellendi!':'✅ Bölüm eklendi!')
+    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
   async function sil(id) {
     if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from('bolumler').delete().eq('id', id)
-    await refreshBolumler()
+    await supabase.from('bolumler').delete().eq('id',id); fetchHepsi()
   }
 
-  function duzenleAc(b) {
-    setForm({ sayi: b.sayi, baslik: b.baslik, drive_link: b.drive_link || '', indirme_link: b.indirme_link || '', kapak_url: b.kapak_url || '', cevirmen_id: b.cevirmen_id || '', balonlama_id: b.balonlama_id || '', grafik_id: b.grafik_id || '' })
-    setKapakOnizleme(b.kapak_url || null); setDuzenleId(b.id); setMod('form')
-  }
+  const filtreli = bolumler.filter(b=>seriFiltre==='tumu'||b.seri_id===seriFiltre).filter(b=>!aramaMetni||b.baslik.toLowerCase().includes(aramaMetni.toLowerCase())||b.seriler?.baslik.toLowerCase().includes(aramaMetni.toLowerCase()))
 
-  if (mod === 'form') return (
-    <div style={{ maxWidth: '560px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => { setMod('liste'); setDuzenleId(null); setForm(bos); setKapakOnizleme(null) }} style={{ ...BS, padding: '7px 14px' }}>← Geri</button>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>{duzenleId ? 'Bölüm Düzenle' : 'Yeni Bölüm Ekle'}</div>
+  if (mod==='form') return (
+    <div style={{ maxWidth:'600px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>← Geri</button>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Bölüm Düzenle':'Yeni Bölüm'}</div>
       </div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div>
-          <div style={L}>Bölüm Kapağı</div>
-          <KapakYukle onizleme={kapakOnizleme} onChange={(url, prev) => { setForm(f => ({ ...f, kapak_url: url })); setKapakOnizleme(prev) }} />
+      <div style={{ display:'flex',gap:'20px',marginBottom:'16px' }}>
+        <ResimYukle onizleme={kapakOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,kapak_url:url}));setKapakOnizleme(prev)}} />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Seri</div><AramaSecimTek liste={seriler.map(s=>({id:s.id,isim:s.baslik}))} secili={form.seri_id} onChange={v=>setForm(f=>({...f,seri_id:v}))} placeholder="Seri seç" /></div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 2fr',gap:'12px' }}>
+            <div><div style={LB}>Sayı</div><input type="number" value={form.sayi} onChange={e=>setForm(f=>({...f,sayi:e.target.value}))} style={I} /></div>
+            <div><div style={LB}>Başlık</div><input value={form.baslik} onChange={e=>setForm(f=>({...f,baslik:e.target.value}))} style={I} /></div>
+          </div>
         </div>
-        <div><div style={L}>Bölüm No</div><input type="number" value={form.sayi} onChange={e => setForm(f => ({ ...f, sayi: e.target.value }))} placeholder="1" style={I} /></div>
-        <div><div style={L}>Bölüm Başlığı *</div><input value={form.baslik} onChange={e => setForm(f => ({ ...f, baslik: e.target.value }))} placeholder="Bölüm başlığı" style={I} /></div>
-        <div><div style={L}>Google Drive Linki</div><input value={form.drive_link} onChange={e => setForm(f => ({ ...f, drive_link: e.target.value }))} placeholder="https://drive.google.com/file/d/..." style={I} /></div>
-        <div><div style={L}>İndirme Linki</div><input value={form.indirme_link} onChange={e => setForm(f => ({ ...f, indirme_link: e.target.value }))} placeholder="https://mediafire.com/..." style={I} /></div>
-        <div style={{ background: '#f9f8f5', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Konsey Ekibi</div>
-          {[['cevirmen_id', 'Çevirmen'], ['balonlama_id', 'Balonlama'], ['grafik_id', 'Grafik']].map(([field, lbl]) => (
-            <div key={field}>
-              <div style={L}>{lbl}</div>
-              <select value={form[field]} onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))} style={S}>
-                <option value="">Seçiniz</option>
-                {ekip.map(e => <option key={e.id} value={e.id}>{e.isim}</option>)}
-              </select>
-            </div>
-          ))}
-        </div>
-        <button onClick={kaydet} disabled={yukleniyor} style={{ ...BP, padding: '13px', fontSize: '14px' }}>
-          {yukleniyor ? 'Kaydediliyor...' : duzenleId ? '✓ Güncelle' : '+ Bölüm Ekle'}
-        </button>
+      </div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Drive Linki</div><input value={form.drive_link} onChange={e=>setForm(f=>({...f,drive_link:e.target.value}))} style={I} placeholder="https://drive.google.com/..." /></div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>İndirme Linki</div><input value={form.indirme_link} onChange={e=>setForm(f=>({...f,indirme_link:e.target.value}))} style={I} /></div>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'12px',marginBottom:'20px' }}>
+        {[['cevirmen_id','Çevirmen'],['balonlama_id','Balonlama'],['grafik_id','Grafik']].map(([key,label])=>(
+          <div key={key}><div style={LB}>{label}</div><AramaSecimTek liste={ekip.map(e=>({id:e.id,isim:e.isim}))} secili={form[key]} onChange={v=>setForm(f=>({...f,[key]:v}))} placeholder={label+' seç'} /></div>
+        ))}
+      </div>
+      <div style={{ display:'flex',gap:'10px' }}>
+        <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button>
       </div>
     </div>
   )
 
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>Bölümler</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <AramaSecimTek
-          liste={seriler.map(s => ({ id: s.id, isim: s.baslik }))}
-          secili={seciliSeri}
-          onChange={setSeciliSeri}
-          placeholder="Seri seç..."
-        />
-        {seciliSeri && <button onClick={() => { setMod('form') }} style={BP}>+ Yeni Bölüm</button>}
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>Bölümler</div>
+        <div style={{ display:'flex',gap:'8px' }}>
+          <button onClick={()=>setGorunum(gorunum==='liste'?'grid':'liste')} style={BS}>{gorunum==='liste'?'⊞ Grid':'☰ Liste'}</button>
+          <button onClick={()=>setMod('form')} style={BP}>+ Yeni Bölüm</button>
+        </div>
       </div>
-      <Msg text={msg} />
-      {seciliSeri && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {bolumler.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Bu seriye ait bölüm yok.</div>}
-          {bolumler.map(b => (
-            <div key={b.id} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '48px', borderRadius: '6px', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                {b.kapak_url ? <img src={b.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>📖</div>}
+      <div style={{ display:'flex',gap:'8px',marginBottom:'16px',flexWrap:'wrap' }}>
+        <button onClick={()=>setSeriFiltre('tumu')} style={{...BS,background:seriFiltre==='tumu'?'#111':'#f5f4f0',color:seriFiltre==='tumu'?'#fff':'#111',border:'none'}}>Tümü</button>
+        {seriler.slice(0,8).map(s=><button key={s.id} onClick={()=>setSeriFiltre(s.id)} style={{...BS,background:seriFiltre===s.id?'#111':'#f5f4f0',color:seriFiltre===s.id?'#fff':'#111',border:'none'}}>{s.baslik}</button>)}
+      </div>
+      <input value={aramaMetni} onChange={e=>setAramaMetni(e.target.value)} placeholder="Bölüm ara..." style={{...I,marginBottom:'16px',maxWidth:'300px'}} />
+      {gorunum==='grid' ? (
+        <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))',gap:'16px' }}>
+          {filtreli.map(b=>(
+            <div key={b.id} style={{ background:'#fff',borderRadius:'12px',overflow:'hidden',border:'1px solid #e8e6e0' }}>
+              <div style={{ width:'100%',paddingTop:'133%',position:'relative',background:'#f5f4f0' }}>
+                {b.kapak_url&&<img src={b.kapak_url} style={{ position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover' }} />}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} — {b.baslik}</div>
-                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{b.drive_link ? '✓ Drive' : '✗ Drive'}{b.indirme_link ? ' · ✓ İndirme' : ''}</div>
+              <div style={{ padding:'10px' }}>
+                <div style={{ fontSize:'11px',color:'#aaa',marginBottom:'2px' }}>{b.seriler?.baslik}</div>
+                <div style={{ fontSize:'13px',fontWeight:600 }}>#{b.sayi} {b.baslik}</div>
+                <div style={{ display:'flex',gap:'6px',marginTop:'8px' }}>
+                  <button onClick={()=>{setForm({...bos,...b});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={{...BS,flex:1}}>Düzenle</button>
+                  <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
+                </div>
               </div>
-              <button onClick={() => duzenleAc(b)} style={BS}>Düzenle</button>
-              <button onClick={() => sil(b.id)} style={BD}>Sil</button>
             </div>
           ))}
+        </div>
+      ) : (
+        <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+          {filtreli.map((b,i)=>(
+            <div key={b.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<filtreli.length-1?'1px solid #f0ede8':'none' }}>
+              {b.kapak_url?<img src={b.kapak_url} style={{ width:'40px',height:'53px',objectFit:'cover',borderRadius:'4px',flexShrink:0 }} />:<div style={{ width:'40px',height:'53px',background:'#f5f4f0',borderRadius:'4px',flexShrink:0 }} />}
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:'12px',color:'#aaa' }}>{b.seriler?.baslik}</div>
+                <div style={{ fontSize:'14px',fontWeight:500 }}>#{b.sayi} {b.baslik}</div>
+                <div style={{ fontSize:'12px',color:'#888' }}>{b.goruntuleme_sayisi||0} görüntülenme</div>
+              </div>
+              <button onClick={()=>{setForm({...bos,...b});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
+              <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
+            </div>
+          ))}
+          {filtreli.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Bölüm bulunamadı</div>}
         </div>
       )}
     </div>
@@ -660,103 +700,57 @@ function BolumlerSayfasi() {
 
 // ---- KONSEY EKİBİ ----
 function KonseySayfasi() {
-  const [kullanicilar, setKullanicilar] = useState([])
   const [ekip, setEkip] = useState([])
-  const [aramaMetni, setAramaMetni] = useState('')
+  const [mod, setMod] = useState('liste')
+  const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
-  const [ekipIsim, setEkipIsim] = useState('')
-  const [ekipUnvan, setEkipUnvan] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [avatarOnizleme, setAvatarOnizleme] = useState(null)
+  const bos = { isim:'',unvan:'',avatar_url:'' }
+  const [form, setForm] = useState(bos)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('ekip').select('*').order('isim'); setEkip(data||[]) }
 
-  async function fetchData() {
-    const [p, e] = await Promise.all([
-      supabase.from('profiller').select('id, kullanici_adi, avatar_url, rol').in('rol', ['admin', 'yonetici', 'konsey']).order('rol'),
-      supabase.from('ekip').select('*').order('isim'),
-    ])
-    setKullanicilar(p.data || [])
-    setEkip(e.data || [])
+  async function kaydet() {
+    if (!form.isim) { setMsg('❌ İsim zorunlu!'); return }
+    setYukleniyor(true)
+    if (duzenleId) await supabase.from('ekip').update(form).eq('id',duzenleId)
+    else await supabase.from('ekip').insert([form])
+    setMsg(duzenleId?'✅ Güncellendi!':'✅ Üye eklendi!')
+    setForm(bos); setDuzenleId(null); setAvatarOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
-  async function rolDegistir(id, yeniRol) {
-    await supabase.from('profiller').update({ rol: yeniRol }).eq('id', id)
-    setMsg('✅ Rol güncellendi!')
-    fetchData()
-    setTimeout(() => setMsg(''), 2000)
-  }
+  async function sil(id) { if (!confirm('Silmek istediğine emin misin?')) return; await supabase.from('ekip').delete().eq('id',id); fetchHepsi() }
 
-  async function ekipEkle() {
-    if (!ekipIsim) return
-    await supabase.from('ekip').insert([{ isim: ekipIsim, unvan: ekipUnvan }])
-    setEkipIsim(''); setEkipUnvan(''); fetchData()
-    setMsg('✅ Ekip üyesi eklendi!'); setTimeout(() => setMsg(''), 2000)
-  }
-
-  async function ekipSil(id) {
-    if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from('ekip').delete().eq('id', id)
-    fetchData()
-  }
-
-  const rolRenk = { admin: '#7c3aed', yonetici: '#1d4ed8', konsey: '#065f46', okuyucu: '#888' }
-  const rolEtiket = { admin: 'Admin', yonetici: 'Yönetici', konsey: 'Konsey', okuyucu: 'Okuyucu' }
-
-  const filtreliKullanicilar = aramaMetni
-    ? kullanicilar.filter(u => u.kullanici_adi?.toLowerCase().includes(aramaMetni.toLowerCase()))
-    : kullanicilar
+  if (mod==='form') return (
+    <div style={{ maxWidth:'500px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>← Geri</button><div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Üye Düzenle':'Yeni Üye'}</div></div>
+      <Msg text={msg} />
+      <div style={{ display:'flex',gap:'20px',marginBottom:'16px',alignItems:'flex-start' }}>
+        <ResimYukle onizleme={avatarOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,avatar_url:url}));setAvatarOnizleme(prev)}} bucket="avatarlar" width="80px" height="80px" />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>İsim</div><input value={form.isim} onChange={e=>setForm(f=>({...f,isim:e.target.value}))} style={I} /></div>
+          <div><div style={LB}>Unvan</div><input value={form.unvan} onChange={e=>setForm(f=>({...f,unvan:e.target.value}))} style={I} placeholder="Çevirmen, Editör..." /></div>
+        </div>
+      </div>
+      <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button></div>
+    </div>
+  )
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        {/* Sol: Yetkili Kullanıcılar */}
-        <div>
-          <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px' }}>🎖️ Yetkili Kullanıcılar</div>
-          <Msg text={msg} />
-          <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Kullanıcı ara..." style={{ ...I, marginBottom: '12px' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {filtreliKullanicilar.map(u => (
-              <div key={u.id} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                  {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>👤</div>}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{u.kullanici_adi}</div>
-                  <span style={{ fontSize: '11px', color: rolRenk[u.rol] || '#888', fontWeight: 600 }}>{rolEtiket[u.rol] || u.rol}</span>
-                </div>
-                <select value={u.rol} onChange={e => rolDegistir(u.id, e.target.value)} style={{ padding: '5px 8px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
-                  <option value="admin">Admin</option>
-                  <option value="yonetici">Yönetici</option>
-                  <option value="konsey">Konsey</option>
-                  <option value="okuyucu">Okuyucu</option>
-                </select>
-              </div>
-            ))}
-            {filtreliKullanicilar.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', padding: '12px 0' }}>Yetkili kullanıcı yok.</div>}
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}><div style={{ fontSize:'16px',fontWeight:600 }}>Konsey Ekibi</div><button onClick={()=>setMod('form')} style={BP}>+ Yeni Üye</button></div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {ekip.map((u,i)=>(
+          <div key={u.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<ekip.length-1?'1px solid #f0ede8':'none' }}>
+            {u.avatar_url?<img src={u.avatar_url} style={{ width:'40px',height:'40px',borderRadius:'50%',objectFit:'cover' }} />:<div style={{ width:'40px',height:'40px',borderRadius:'50%',background:'#f5f4f0',display:'flex',alignItems:'center',justifyContent:'center' }}>👤</div>}
+            <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{u.isim}</div><div style={{ fontSize:'12px',color:'#888' }}>{u.unvan}</div></div>
+            <button onClick={()=>{setForm({...bos,...u});setAvatarOnizleme(u.avatar_url);setDuzenleId(u.id);setMod('form')}} style={BS}>Düzenle</button>
+            <button onClick={()=>sil(u.id)} style={BD}>Sil</button>
           </div>
-        </div>
-
-        {/* Sağ: Çeviri Ekibi */}
-        <div>
-          <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px' }}>🛠️ Çeviri Ekibi</div>
-          <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
-              <input value={ekipIsim} onChange={e => setEkipIsim(e.target.value)} placeholder="İsim *" style={I} />
-              <input value={ekipUnvan} onChange={e => setEkipUnvan(e.target.value)} placeholder="Unvan (Çevirmen, Balonlama...)" style={I} />
-            </div>
-            <button onClick={ekipEkle} style={BP}>+ Ekip Üyesi Ekle</button>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {ekip.map(e => (
-              <div key={e.id} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', minWidth: '160px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{e.isim}</div>
-                  {e.unvan && <div style={{ fontSize: '11px', color: '#888' }}>{e.unvan}</div>}
-                </div>
-                <button onClick={() => ekipSil(e.id)} style={{ ...BD, padding: '4px 8px', fontSize: '11px' }}>Sil</button>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
+        {ekip.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Henüz üye yok</div>}
       </div>
     </div>
   )
@@ -764,449 +758,227 @@ function KonseySayfasi() {
 
 // ---- YAZARLAR & ÇİZERLER ----
 function YazarCizerSayfasi() {
-  const [liste, setListe] = useState([])
-  const [aramaMetni, setAramaMetni] = useState('')
-  const [filtre, setFiltre] = useState('hepsi') // hepsi, yazar, cizer
-  const [secili, setSecili] = useState(null) // detay göster
-  const [secilenSeriler, setSecilenSeriler] = useState([])
+  const [yazarlar, setYazarlar] = useState([])
+  const [cizerler, setCizerler] = useState([])
+  const [tab, setTab] = useState('yazarlar')
   const [mod, setMod] = useState('liste')
-  const [form, setForm] = useState({ isim: '', biyografi: '', fotograf_url: '', tip: 'yazar' })
+  const [tip, setTip] = useState('yazar')
   const [duzenleId, setDuzenleId] = useState(null)
-  const [duzenleType, setDuzenleType] = useState('yazar')
   const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [fotoOnizleme, setFotoOnizleme] = useState(null)
+  const bos = { isim:'',biyografi:'',fotograf_url:'' }
+  const [form, setForm] = useState(bos)
 
-  useEffect(() => { fetchListe() }, [])
-
-  async function fetchListe() {
-    const [y, c] = await Promise.all([
-      supabase.from('yazarlar').select('*').order('isim'),
-      supabase.from('cizerler').select('*').order('isim'),
-    ])
-    const yazarlar = (y.data || []).map(x => ({ ...x, tip: 'yazar' }))
-    const cizerler = (c.data || []).map(x => ({ ...x, tip: 'cizer' }))
-    setListe([...yazarlar, ...cizerler].sort((a, b) => a.isim.localeCompare(b.isim)))
-  }
-
-  async function detayGoster(kisi) {
-    setSecili(kisi)
-    const tablo = kisi.tip === 'yazar' ? 'seri_yazarlar' : 'seri_cizerler'
-    const alan = kisi.tip === 'yazar' ? 'yazar_id' : 'cizer_id'
-    const { data } = await supabase.from(tablo).select('seriler(id, baslik, kapak_url, durum)').eq(alan, kisi.id)
-    setSecilenSeriler(data?.map(x => x.seriler).filter(Boolean) || [])
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() {
+    const [y,c] = await Promise.all([supabase.from('yazarlar').select('*').order('isim'),supabase.from('cizerler').select('*').order('isim')])
+    setYazarlar(y.data||[]); setCizerler(c.data||[])
   }
 
   async function kaydet() {
     if (!form.isim) { setMsg('❌ İsim zorunlu!'); return }
-    const tablo = form.tip === 'yazar' ? 'yazarlar' : 'cizerler'
-    const payload = { isim: form.isim, biyografi: form.biyografi, fotograf_url: form.fotograf_url }
-    if (duzenleId) {
-      await supabase.from(tablo).update(payload).eq('id', duzenleId)
-      if (duzenleType !== form.tip) {
-        const eskiTablo = duzenleType === 'yazar' ? 'yazarlar' : 'cizerler'
-        await supabase.from(eskiTablo).delete().eq('id', duzenleId)
-        await supabase.from(tablo).insert([payload])
-      }
-    } else {
-      await supabase.from(tablo).insert([payload])
-    }
-    setMsg(duzenleId ? '✅ Güncellendi!' : '✅ Eklendi!')
-    setForm({ isim: '', biyografi: '', fotograf_url: '', tip: 'yazar' })
-    setDuzenleId(null); setMod('liste'); fetchListe()
-    setTimeout(() => setMsg(''), 2000)
+    setYukleniyor(true)
+    const tablo = tip==='yazar'?'yazarlar':'cizerler'
+    if (duzenleId) await supabase.from(tablo).update(form).eq('id',duzenleId)
+    else await supabase.from(tablo).insert([form])
+    setMsg('✅ Kaydedildi!'); setForm(bos); setDuzenleId(null); setFotoOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
-  async function sil(id, tip) {
+  async function sil(id) {
     if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from(tip === 'yazar' ? 'yazarlar' : 'cizerler').delete().eq('id', id)
-    if (secili?.id === id) setSecili(null)
-    fetchListe()
+    await supabase.from(tip==='yazar'?'yazarlar':'cizerler').delete().eq('id',id); fetchHepsi()
   }
 
-  function duzenleAc(kisi) {
-    setForm({ isim: kisi.isim, biyografi: kisi.biyografi || '', fotograf_url: kisi.fotograf_url || '', tip: kisi.tip })
-    setDuzenleId(kisi.id); setDuzenleType(kisi.tip); setMod('form')
-  }
-
-  const filtrelenmis = liste.filter(k => {
-    const aramaUyumu = k.isim.toLowerCase().includes(aramaMetni.toLowerCase())
-    const tipUyumu = filtre === 'hepsi' || (filtre === 'yazar' && k.tip === 'yazar') || (filtre === 'cizer' && k.tip === 'cizer')
-    return aramaUyumu && tipUyumu
-  })
-
-  if (mod === 'form') return (
-    <div style={{ maxWidth: '480px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => { setMod('liste'); setDuzenleId(null) }} style={{ ...BS, padding: '7px 14px' }}>← Geri</button>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>{duzenleId ? 'Düzenle' : 'Yeni Ekle'}</div>
-      </div>
+  if (mod==='form') return (
+    <div style={{ maxWidth:'500px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>← Geri</button><div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Düzenle':`Yeni ${tip==='yazar'?'Yazar':'Çizer'}`}</div></div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div>
-          <div style={L}>Tür</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[['yazar', '✍️ Yazar'], ['cizer', '🖊️ Çizer']].map(([val, lbl]) => (
-              <button key={val} onClick={() => setForm(f => ({ ...f, tip: val }))}
-                style={{ padding: '7px 18px', borderRadius: '100px', border: `1px solid ${form.tip === val ? '#111' : '#e8e6e0'}`, background: form.tip === val ? '#111' : '#fff', color: form.tip === val ? '#fff' : '#888', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>{lbl}</button>
-            ))}
-          </div>
+      <div style={{ display:'flex',gap:'20px',marginBottom:'16px',alignItems:'flex-start' }}>
+        <ResimYukle onizleme={fotoOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,fotograf_url:url}));setFotoOnizleme(prev)}} bucket="avatarlar" width="80px" height="80px" />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>İsim</div><input value={form.isim} onChange={e=>setForm(f=>({...f,isim:e.target.value}))} style={I} /></div>
+          <div><div style={LB}>Biyografi</div><textarea value={form.biyografi} onChange={e=>setForm(f=>({...f,biyografi:e.target.value}))} style={{...I,height:'80px'}} /></div>
         </div>
-        <div><div style={L}>İsim *</div><input value={form.isim} onChange={e => setForm(f => ({ ...f, isim: e.target.value }))} placeholder="Ad Soyad" style={I} /></div>
-        <div><div style={L}>Fotoğraf URL</div><input value={form.fotograf_url} onChange={e => setForm(f => ({ ...f, fotograf_url: e.target.value }))} placeholder="https://..." style={I} /></div>
-        <div><div style={L}>Biyografi</div><textarea value={form.biyografi} onChange={e => setForm(f => ({ ...f, biyografi: e.target.value }))} placeholder="Kısa biyografi..." rows={4} style={{ ...I, resize: 'vertical' }} /></div>
-        <button onClick={kaydet} style={{ ...BP, padding: '12px' }}>{duzenleId ? '✓ Güncelle' : '+ Ekle'}</button>
       </div>
+      <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button></div>
     </div>
   )
 
+  const liste = tab==='yazarlar'?yazarlar:cizerler
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: secili ? '1fr 340px' : '1fr', gap: '20px' }}>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '16px', fontWeight: 600 }}>Yazarlar & Çizerler ({filtrelenmis.length})</div>
-          <button onClick={() => setMod('form')} style={BP}>+ Yeni Ekle</button>
-        </div>
-        <Msg text={msg} />
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-          <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Ara..." style={{ ...I, flex: 1, minWidth: '160px' }} />
-          {['hepsi', 'yazar', 'cizer'].map(f => (
-            <button key={f} onClick={() => setFiltre(f)}
-              style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${filtre === f ? '#111' : '#e8e6e0'}`, background: filtre === f ? '#111' : '#fff', color: filtre === f ? '#fff' : '#888', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' }}>
-              {f === 'hepsi' ? 'Hepsi' : f === 'yazar' ? '✍️ Yazarlar' : '🖊️ Çizerler'}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {filtrelenmis.map(kisi => (
-            <div key={kisi.id + kisi.tip} onClick={() => detayGoster(kisi)}
-              style={{ background: secili?.id === kisi.id && secili?.tip === kisi.tip ? '#f0ede8' : '#fff', border: `1px solid ${secili?.id === kisi.id && secili?.tip === kisi.tip ? '#d0c8be' : '#e8e6e0'}`, borderRadius: '10px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                {kisi.fotograf_url ? <img src={kisi.fotograf_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>{kisi.tip === 'yazar' ? '✍️' : '🖊️'}</div>}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 500 }}>{kisi.isim}</div>
-                <div style={{ fontSize: '11px', color: '#888' }}>{kisi.tip === 'yazar' ? 'Yazar' : 'Çizer'}</div>
-              </div>
-              <button onClick={e => { e.stopPropagation(); duzenleAc(kisi) }} style={BS}>Düzenle</button>
-              <button onClick={e => { e.stopPropagation(); sil(kisi.id, kisi.tip) }} style={BD}>Sil</button>
-            </div>
-          ))}
-        </div>
+    <div>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>Yazarlar & Çizerler</div>
+        <button onClick={()=>{setTip(tab==='yazarlar'?'yazar':'cizer');setMod('form')}} style={BP}>+ Yeni Ekle</button>
       </div>
-      {secili && (
-        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px', alignSelf: 'start', position: 'sticky', top: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{secili.isim}</div>
-            <button onClick={() => setSecili(null)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#aaa' }}>×</button>
+      <div style={{ display:'flex',gap:'8px',marginBottom:'16px' }}>
+        {[['yazarlar','Yazarlar'],['cizerler','Çizerler']].map(([key,label])=><button key={key} onClick={()=>setTab(key)} style={{...BS,background:tab===key?'#111':'#f5f4f0',color:tab===key?'#fff':'#111',border:'none'}}>{label}</button>)}
+      </div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {liste.map((x,i)=>(
+          <div key={x.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<liste.length-1?'1px solid #f0ede8':'none' }}>
+            {x.fotograf_url?<img src={x.fotograf_url} style={{ width:'40px',height:'40px',borderRadius:'50%',objectFit:'cover' }} />:<div style={{ width:'40px',height:'40px',borderRadius:'50%',background:'#f5f4f0',display:'flex',alignItems:'center',justifyContent:'center' }}>✍️</div>}
+            <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{x.isim}</div>{x.biyografi&&<div style={{ fontSize:'12px',color:'#888',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{x.biyografi}</div>}</div>
+            <button onClick={()=>{setTip(tab==='yazarlar'?'yazar':'cizer');setForm({...bos,...x});setFotoOnizleme(x.fotograf_url);setDuzenleId(x.id);setMod('form')}} style={BS}>Düzenle</button>
+            <button onClick={()=>{setTip(tab==='yazarlar'?'yazar':'cizer');sil(x.id)}} style={BD}>Sil</button>
           </div>
-          {secili.biyografi && <div style={{ fontSize: '12px', color: '#888', marginBottom: '14px', lineHeight: 1.6 }}>{secili.biyografi}</div>}
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Serileri ({secilenSeriler.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {secilenSeriler.map(s => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: '1px solid #f0ede8' }}>
-                <div style={{ width: '28px', height: '38px', borderRadius: '4px', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                  {s.kapak_url ? <img src={s.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>📚</div>}
-                </div>
-                <div style={{ flex: 1, fontSize: '12px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</div>
-              </div>
-            ))}
-            {secilenSeriler.length === 0 && <div style={{ fontSize: '12px', color: '#aaa' }}>Henüz seri yok.</div>}
-          </div>
-        </div>
-      )}
+        ))}
+        {liste.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Henüz kayıt yok</div>}
+      </div>
     </div>
   )
 }
 
 // ---- KATEGORİLER ----
 function KategoriSayfasi() {
-  const [liste, setListe] = useState([])
-  const [secili, setSecili] = useState(null)
-  const [seciliSeriler, setSeciliSeriler] = useState([])
+  const [kategoriler, setKategoriler] = useState([])
   const [mod, setMod] = useState('liste')
-  const [form, setForm] = useState({ isim: '', aciklama: '', resim_url: '' })
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
-  const [aramaMetni, setAramaMetni] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [resimOnizleme, setResimOnizleme] = useState(null)
+  const bos = { isim:'',aciklama:'',resim_url:'' }
+  const [form, setForm] = useState(bos)
 
-  useEffect(() => { fetchListe() }, [])
-
-  async function fetchListe() {
-    const { data } = await supabase.from('kategoriler').select('*').order('isim')
-    setListe(data || [])
-  }
-
-  async function detayGoster(kat) {
-    setSecili(kat)
-    const { data } = await supabase.from('seriler').select('id, baslik, kapak_url, durum').eq('kategori_id', kat.id).order('baslik')
-    setSeciliSeriler(data || [])
-  }
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('kategoriler').select('*').order('isim'); setKategoriler(data||[]) }
 
   async function kaydet() {
     if (!form.isim) { setMsg('❌ İsim zorunlu!'); return }
-    const payload = { isim: form.isim, aciklama: form.aciklama, resim_url: form.resim_url }
-    if (duzenleId) await supabase.from('kategoriler').update(payload).eq('id', duzenleId)
-    else await supabase.from('kategoriler').insert([payload])
-    setMsg(duzenleId ? '✅ Güncellendi!' : '✅ Eklendi!')
-    setForm({ isim: '', aciklama: '', resim_url: '' }); setDuzenleId(null); setMod('liste'); fetchListe()
-    setTimeout(() => setMsg(''), 2000)
+    setYukleniyor(true)
+    if (duzenleId) await supabase.from('kategoriler').update(form).eq('id',duzenleId)
+    else await supabase.from('kategoriler').insert([form])
+    setMsg(duzenleId?'✅ Güncellendi!':'✅ Kategori eklendi!')
+    setForm(bos); setDuzenleId(null); setResimOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
-  async function sil(id) {
-    if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from('kategoriler').delete().eq('id', id)
-    if (secili?.id === id) setSecili(null)
-    fetchListe()
-  }
+  async function sil(id) { if (!confirm('Silmek istediğine emin misin?')) return; await supabase.from('kategoriler').delete().eq('id',id); fetchHepsi() }
 
-  function duzenleAc(kat) {
-    setForm({ isim: kat.isim, aciklama: kat.aciklama || '', resim_url: kat.resim_url || '' })
-    setDuzenleId(kat.id); setMod('form')
-  }
-
-  const filtrelenmis = aramaMetni ? liste.filter(k => k.isim.toLowerCase().includes(aramaMetni.toLowerCase())) : liste
-
-  if (mod === 'form') return (
-    <div style={{ maxWidth: '480px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => { setMod('liste'); setDuzenleId(null) }} style={{ ...BS, padding: '7px 14px' }}>← Geri</button>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>{duzenleId ? 'Kategori Düzenle' : 'Yeni Kategori'}</div>
-      </div>
+  if (mod==='form') return (
+    <div style={{ maxWidth:'500px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>← Geri</button><div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Kategori Düzenle':'Yeni Kategori'}</div></div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div><div style={L}>İsim *</div><input value={form.isim} onChange={e => setForm(f => ({ ...f, isim: e.target.value }))} placeholder="Kategori adı" style={I} /></div>
-        <div><div style={L}>Resim URL</div><input value={form.resim_url} onChange={e => setForm(f => ({ ...f, resim_url: e.target.value }))} placeholder="https://..." style={I} /></div>
-        {form.resim_url && <img src={form.resim_url} style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e8e6e0' }} />}
-        <div><div style={L}>Açıklama</div><textarea value={form.aciklama} onChange={e => setForm(f => ({ ...f, aciklama: e.target.value }))} placeholder="Kategori açıklaması..." rows={3} style={{ ...I, resize: 'vertical' }} /></div>
-        <button onClick={kaydet} style={{ ...BP, padding: '12px' }}>{duzenleId ? '✓ Güncelle' : '+ Ekle'}</button>
+      <div style={{ display:'flex',gap:'20px',marginBottom:'16px',alignItems:'flex-start' }}>
+        <ResimYukle onizleme={resimOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,resim_url:url}));setResimOnizleme(prev)}} bucket="kategoriler" width="80px" height="80px" />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>İsim</div><input value={form.isim} onChange={e=>setForm(f=>({...f,isim:e.target.value}))} style={I} /></div>
+          <div><div style={LB}>Açıklama</div><textarea value={form.aciklama} onChange={e=>setForm(f=>({...f,aciklama:e.target.value}))} style={{...I,height:'80px'}} /></div>
+        </div>
       </div>
+      <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button></div>
     </div>
   )
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: secili ? '1fr 300px' : '1fr', gap: '20px' }}>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 600 }}>Kategoriler ({filtrelenmis.length})</div>
-          <button onClick={() => setMod('form')} style={BP}>+ Yeni Kategori</button>
-        </div>
-        <Msg text={msg} />
-        <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Ara..." style={{ ...I, marginBottom: '12px' }} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {filtrelenmis.map(kat => (
-            <div key={kat.id} onClick={() => detayGoster(kat)}
-              style={{ background: secili?.id === kat.id ? '#f0ede8' : '#fff', border: `1px solid ${secili?.id === kat.id ? '#d0c8be' : '#e8e6e0'}`, borderRadius: '10px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-              {kat.resim_url && <img src={kat.resim_url} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px' }} />}
-              {!kat.resim_url && <div style={{ width: '40px', height: '40px', background: '#f0ede8', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🏢</div>}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 500 }}>{kat.isim}</div>
-                {kat.aciklama && <div style={{ fontSize: '11px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{kat.aciklama}</div>}
-              </div>
-              <button onClick={e => { e.stopPropagation(); duzenleAc(kat) }} style={BS}>Düzenle</button>
-              <button onClick={e => { e.stopPropagation(); sil(kat.id) }} style={BD}>Sil</button>
-            </div>
-          ))}
-        </div>
+    <div>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}><div style={{ fontSize:'16px',fontWeight:600 }}>Kategoriler</div><button onClick={()=>setMod('form')} style={BP}>+ Yeni Kategori</button></div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {kategoriler.map((k,i)=>(
+          <div key={k.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<kategoriler.length-1?'1px solid #f0ede8':'none' }}>
+            {k.resim_url?<img src={k.resim_url} style={{ width:'40px',height:'40px',borderRadius:'8px',objectFit:'cover' }} />:<div style={{ width:'40px',height:'40px',borderRadius:'8px',background:'#f5f4f0' }} />}
+            <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{k.isim}</div>{k.aciklama&&<div style={{ fontSize:'12px',color:'#888' }}>{k.aciklama}</div>}</div>
+            <button onClick={()=>{setForm({...bos,...k});setResimOnizleme(k.resim_url);setDuzenleId(k.id);setMod('form')}} style={BS}>Düzenle</button>
+            <button onClick={()=>sil(k.id)} style={BD}>Sil</button>
+          </div>
+        ))}
+        {kategoriler.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Henüz kategori yok</div>}
       </div>
-      {secili && (
-        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px', alignSelf: 'start', position: 'sticky', top: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{secili.isim}</div>
-            <button onClick={() => setSecili(null)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#aaa' }}>×</button>
-          </div>
-          {secili.resim_url && <img src={secili.resim_url} style={{ width: '100%', maxHeight: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }} />}
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Seriler ({seciliSeriler.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            {seciliSeriler.map(s => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f0ede8' }}>
-                <div style={{ width: '24px', height: '32px', borderRadius: '3px', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                  {s.kapak_url && <img src={s.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                </div>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{s.baslik}</span>
-              </div>
-            ))}
-            {seciliSeriler.length === 0 && <div style={{ fontSize: '12px', color: '#aaa' }}>Bu kategoride seri yok.</div>}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 // ---- TÜRLER ----
 function TurlerSayfasi() {
-  const [liste, setListe] = useState([])
-  const [secili, setSecili] = useState(null)
-  const [seciliSeriler, setSeciliSeriler] = useState([])
+  const [turler, setTurler] = useState([])
   const [mod, setMod] = useState('liste')
-  const [form, setForm] = useState({ isim: '', aciklama: '', resim_url: '' })
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
-  const [aramaMetni, setAramaMetni] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [resimOnizleme, setResimOnizleme] = useState(null)
+  const bos = { isim:'',aciklama:'',resim_url:'' }
+  const [form, setForm] = useState(bos)
 
-  useEffect(() => { fetchListe() }, [])
-
-  async function fetchListe() {
-    const { data } = await supabase.from('turler').select('*').order('isim')
-    setListe(data || [])
-  }
-
-  async function detayGoster(tur) {
-    setSecili(tur)
-    const { data } = await supabase.from('seriler').select('id, baslik, kapak_url').filter('turler', 'cs', `{${tur.id}}`).order('baslik')
-    setSeciliSeriler(data || [])
-  }
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('turler').select('*').order('isim'); setTurler(data||[]) }
 
   async function kaydet() {
     if (!form.isim) { setMsg('❌ İsim zorunlu!'); return }
-    const payload = { isim: form.isim, aciklama: form.aciklama, resim_url: form.resim_url }
-    if (duzenleId) await supabase.from('turler').update(payload).eq('id', duzenleId)
-    else await supabase.from('turler').insert([payload])
-    setMsg(duzenleId ? '✅ Güncellendi!' : '✅ Eklendi!')
-    setForm({ isim: '', aciklama: '', resim_url: '' }); setDuzenleId(null); setMod('liste'); fetchListe()
-    setTimeout(() => setMsg(''), 2000)
+    setYukleniyor(true)
+    if (duzenleId) await supabase.from('turler').update(form).eq('id',duzenleId)
+    else await supabase.from('turler').insert([form])
+    setMsg(duzenleId?'✅ Güncellendi!':'✅ Tür eklendi!')
+    setForm(bos); setDuzenleId(null); setResimOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
-  async function sil(id) {
-    if (!confirm('Silmek istediğine emin misin?')) return
-    await supabase.from('turler').delete().eq('id', id)
-    if (secili?.id === id) setSecili(null)
-    fetchListe()
-  }
+  async function sil(id) { if (!confirm('Silmek istediğine emin misin?')) return; await supabase.from('turler').delete().eq('id',id); fetchHepsi() }
 
-  function duzenleAc(tur) {
-    setForm({ isim: tur.isim, aciklama: tur.aciklama || '', resim_url: tur.resim_url || '' })
-    setDuzenleId(tur.id); setMod('form')
-  }
-
-  const filtrelenmis = aramaMetni ? liste.filter(t => t.isim.toLowerCase().includes(aramaMetni.toLowerCase())) : liste
-
-  if (mod === 'form') return (
-    <div style={{ maxWidth: '480px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={() => { setMod('liste'); setDuzenleId(null) }} style={{ ...BS, padding: '7px 14px' }}>← Geri</button>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>{duzenleId ? 'Tür Düzenle' : 'Yeni Tür'}</div>
-      </div>
+  if (mod==='form') return (
+    <div style={{ maxWidth:'500px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>← Geri</button><div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Tür Düzenle':'Yeni Tür'}</div></div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div><div style={L}>İsim *</div><input value={form.isim} onChange={e => setForm(f => ({ ...f, isim: e.target.value }))} placeholder="Tür adı" style={I} /></div>
-        <div><div style={L}>Resim URL</div><input value={form.resim_url} onChange={e => setForm(f => ({ ...f, resim_url: e.target.value }))} placeholder="https://..." style={I} /></div>
-        {form.resim_url && <img src={form.resim_url} style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e8e6e0' }} />}
-        <div><div style={L}>Açıklama</div><textarea value={form.aciklama} onChange={e => setForm(f => ({ ...f, aciklama: e.target.value }))} placeholder="Tür açıklaması..." rows={3} style={{ ...I, resize: 'vertical' }} /></div>
-        <button onClick={kaydet} style={{ ...BP, padding: '12px' }}>{duzenleId ? '✓ Güncelle' : '+ Ekle'}</button>
+      <div style={{ display:'flex',gap:'20px',marginBottom:'16px',alignItems:'flex-start' }}>
+        <ResimYukle onizleme={resimOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,resim_url:url}));setResimOnizleme(prev)}} bucket="kategoriler" width="80px" height="80px" />
+        <div style={{ flex:1 }}>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>İsim</div><input value={form.isim} onChange={e=>setForm(f=>({...f,isim:e.target.value}))} style={I} /></div>
+          <div><div style={LB}>Açıklama</div><textarea value={form.aciklama} onChange={e=>setForm(f=>({...f,aciklama:e.target.value}))} style={{...I,height:'80px'}} /></div>
+        </div>
       </div>
+      <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button></div>
     </div>
   )
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: secili ? '1fr 280px' : '1fr', gap: '20px' }}>
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 600 }}>Türler ({filtrelenmis.length})</div>
-          <button onClick={() => setMod('form')} style={BP}>+ Yeni Tür</button>
-        </div>
-        <Msg text={msg} />
-        <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Ara..." style={{ ...I, marginBottom: '12px' }} />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {filtrelenmis.map(tur => (
-            <div key={tur.id} onClick={() => detayGoster(tur)}
-              style={{ background: secili?.id === tur.id ? '#f0ede8' : '#fff', border: `1px solid ${secili?.id === tur.id ? '#d0c8be' : '#e8e6e0'}`, borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              {tur.resim_url && <img src={tur.resim_url} style={{ width: '28px', height: '28px', objectFit: 'cover', borderRadius: '4px' }} />}
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 500 }}>{tur.isim}</div>
-              </div>
-              <button onClick={e => { e.stopPropagation(); duzenleAc(tur) }} style={{ ...BS, padding: '4px 8px', fontSize: '11px' }}>Düzenle</button>
-              <button onClick={e => { e.stopPropagation(); sil(tur.id) }} style={{ ...BD, padding: '4px 8px', fontSize: '11px' }}>Sil</button>
-            </div>
-          ))}
-        </div>
+    <div>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}><div style={{ fontSize:'16px',fontWeight:600 }}>Türler</div><button onClick={()=>setMod('form')} style={BP}>+ Yeni Tür</button></div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {turler.map((t,i)=>(
+          <div key={t.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<turler.length-1?'1px solid #f0ede8':'none' }}>
+            {t.resim_url?<img src={t.resim_url} style={{ width:'40px',height:'40px',borderRadius:'8px',objectFit:'cover' }} />:<div style={{ width:'40px',height:'40px',borderRadius:'8px',background:'#f5f4f0' }} />}
+            <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{t.isim}</div>{t.aciklama&&<div style={{ fontSize:'12px',color:'#888' }}>{t.aciklama}</div>}</div>
+            <button onClick={()=>{setForm({...bos,...t});setResimOnizleme(t.resim_url);setDuzenleId(t.id);setMod('form')}} style={BS}>Düzenle</button>
+            <button onClick={()=>sil(t.id)} style={BD}>Sil</button>
+          </div>
+        ))}
       </div>
-      {secili && (
-        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px', alignSelf: 'start', position: 'sticky', top: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>{secili.isim}</div>
-            <button onClick={() => setSecili(null)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#aaa' }}>×</button>
-          </div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Bu türdeki seriler ({seciliSeriler.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            {seciliSeriler.map(s => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #f0ede8' }}>
-                <div style={{ width: '24px', height: '32px', borderRadius: '3px', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                  {s.kapak_url && <img src={s.kapak_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                </div>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{s.baslik}</span>
-              </div>
-            ))}
-            {seciliSeriler.length === 0 && <div style={{ fontSize: '12px', color: '#aaa' }}>Bu türde seri yok.</div>}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 // ---- KULLANICILAR ----
 function KullanicilarSayfasi() {
-  const [liste, setListe] = useState([])
+  const [kullanicilar, setKullanicilar] = useState([])
   const [aramaMetni, setAramaMetni] = useState('')
   const [msg, setMsg] = useState('')
-  const [mevcutKullanici, setMevcutKullanici] = useState(null)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setMevcutKullanici(session?.user?.id))
-    fetchListe()
-  }, [])
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('profiller').select('*').order('created_at',{ascending:false}); setKullanicilar(data||[]) }
 
-  async function fetchListe() {
-    const { data } = await supabase.from('profiller').select('id, kullanici_adi, avatar_url, rol, askiya_alindi, created_at').order('created_at', { ascending: false })
-    setListe(data || [])
-  }
+  async function rolDegistir(id, yeniRol) { await supabase.from('profiller').update({rol:yeniRol}).eq('id',id); fetchHepsi(); setMsg('✅ Rol güncellendi!') }
+  async function banToggle(id, mevcut) { await supabase.from('profiller').update({askiya_alindi:!mevcut}).eq('id',id); fetchHepsi(); setMsg(mevcut?'✅ Ban kaldırıldı!':'✅ Kullanıcı banlandı!') }
 
-  async function rolDegistir(id, yeniRol) {
-    await supabase.from('profiller').update({ rol: yeniRol }).eq('id', id)
-    setMsg('✅ Rol güncellendi!'); fetchListe(); setTimeout(() => setMsg(''), 2000)
-  }
-
-  async function askiyaAl(id, durum) {
-    await supabase.from('profiller').update({ askiya_alindi: durum }).eq('id', id)
-    setMsg(durum ? '⚠️ Hesap askıya alındı.' : '✅ Hesap aktif edildi.'); fetchListe(); setTimeout(() => setMsg(''), 2000)
-  }
-
-  const rolRenk = { admin: '#7c3aed', yonetici: '#1d4ed8', konsey: '#065f46', okuyucu: '#888' }
-
-  const filtrelenmis = aramaMetni ? liste.filter(u => u.kullanici_adi?.toLowerCase().includes(aramaMetni.toLowerCase())) : liste
+  const filtreli = kullanicilar.filter(k=>!aramaMetni||k.kullanici_adi?.toLowerCase().includes(aramaMetni.toLowerCase()))
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>Kullanıcılar ({filtrelenmis.length})</div>
-      </div>
+      <div style={{ fontSize:'16px',fontWeight:600,marginBottom:'20px' }}>Kullanıcılar</div>
       <Msg text={msg} />
-      <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Kullanıcı ara..." style={{ ...I, maxWidth: '320px', marginBottom: '14px' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {filtrelenmis.map(u => (
-          <div key={u.id} style={{ background: u.askiya_alindi ? '#fff8f8' : '#fff', border: `1px solid ${u.askiya_alindi ? '#fecaca' : '#e8e6e0'}`, borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-              {u.avatar_url ? <img src={u.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>👤</div>}
+      <input value={aramaMetni} onChange={e=>setAramaMetni(e.target.value)} placeholder="Kullanıcı ara..." style={{...I,marginBottom:'16px',maxWidth:'300px'}} />
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {filtreli.map((k,i)=>(
+          <div key={k.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<filtreli.length-1?'1px solid #f0ede8':'none',opacity:k.askiya_alindi?0.5:1 }}>
+            {k.avatar_url?<img src={k.avatar_url} style={{ width:'36px',height:'36px',borderRadius:'50%',objectFit:'cover' }} />:<div style={{ width:'36px',height:'36px',borderRadius:'50%',background:'#f5f4f0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px' }}>👤</div>}
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:'14px',fontWeight:500 }}>{k.kullanici_adi} {k.askiya_alindi&&<span style={{ fontSize:'11px',background:'#fee2e2',color:'#dc2626',padding:'1px 6px',borderRadius:'4px' }}>Banlı</span>}</div>
+              <div style={{ fontSize:'12px',color:'#888' }}>Seviye {k.seviye} · {k.xp} XP · {new Date(k.created_at).toLocaleDateString('tr-TR')}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>{u.kullanici_adi || 'İsimsiz'}{u.askiya_alindi && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#dc2626', background: '#fff0f0', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>Askıda</span>}</div>
-              <span style={{ fontSize: '11px', color: rolRenk[u.rol] || '#888', fontWeight: 600 }}>{u.rol}</span>
-            </div>
-            {u.id !== mevcutKullanici && (
-              <>
-                <select value={u.rol} onChange={e => rolDegistir(u.id, e.target.value)} style={{ padding: '5px 8px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '6px', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}>
-                  <option value="okuyucu">Okuyucu</option>
-                  <option value="konsey">Konsey</option>
-                  <option value="yonetici">Yönetici</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <button onClick={() => askiyaAl(u.id, !u.askiya_alindi)} style={{ ...BS, color: u.askiya_alindi ? '#16a34a' : '#dc2626', borderColor: u.askiya_alindi ? '#bbf7d0' : '#fecaca', background: u.askiya_alindi ? '#f0fdf4' : '#fff0f0' }}>
-                  {u.askiya_alindi ? '✓ Aktif Et' : '⊘ Askıya Al'}
-                </button>
-              </>
-            )}
+            <select value={k.rol} onChange={e=>rolDegistir(k.id,e.target.value)} style={{...S,width:'auto',fontSize:'12px',padding:'4px 8px'}}>
+              <option value="okuyucu">Okuyucu</option><option value="cevirmeni">Çevirmen</option><option value="grafik">Grafik</option><option value="editor">Editör</option><option value="moderator">Moderatör</option><option value="admin">Admin</option><option value="yonetici">Yönetici</option>
+            </select>
+            <button onClick={()=>banToggle(k.id,k.askiya_alindi)} style={k.askiya_alindi?BS:BD}>{k.askiya_alindi?'Banı Kaldır':'Banla'}</button>
           </div>
         ))}
+        {filtreli.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Kullanıcı bulunamadı</div>}
       </div>
     </div>
   )
@@ -1215,197 +987,149 @@ function KullanicilarSayfasi() {
 // ---- YORUMLAR ----
 function YorumlarSayfasi() {
   const [yorumlar, setYorumlar] = useState([])
-  const [filtre, setFiltre] = useState('aktif')
+  const [secili, setSecili] = useState([])
   const [msg, setMsg] = useState('')
+  const [aramaMetni, setAramaMetni] = useState('')
 
-  useEffect(() => { fetchYorumlar() }, [filtre])
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('yorumlar').select('*, profiller(kullanici_adi), seriler(baslik)').eq('silindi',false).order('created_at',{ascending:false}); setYorumlar(data||[]) }
 
-  async function fetchYorumlar() {
-    let q = supabase.from('yorumlar').select('*, profiller(kullanici_adi, avatar_url), seriler(baslik), bolumler(baslik, sayi)').order('created_at', { ascending: false }).limit(100)
-    if (filtre === 'aktif') q = q.eq('silindi', false)
-    if (filtre === 'silindi') q = q.eq('silindi', true)
-    const { data } = await q
-    setYorumlar(data || [])
+  async function topluSil() {
+    if (secili.length===0) return
+    if (!confirm(`${secili.length} yorumu silmek istediğine emin misin?`)) return
+    await supabase.from('yorumlar').update({silindi:true}).in('id',secili)
+    setSecili([]); fetchHepsi(); setMsg('✅ Yorumlar silindi!')
   }
 
-  async function sil(id) {
-    await supabase.from('yorumlar').update({ silindi: true }).eq('id', id)
-    setMsg('✅ Yorum gizlendi.'); fetchYorumlar(); setTimeout(() => setMsg(''), 2000)
-  }
+  async function tekSil(id) { await supabase.from('yorumlar').update({silindi:true}).eq('id',id); fetchHepsi(); setMsg('✅ Yorum silindi!') }
 
-  async function geriAl(id) {
-    await supabase.from('yorumlar').update({ silindi: false }).eq('id', id)
-    setMsg('✅ Yorum geri yüklendi.'); fetchYorumlar(); setTimeout(() => setMsg(''), 2000)
-  }
-
-  async function kaliciSil(id) {
-    if (!confirm('Kalıcı olarak silinecek. Emin misin?')) return
-    await supabase.from('yorumlar').delete().eq('id', id)
-    setMsg('✅ Kalıcı olarak silindi.'); fetchYorumlar(); setTimeout(() => setMsg(''), 2000)
-  }
+  const filtreli = yorumlar.filter(y=>!aramaMetni||y.icerik.toLowerCase().includes(aramaMetni.toLowerCase()))
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <div style={{ fontSize: '16px', fontWeight: 600 }}>Yorumlar</div>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-        {[['aktif', 'Aktif'], ['silindi', 'Gizlenen'], ['hepsi', 'Hepsi']].map(([val, lbl]) => (
-          <button key={val} onClick={() => setFiltre(val)}
-            style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${filtre === val ? '#111' : '#e8e6e0'}`, background: filtre === val ? '#111' : '#fff', color: filtre === val ? '#fff' : '#888', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>{lbl}</button>
-        ))}
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}>
+        <div style={{ fontSize:'16px',fontWeight:600 }}>Yorumlar</div>
+        {secili.length>0&&<button onClick={topluSil} style={BD}>🗑️ {secili.length} Yorumu Sil</button>}
       </div>
       <Msg text={msg} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {yorumlar.map(y => (
-          <div key={y.id} style={{ background: y.silindi ? '#fff8f8' : '#fff', border: `1px solid ${y.silindi ? '#fecaca' : '#e8e6e0'}`, borderRadius: '10px', padding: '12px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', overflow: 'hidden', background: '#f0ede8', flexShrink: 0 }}>
-                {y.profiller?.avatar_url ? <img src={y.profiller.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>👤</div>}
+      <input value={aramaMetni} onChange={e=>setAramaMetni(e.target.value)} placeholder="Yorum ara..." style={{...I,marginBottom:'16px',maxWidth:'300px'}} />
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {filtreli.map((y,i)=>(
+          <div key={y.id} style={{ display:'flex',alignItems:'flex-start',gap:'12px',padding:'12px 16px',borderBottom:i<filtreli.length-1?'1px solid #f0ede8':'none',background:secili.includes(y.id)?'#fef9f0':'#fff' }}>
+            <input type="checkbox" checked={secili.includes(y.id)} onChange={e=>setSecili(e.target.checked?[...secili,y.id]:secili.filter(id=>id!==y.id))} style={{ marginTop:'3px' }} />
+            <div style={{ flex:1 }}>
+              <div style={{ display:'flex',gap:'8px',alignItems:'center',marginBottom:'4px' }}>
+                <span style={{ fontSize:'13px',fontWeight:500 }}>{y.profiller?.kullanici_adi}</span>
+                <span style={{ fontSize:'11px',color:'#aaa' }}>→</span>
+                <span style={{ fontSize:'12px',color:'#888' }}>{y.seriler?.baslik}</span>
+                <span style={{ fontSize:'11px',color:'#aaa' }}>{new Date(y.created_at).toLocaleDateString('tr-TR')}</span>
               </div>
-              <div style={{ flex: 1 }}>
-                <span style={{ fontSize: '12px', fontWeight: 600 }}>{y.profiller?.kullanici_adi || 'Anonim'}</span>
-                <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '8px' }}>{y.seriler?.baslik}{y.bolumler ? ` › #${y.bolumler.sayi}` : ''}</span>
-              </div>
-              {y.silindi && <span style={{ fontSize: '10px', color: '#dc2626', background: '#fff0f0', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>Gizlendi</span>}
+              <div style={{ fontSize:'13px' }}>{y.icerik}</div>
             </div>
-            <div style={{ fontSize: '13px', color: '#333', marginBottom: '8px', lineHeight: 1.5 }}>{y.icerik}</div>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {!y.silindi && <button onClick={() => sil(y.id)} style={BD}>Gizle</button>}
-              {y.silindi && <button onClick={() => geriAl(y.id)} style={{ ...BS, color: '#16a34a', borderColor: '#bbf7d0', background: '#f0fdf4' }}>Geri Al</button>}
-              <button onClick={() => kaliciSil(y.id)} style={{ ...BD, background: '#dc2626', color: '#fff', borderColor: '#dc2626' }}>Kalıcı Sil</button>
-            </div>
+            <button onClick={()=>tekSil(y.id)} style={BD}>Sil</button>
           </div>
         ))}
-        {yorumlar.length === 0 && <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Yorum yok.</div>}
+        {filtreli.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Yorum bulunamadı</div>}
       </div>
     </div>
   )
 }
 
-// ---- ANA SAYFA YÖNETİMİ ----
+// ---- ANA SAYFA & SEO ----
 function AnaSayfaSayfasi() {
-  const [logoUrl, setLogoUrl] = useState('')
-  const [sliderSeriler, setSliderSeriler] = useState([])
-  const [tumSeriler, setTumSeriler] = useState([])
+  const [ayarlar, setAyarlar] = useState({})
   const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [logoOnizleme, setLogoOnizleme] = useState(null)
+  const [ogOnizleme, setOgOnizleme] = useState(null)
 
-  useEffect(() => {
-    async function fetchData() {
-      const [logo, slider, seriler] = await Promise.all([
-        supabase.from('site_ayarlari').select('deger').eq('anahtar', 'logo_url').single(),
-        supabase.from('site_ayarlari').select('deger').eq('anahtar', 'slider').single(),
-        supabase.from('seriler').select('id, baslik, kapak_url').order('baslik'),
-      ])
-      setLogoUrl(logo.data?.deger?.url || '')
-      setSliderSeriler(slider.data?.deger || [])
-      setTumSeriler(seriler.data || [])
-    }
-    fetchData()
-  }, [])
-
-  async function logoKaydet() {
-    await supabase.from('site_ayarlari').upsert({ anahtar: 'logo_url', deger: { url: logoUrl }, guncellendi_at: new Date().toISOString() })
-    setMsg('✅ Logo kaydedildi!'); setTimeout(() => setMsg(''), 2000)
+  useEffect(() => { fetchAyarlar() }, [])
+  async function fetchAyarlar() {
+    const { data } = await supabase.from('site_ayarlari').select('*')
+    const obj = {}; data?.forEach(r=>{obj[r.anahtar]=r.deger})
+    setAyarlar(obj); setLogoOnizleme(typeof obj.logo_url==='string'?obj.logo_url:obj.logo_url?.url); setOgOnizleme(typeof obj.og_image==='string'?obj.og_image:obj.og_image?.url)
   }
-
-  function sliderEkle(seriId) {
-    if (!seriId || sliderSeriler.find(s => s.seri_id === seriId)) return
-    setSliderSeriler(prev => [...prev, { seri_id: seriId, siralama: prev.length }])
-  }
-
-  function sliderCikar(seriId) {
-    setSliderSeriler(prev => prev.filter(s => s.seri_id !== seriId))
-  }
-
-  async function sliderKaydet() {
-    await supabase.from('site_ayarlari').upsert({ anahtar: 'slider', deger: sliderSeriler, guncellendi_at: new Date().toISOString() })
-    setMsg('✅ Slider kaydedildi!'); setTimeout(() => setMsg(''), 2000)
-  }
-
-  const [secilenSeri, setSecilenSeri] = useState('')
-
-  return (
-    <div style={{ maxWidth: '680px' }}>
-      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '24px' }}>Ana Sayfa Yönetimi</div>
-      <Msg text={msg} />
-
-      {/* Logo */}
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>🖼️ Site Logosu</div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-          <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="Logo URL (https://...)" style={{ ...I, flex: 1 }} />
-          {logoUrl && <img src={logoUrl} style={{ height: '40px', maxWidth: '120px', objectFit: 'contain', border: '1px solid #e8e6e0', borderRadius: '6px', padding: '4px' }} />}
-        </div>
-        <button onClick={logoKaydet} style={BP}>Kaydet</button>
-      </div>
-
-      {/* Slider */}
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>🎠 Öne Çıkan Slider</div>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-          <AramaSecimTek liste={tumSeriler.map(s => ({ id: s.id, isim: s.baslik }))} secili={secilenSeri} onChange={setSecilenSeri} placeholder="Seri seç..." />
-          <button onClick={() => { sliderEkle(secilenSeri); setSecilenSeri('') }} style={BP}>Ekle</button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-          {sliderSeriler.map((item, i) => {
-            const seri = tumSeriler.find(s => s.id === item.seri_id)
-            return (
-              <div key={item.seri_id} style={{ background: '#f9f8f5', border: '1px solid #e8e6e0', borderRadius: '8px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#aaa', fontSize: '12px', width: '20px', textAlign: 'center' }}>{i + 1}</span>
-                {seri?.kapak_url && <img src={seri.kapak_url} style={{ width: '28px', height: '38px', objectFit: 'cover', borderRadius: '4px' }} />}
-                <span style={{ flex: 1, fontSize: '13px', fontWeight: 500 }}>{seri?.baslik || item.seri_id}</span>
-                <button onClick={() => sliderCikar(item.seri_id)} style={{ ...BD, padding: '4px 8px', fontSize: '11px' }}>Çıkar</button>
-              </div>
-            )
-          })}
-          {sliderSeriler.length === 0 && <div style={{ fontSize: '12px', color: '#aaa', padding: '8px 0' }}>Slider'a seri eklenmemiş.</div>}
-        </div>
-        <button onClick={sliderKaydet} style={BP}>Slider'ı Kaydet</button>
-      </div>
-    </div>
-  )
-}
-
-// ---- SAYFA YÖNETİMİ ----
-function SayfalarSayfasi() {
-  const [sayfalar, setSayfalar] = useState({ hakkimizda: '', iletisim: '', kullanim_kosullari: '' })
-  const [aktifSayfa, setAktifSayfa] = useState('hakkimizda')
-  const [msg, setMsg] = useState('')
-
-  useEffect(() => {
-    supabase.from('site_ayarlari').select('deger').eq('anahtar', 'sayfalar').single().then(({ data }) => {
-      if (data?.deger) setSayfalar(data.deger)
-    })
-  }, [])
 
   async function kaydet() {
-    await supabase.from('site_ayarlari').upsert({ anahtar: 'sayfalar', deger: sayfalar, guncellendi_at: new Date().toISOString() })
-    setMsg('✅ Sayfa kaydedildi!'); setTimeout(() => setMsg(''), 2000)
+    setYukleniyor(true)
+    await Promise.all(Object.entries(ayarlar).map(([anahtar,deger])=>supabase.from('site_ayarlari').upsert({anahtar,deger,guncellendi_at:new Date().toISOString()},{onConflict:'anahtar'})))
+    setMsg('✅ Ayarlar kaydedildi!'); setYukleniyor(false)
   }
 
-  const sayfaEtiketleri = { hakkimizda: 'Hakkımızda', iletisim: 'İletişim', kullanim_kosullari: 'Kullanım Koşulları' }
+  function guncelle(k,v) { setAyarlar(prev=>({...prev,[k]:v})) }
 
   return (
-    <div style={{ maxWidth: '680px' }}>
-      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>Sayfa Yönetimi</div>
+    <div style={{ maxWidth:'700px' }}>
+      <div style={{ fontSize:'16px',fontWeight:600,marginBottom:'20px' }}>Ana Sayfa & SEO Ayarları</div>
       <Msg text={msg} />
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        {Object.entries(sayfaEtiketleri).map(([key, lbl]) => (
-          <button key={key} onClick={() => setAktifSayfa(key)}
-            style={{ padding: '7px 14px', borderRadius: '100px', border: `1px solid ${aktifSayfa === key ? '#111' : '#e8e6e0'}`, background: aktifSayfa === key ? '#111' : '#fff', color: aktifSayfa === key ? '#fff' : '#888', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>{lbl}</button>
-        ))}
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',padding:'24px',marginBottom:'16px' }}>
+        <div style={{ fontSize:'14px',fontWeight:600,marginBottom:'16px' }}>Site Kimliği</div>
+        <div style={{ display:'flex',gap:'20px',marginBottom:'16px',alignItems:'flex-start' }}>
+          <div><div style={LB}>Logo</div><ResimYukle onizleme={logoOnizleme} onChange={(url,prev)=>{guncelle('logo_url',url);setLogoOnizleme(prev)}} bucket="site" width="100px" height="60px" /></div>
+          <div style={{ flex:1 }}>
+            <div style={{ marginBottom:'12px' }}><div style={LB}>Site Adı</div><input value={ayarlar.site_adi||''} onChange={e=>guncelle('site_adi',e.target.value)} style={I} placeholder="KonseyComics" /></div>
+            <div><div style={LB}>Site Sloganı</div><input value={ayarlar.site_slogan||''} onChange={e=>guncelle('site_slogan',e.target.value)} style={I} placeholder="Türkçe Çizgi Roman & Manga Okuma Platformu" /></div>
+          </div>
+        </div>
       </div>
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '20px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px' }}>{sayfaEtiketleri[aktifSayfa]}</div>
-        <textarea
-          value={sayfalar[aktifSayfa]}
-          onChange={e => setSayfalar(p => ({ ...p, [aktifSayfa]: e.target.value }))}
-          rows={14}
-          placeholder="Sayfa içeriği..."
-          style={{ ...I, resize: 'vertical', lineHeight: 1.7, marginBottom: '12px' }}
-        />
-        <button onClick={kaydet} style={BP}>Kaydet</button>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',padding:'24px',marginBottom:'16px' }}>
+        <div style={{ fontSize:'14px',fontWeight:600,marginBottom:'16px' }}>SEO Ayarları</div>
+        <div style={{ marginBottom:'12px' }}><div style={LB}>Meta Başlık</div><input value={ayarlar.meta_baslik||''} onChange={e=>guncelle('meta_baslik',e.target.value)} style={I} placeholder="KonseyComics - Türkçe Manga Oku" /></div>
+        <div style={{ marginBottom:'12px' }}><div style={LB}>Meta Açıklama</div><textarea value={ayarlar.meta_aciklama||''} onChange={e=>guncelle('meta_aciklama',e.target.value)} style={{...I,height:'80px'}} placeholder="Türkçe çeviri manga, manhwa ve webtoon oku..." /></div>
+        <div style={{ marginBottom:'12px' }}><div style={LB}>Anahtar Kelimeler</div><input value={ayarlar.anahtar_kelimeler||''} onChange={e=>guncelle('anahtar_kelimeler',e.target.value)} style={I} placeholder="manga oku, türkçe manga, manhwa..." /></div>
+        <div><div style={LB}>OG Image (Sosyal Medya Önizleme)</div><ResimYukle onizleme={ogOnizleme} onChange={(url,prev)=>{guncelle('og_image',url);setOgOnizleme(prev)}} bucket="site" width="120px" height="63px" /></div>
+      </div>
+      <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Tüm Ayarları Kaydet'}</button>
+    </div>
+  )
+}
+
+// ---- SAYFALAR ----
+function SayfalarSayfasi() {
+  const [sayfalar, setSayfalar] = useState([])
+  const [mod, setMod] = useState('liste')
+  const [duzenleKey, setDuzenleKey] = useState(null)
+  const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const bos = { baslik:'',slug:'',icerik:'',yayinda:true }
+  const [form, setForm] = useState(bos)
+
+  useEffect(() => { fetchHepsi() }, [])
+  async function fetchHepsi() { const { data } = await supabase.from('site_ayarlari').select('*').like('anahtar','sayfa_%'); setSayfalar(data||[]) }
+
+  function slugOlustur(v) { return v.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'') }
+
+  async function kaydet() {
+    if (!form.baslik) { setMsg('❌ Başlık zorunlu!'); return }
+    setYukleniyor(true)
+    const anahtar = `sayfa_${form.slug||slugOlustur(form.baslik)}`
+    await supabase.from('site_ayarlari').upsert({anahtar,deger:form,guncellendi_at:new Date().toISOString()},{onConflict:'anahtar'})
+    setMsg('✅ Sayfa kaydedildi!'); setForm(bos); setDuzenleKey(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
+  }
+
+  if (mod==='form') return (
+    <div style={{ maxWidth:'600px' }}>
+      <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleKey(null)}} style={BS}>← Geri</button><div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleKey?'Sayfa Düzenle':'Yeni Sayfa'}</div></div>
+      <Msg text={msg} />
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Başlık</div><input value={form.baslik} onChange={e=>setForm(f=>({...f,baslik:e.target.value,slug:slugOlustur(e.target.value)}))} style={I} /></div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>Slug</div><input value={form.slug} onChange={e=>setForm(f=>({...f,slug:e.target.value}))} style={I} /></div>
+      <div style={{ marginBottom:'12px' }}><div style={LB}>İçerik</div><textarea value={form.icerik} onChange={e=>setForm(f=>({...f,icerik:e.target.value}))} style={{...I,height:'200px'}} /></div>
+      <div style={{ marginBottom:'20px' }}><label style={{ display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'13px' }}><input type="checkbox" checked={form.yayinda} onChange={e=>setForm(f=>({...f,yayinda:e.target.checked}))} /> Yayında</label></div>
+      <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleKey(null)}} style={BS}>İptal</button></div>
+    </div>
+  )
+
+  return (
+    <div>
+      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px' }}><div style={{ fontSize:'16px',fontWeight:600 }}>Sayfalar</div><button onClick={()=>setMod('form')} style={BP}>+ Yeni Sayfa</button></div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',overflow:'hidden' }}>
+        {sayfalar.map((s,i)=>(
+          <div key={s.anahtar} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'14px 16px',borderBottom:i<sayfalar.length-1?'1px solid #f0ede8':'none' }}>
+            <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{s.deger?.baslik||s.anahtar}</div><div style={{ fontSize:'12px',color:'#888' }}>/{s.deger?.slug} · {s.deger?.yayinda?'Yayında':'Taslak'}</div></div>
+            <button onClick={()=>{setForm(s.deger||bos);setDuzenleKey(s.anahtar);setMod('form')}} style={BS}>Düzenle</button>
+          </div>
+        ))}
+        {sayfalar.length===0&&<div style={{ padding:'40px',textAlign:'center',color:'#aaa' }}>Henüz sayfa yok</div>}
       </div>
     </div>
   )
@@ -1413,40 +1137,31 @@ function SayfalarSayfasi() {
 
 // ---- SOSYAL MEDYA ----
 function SosyalMedyaSayfasi() {
-  const [form, setForm] = useState({ instagram: '', twitter: '', discord: '', youtube: '', tiktok: '' })
+  const [form, setForm] = useState({ instagram:'',twitter:'',discord:'',youtube:'',facebook:'' })
   const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
 
   useEffect(() => {
-    supabase.from('site_ayarlari').select('deger').eq('anahtar', 'sosyal_medya').single().then(({ data }) => {
-      if (data?.deger) setForm(prev => ({ ...prev, ...data.deger }))
+    supabase.from('site_ayarlari').select('*').eq('anahtar','sosyal_medya').single().then(({data})=>{
+      if (data?.deger) setForm(prev=>({...prev,...data.deger}))
     })
   }, [])
 
   async function kaydet() {
-    await supabase.from('site_ayarlari').upsert({ anahtar: 'sosyal_medya', deger: form, guncellendi_at: new Date().toISOString() })
-    setMsg('✅ Sosyal medya linkleri kaydedildi!'); setTimeout(() => setMsg(''), 2000)
+    setYukleniyor(true)
+    await supabase.from('site_ayarlari').upsert({anahtar:'sosyal_medya',deger:form,guncellendi_at:new Date().toISOString()},{onConflict:'anahtar'})
+    setMsg('✅ Kaydedildi!'); setYukleniyor(false)
   }
 
-  const alanlar = [
-    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/konseycomics', emoji: '📸' },
-    { key: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/konseycomics', emoji: '🐦' },
-    { key: 'discord', label: 'Discord', placeholder: 'https://discord.gg/...', emoji: '💬' },
-    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@konseycomics', emoji: '▶️' },
-    { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@konseycomics', emoji: '🎵' },
-  ]
-
   return (
-    <div style={{ maxWidth: '560px' }}>
-      <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px' }}>Sosyal Medya</div>
+    <div style={{ maxWidth:'500px' }}>
+      <div style={{ fontSize:'16px',fontWeight:600,marginBottom:'20px' }}>Sosyal Medya</div>
       <Msg text={msg} />
-      <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {alanlar.map(alan => (
-          <div key={alan.key}>
-            <div style={L}>{alan.emoji} {alan.label}</div>
-            <input value={form[alan.key]} onChange={e => setForm(f => ({ ...f, [alan.key]: e.target.value }))} placeholder={alan.placeholder} style={I} />
-          </div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',padding:'24px' }}>
+        {[['instagram','Instagram','https://instagram.com/konseycomics'],['twitter','Twitter / X','https://x.com/konseycomics'],['discord','Discord','https://discord.gg/...'],['youtube','YouTube','https://youtube.com/@konseycomics'],['facebook','Facebook','https://facebook.com/konseycomics']].map(([key,label,ph])=>(
+          <div key={key} style={{ marginBottom:'16px' }}><div style={LB}>{label}</div><input value={form[key]||''} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} style={I} placeholder={ph} /></div>
         ))}
-        <button onClick={kaydet} style={{ ...BP, padding: '12px', fontSize: '14px' }}>Kaydet</button>
+        <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button>
       </div>
     </div>
   )

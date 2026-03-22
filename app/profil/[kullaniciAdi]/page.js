@@ -2,6 +2,7 @@
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { getPublicProfileByUsername } from '../../lib/publicProfiles'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import TakipButonu from '../../components/TakipButonu'
@@ -36,7 +37,7 @@ export default function ProfilSayfasi() {
   useEffect(() => {
     async function fetchData() {
       const [profilRes, sessionRes] = await Promise.all([
-        supabase.from('profiller').select('*').eq('kullanici_adi', kullaniciAdi).single(),
+        getPublicProfileByUsername(kullaniciAdi),
         supabase.auth.getSession()
       ])
 
@@ -48,7 +49,9 @@ export default function ProfilSayfasi() {
 
       const [rozetRes, listeRes] = await Promise.all([
         supabase.from('kullanici_rozetleri').select('*, rozet_tanimlari(*)').eq('kullanici_id', profilRes.data.id).order('kazanildi_at'),
-        supabase.from('okuma_listesi').select('*, seriler(id, baslik, slug, kapak_url, kategori)').eq('kullanici_id', profilRes.data.id).order('updated_at', { ascending: false })
+        benimId === profilRes.data.id
+          ? supabase.from('okuma_listesi').select('*, seriler(id, baslik, slug, kapak_url, kategori)').eq('kullanici_id', profilRes.data.id).order('updated_at', { ascending: false })
+          : Promise.resolve({ data: [] })
       ])
 
       setRozetler(rozetRes.data || [])
@@ -95,7 +98,7 @@ export default function ProfilSayfasi() {
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#111', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '32px', color: '#fff', border: '3px solid var(--border)' }}>
                 {profil.avatar_url
-                  ? <img src={profil.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : profil.kullanici_adi[0].toUpperCase()
                 }
               </div>
@@ -174,48 +177,59 @@ export default function ProfilSayfasi() {
 
         {/* Okuma listesi */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
-            {[
-              { key: 'liste', label: `Tümü (${okumalistesi.length})` },
-              { key: 'okunuyor', label: `Okunuyor (${okunuyor.length})` },
-              { key: 'okundu', label: `Okundu (${okundu.length})` },
-              { key: 'okuyacak', label: `Okuyacak (${okuyacaklar.length})` },
-            ].map(s => (
-              <button key={s.key} onClick={() => setAktifSekme(s.key)} style={{ padding: '14px 20px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', color: aktifSekme === s.key ? 'var(--text)' : 'var(--text-muted)', borderBottom: aktifSekme === s.key ? '2px solid var(--text)' : '2px solid transparent' }}>
-                {s.label}
-              </button>
-            ))}
+          <div style={{ padding: '16px 16px 0', fontSize: '13px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--text-light)' }}>
+            Okuma Listesi
           </div>
-          <div style={{ padding: '16px' }}>
-            {(() => {
-              const liste = aktifSekme === 'okunuyor' ? okunuyor : aktifSekme === 'okundu' ? okundu : aktifSekme === 'okuyacak' ? okuyacaklar : okumalistesi
-              if (liste.length === 0) return (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>Liste boş.</div>
-              )
-              return (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
-                  {liste.map(item => (
-                    <Link key={item.id} href={`/seri/${item.seriler?.slug}`} style={{ textDecoration: 'none' }}>
-                      <div onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'none'} style={{ transition: 'transform 0.15s' }}>
-                        <div style={{ aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden', background: '#111', marginBottom: '6px', position: 'relative' }}>
-                          {item.seriler?.kapak_url
-                            ? <img src={item.seriler.kapak_url} alt={item.seriler.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#fff', fontFamily: "'Bebas Neue', sans-serif", padding: '4px', textAlign: 'center' }}>{item.seriler?.baslik}</div>
-                          }
-                          {aktifSekme === 'liste' && (
-                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', padding: '4px 6px' }}>
-                              <div style={{ fontSize: '9px', color: '#fff', fontWeight: 500 }}>{LISTE_ETIKET[item.durum]}</div>
+          {benimProfil ? (
+            <>
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', overflowX: 'auto', marginTop: '16px' }}>
+                {[
+                  { key: 'liste', label: `Tümü (${okumalistesi.length})` },
+                  { key: 'okunuyor', label: `Okunuyor (${okunuyor.length})` },
+                  { key: 'okundu', label: `Okundu (${okundu.length})` },
+                  { key: 'okuyacak', label: `Okuyacak (${okuyacaklar.length})` },
+                ].map(s => (
+                  <button key={s.key} onClick={() => setAktifSekme(s.key)} style={{ padding: '14px 20px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', color: aktifSekme === s.key ? 'var(--text)' : 'var(--text-muted)', borderBottom: aktifSekme === s.key ? '2px solid var(--text)' : '2px solid transparent' }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ padding: '16px' }}>
+                {(() => {
+                  const liste = aktifSekme === 'okunuyor' ? okunuyor : aktifSekme === 'okundu' ? okundu : aktifSekme === 'okuyacak' ? okuyacaklar : okumalistesi
+                  if (liste.length === 0) return (
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>Liste boş.</div>
+                  )
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '12px' }}>
+                      {liste.map(item => (
+                        <Link key={item.id} href={`/seri/${item.seriler?.slug}`} style={{ textDecoration: 'none' }}>
+                          <div onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'none'} style={{ transition: 'transform 0.15s' }}>
+                            <div style={{ aspectRatio: '2/3', borderRadius: '8px', overflow: 'hidden', background: '#111', marginBottom: '6px', position: 'relative' }}>
+                              {item.seriler?.kapak_url
+                                ? <img src={item.seriler.kapak_url} alt={item.seriler.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#fff', fontFamily: "'Bebas Neue', sans-serif", padding: '4px', textAlign: 'center' }}>{item.seriler?.baslik}</div>
+                              }
+                              {aktifSekme === 'liste' && (
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', padding: '4px 6px' }}>
+                                  <div style={{ fontSize: '9px', color: '#fff', fontWeight: 500 }}>{LISTE_ETIKET[item.durum]}</div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.seriler?.baslik}</div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )
-            })()}
-          </div>
+                            <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.seriler?.baslik}</div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: '20px 16px 24px', color: 'var(--text-muted)', fontSize: '14px' }}>
+              Bu kullanicinin okuma listesi gizli tutuluyor.
+            </div>
+          )}
         </div>
       </div>
       <Footer />

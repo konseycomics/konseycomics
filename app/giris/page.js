@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getPublicProfileByUsername } from '../lib/publicProfiles'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -17,7 +18,7 @@ export default function GirisKayit() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.push('/')
     })
-  }, [])
+  }, [router])
 
   async function handleGiris(e) {
     e.preventDefault()
@@ -54,11 +55,7 @@ export default function GirisKayit() {
     }
 
     // Kullanıcı adı müsait mi?
-    const { data: mevcutProfil } = await supabase
-      .from('profiller')
-      .select('id')
-      .eq('kullanici_adi', form.kullaniciAdi)
-      .single()
+    const { data: mevcutProfil } = await getPublicProfileByUsername(form.kullaniciAdi)
 
     if (mevcutProfil) {
       setHata('Bu kullanıcı adı zaten alınmış.')

@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getPublicProfilesByIds } from '../lib/publicProfiles'
 import Link from 'next/link'
 
 export default function BildirimZili({ kullaniciId }) {
@@ -9,26 +10,34 @@ export default function BildirimZili({ kullaniciId }) {
   const [okunmamis, setOkunmamis] = useState(0)
   const ref = useRef()
 
+  const fetchBildirimler = useCallback(async () => {
+    const { data } = await supabase
+      .from('bildirimler')
+      .select('*')
+      .eq('alici_id', kullaniciId)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    const profilMap = await getPublicProfilesByIds((data || []).map(bildirim => bildirim.gonderen_id))
+    const zenginlestirilmis = (data || []).map(bildirim => ({
+      ...bildirim,
+      gonderen: profilMap[bildirim.gonderen_id] || null,
+    }))
+    setBildirimler(zenginlestirilmis)
+    setOkunmamis(zenginlestirilmis.filter(b => !b.okundu).length)
+  }, [kullaniciId])
+
   useEffect(() => {
     if (!kullaniciId) return
-    fetchBildirimler()
+    async function yukle() {
+      await fetchBildirimler()
+    }
+    yukle()
 
     // Dışarı tıklanınca kapat
     function kapat(e) { if (ref.current && !ref.current.contains(e.target)) setAcik(false) }
     document.addEventListener('mousedown', kapat)
     return () => document.removeEventListener('mousedown', kapat)
-  }, [kullaniciId])
-
-  async function fetchBildirimler() {
-    const { data } = await supabase
-      .from('bildirimler')
-      .select('*, gonderen:profiller!gonderen_id(kullanici_adi, avatar_url)')
-      .eq('alici_id', kullaniciId)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setBildirimler(data || [])
-    setOkunmamis((data || []).filter(b => !b.okundu).length)
-  }
+  }, [fetchBildirimler, kullaniciId])
 
   async function handleAc() {
     setAcik(!acik)
@@ -67,7 +76,7 @@ export default function BildirimZili({ kullaniciId }) {
             ) : bildirimler.map(b => (
               <div key={b.id} style={{ display: 'flex', gap: '10px', padding: '12px 16px', background: b.okundu ? 'transparent' : 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
                 {b.gonderen?.avatar_url ? (
-                  <img src={b.gonderen.avatar_url} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={b.gonderen.avatar_url} alt={b.gonderen.kullanici_adi || 'Gonderen avatar'} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#111', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <BildirimIkonu tip={b.tip} />

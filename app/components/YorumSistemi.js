@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getPublicProfilesByIds } from '../lib/publicProfiles'
 import Link from 'next/link'
 
 export default function YorumSistemi({ bolumId, seriId }) {
@@ -13,6 +14,19 @@ export default function YorumSistemi({ bolumId, seriId }) {
   const [loading, setLoading] = useState(true)
   const [cevapVerilenId, setCevapVerilenId] = useState(null)
   const [begeniler, setBegeniler] = useState({})
+
+  const fetchYorumlar = useCallback(async () => {
+    const { data } = await supabase
+      .from('yorumlar')
+      .select('*')
+      .eq('bolum_id', bolumId)
+      .is('ust_yorum_id', null)
+      .eq('silindi', false)
+      .order('begeni_sayisi', { ascending: false })
+    const profilMap = await getPublicProfilesByIds((data || []).map(yorum => yorum.kullanici_id))
+    setYorumlar((data || []).map(yorum => ({ ...yorum, profiller: profilMap[yorum.kullanici_id] || null })))
+    setLoading(false)
+  }, [bolumId])
 
   useEffect(() => {
     fetchYorumlar()
@@ -32,19 +46,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
           })
       }
     })
-  }, [bolumId])
-
-  async function fetchYorumlar() {
-    const { data } = await supabase
-      .from('yorumlar')
-      .select('*, profiller(kullanici_adi, avatar_url, rol, seviye)')
-      .eq('bolum_id', bolumId)
-      .is('ust_yorum_id', null)
-      .eq('silindi', false)
-      .order('begeni_sayisi', { ascending: false })
-    setYorumlar(data || [])
-    setLoading(false)
-  }
+  }, [bolumId, fetchYorumlar])
 
   async function yorumGonder(ustYorumId = null) {
     if (!yeniYorum.trim() || !kullanici) return
@@ -89,9 +91,10 @@ export default function YorumSistemi({ bolumId, seriId }) {
     async function cevaplariGetir() {
       if (cevapAcik) { setCevapAcik(false); return }
       const { data } = await supabase.from('yorumlar')
-        .select('*, profiller(kullanici_adi, avatar_url, seviye)')
+        .select('*')
         .eq('ust_yorum_id', yorum.id).eq('silindi', false).order('created_at')
-      setCevaplar(data || [])
+      const profilMap = await getPublicProfilesByIds((data || []).map(cevap => cevap.kullanici_id))
+      setCevaplar((data || []).map(cevap => ({ ...cevap, profiller: profilMap[cevap.kullanici_id] || null })))
       setCevapAcik(true)
     }
 
@@ -114,7 +117,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
           <Link href={`/profil/${yorum.profiller?.kullanici_adi}`} style={{ flexShrink: 0 }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#111', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontFamily: "'Bebas Neue', sans-serif" }}>
               {yorum.profiller?.avatar_url
-                ? <img src={yorum.profiller.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ? <img src={yorum.profiller.avatar_url} alt={yorum.profiller.kullanici_adi || 'Kullanici avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : yorum.profiller?.kullanici_adi?.[0]?.toUpperCase()
               }
             </div>
@@ -181,7 +184,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
       {kullanici ? (
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#111', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontFamily: "'Bebas Neue', sans-serif" }}>
-            {profil?.avatar_url ? <img src={profil.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profil?.kullanici_adi?.[0]?.toUpperCase()}
+            {profil?.avatar_url ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profil?.kullanici_adi?.[0]?.toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
             <textarea value={yeniYorum} onChange={e => setYeniYorum(e.target.value)} placeholder="Bu bölüm hakkında ne düşünüyorsun?" rows={3} style={{ width: '100%', padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.6, boxSizing: 'border-box' }} />

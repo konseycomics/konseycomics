@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
+import { ensureProfile } from '../lib/ensureProfile'
 import BildirimZili from './BildirimZili'
 
 export default function Navbar() {
@@ -12,24 +13,22 @@ export default function Navbar() {
   const router = useRouter()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function syncSessionProfile(session) {
       setKullanici(session?.user || null)
       if (session?.user) {
-        supabase.from('profiller').select('kullanici_adi, avatar_url, rol')
-          .eq('id', session.user.id).single()
-          .then(({ data }) => setProfil(data))
-      }
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setKullanici(session?.user || null)
-      if (session?.user) {
-        supabase.from('profiller').select('kullanici_adi, avatar_url, rol')
-          .eq('id', session.user.id).single()
-          .then(({ data }) => setProfil(data))
+        const mevcutProfil = await ensureProfile(session.user)
+        setProfil(mevcutProfil)
       } else {
         setProfil(null)
       }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncSessionProfile(session)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncSessionProfile(session)
     })
 
     return () => subscription.unsubscribe()

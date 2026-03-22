@@ -1,9 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SITE_URL =
+function normalizeSiteUrl(value) {
+  if (!value) return 'https://konseycomics.vercel.app'
+  return value.startsWith('http') ? value : `https://${value}`
+}
+
+const SITE_URL = normalizeSiteUrl(
   process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ||
-  'https://konseycomics.vercel.app'
+  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+)
 
 export default async function sitemap() {
   const supabase = createClient(

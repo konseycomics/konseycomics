@@ -85,7 +85,7 @@ function BolumKart({ bolum }) {
   if (!seri) return null
   const cover = bolum.kapak_url || seri.kapak_url
   return (
-    <Link href={`/oku/${bolum.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/oku/${seri.slug}/${bolum.sayi}`} style={{ textDecoration: 'none' }}>
       <div
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
@@ -148,7 +148,7 @@ export default function Home() {
     async function fetchAll() {
       const [{ data: sData }, { data: bData }, { data: kData }] = await Promise.all([
         supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
-        supabase.from('bolumler').select('id, baslik, sayi, kapak_url, created_at, seri_id, seriler(baslik, slug, kapak_url)').order('created_at', { ascending: false }).limit(8),
+        supabase.from('bolumler').select('id, baslik, sayi, kapak_url, created_at, seri_id, seriler(baslik, slug, kapak_url)').order('created_at', { ascending: false }).limit(4),
         supabase.from('kategoriler').select('isim').order('isim')
       ])
       setSeriler(sData || [])

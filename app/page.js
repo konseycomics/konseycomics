@@ -88,7 +88,7 @@ function BolumKart({ bolum }) {
   const seri = bolum.seriler
   if (!seri) return null
   return (
-    <Link href={`/oku/${seri.slug}/${bolum.slug || bolum.id}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/oku/${bolum.id}`} style={{ textDecoration: 'none' }}>
       <div
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
@@ -155,7 +155,7 @@ export default function Home() {
           .order('created_at', { ascending: false }),
         supabase
           .from('bolumler')
-          .select('id, baslik, sayi, slug, created_at, seri_id, seriler(baslik, slug, kapak_url)')
+          .select('id, baslik, sayi, created_at, seri_id, seriler(baslik, slug, kapak_url)')
           .order('created_at', { ascending: false })
           .limit(12),
         supabase

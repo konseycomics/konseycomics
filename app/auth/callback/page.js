@@ -2,25 +2,21 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { ensureProfile } from '../../lib/ensureProfile'
 
 export default function AuthCallback() {
   const router = useRouter()
 
   useEffect(() => {
     // Supabase URL'deki token'ı otomatik işler
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        await ensureProfile(session.user)
         router.push('/')
       } else {
         // Token işlenmesini bekle
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           if (event === 'SIGNED_IN' && session) {
-            ensureProfile(session.user).finally(() => {
-              subscription.unsubscribe()
-              router.push('/')
-            })
+            subscription.unsubscribe()
+            router.push('/')
           }
           if (event === 'PASSWORD_RECOVERY') {
             subscription.unsubscribe()

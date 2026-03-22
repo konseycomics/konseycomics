@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { ensureProfile } from '../lib/ensureProfile'
 
 const LB = { fontSize: '11px', fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: '#888', marginBottom: '6px' }
 const I = { width: '100%', padding: '9px 12px', background: '#f5f4f0', border: '1px solid #e8e6e0', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
@@ -162,7 +161,7 @@ export default function Admin() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { setYukleniyor(false); return }
-      const profil = await ensureProfile(session.user)
+      const { data: profil } = await supabase.from('profiller').select('rol').eq('id', session.user.id).single()
       if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
       setYukleniyor(false)
     })
@@ -186,7 +185,7 @@ export default function Admin() {
     e.preventDefault(); setLoginErr(''); setYukleniyor(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: sifre })
     if (error) { setLoginErr('E-posta veya şifre hatalı.'); setYukleniyor(false); return }
-    const profil = await ensureProfile(data.user)
+    const { data: profil } = await supabase.from('profiller').select('rol').eq('id', data.user.id).single()
     if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
     else { setLoginErr('Admin yetkisi yok.'); await supabase.auth.signOut() }
     setYukleniyor(false)

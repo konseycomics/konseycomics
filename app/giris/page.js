@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ensureProfile } from '../lib/ensureProfile'
 import { getPublicProfileByUsername } from '../lib/publicProfiles'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,44 +15,32 @@ export default function GirisKayit() {
 
   // Zaten giriş yapmışsa ana sayfaya yönlendir
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        await ensureProfile(session.user).catch(() => null)
-        router.push('/')
-      }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push('/')
     })
   }, [router])
 
   async function handleGiris(e) {
     e.preventDefault()
-    try {
-      setYukleniyor(true)
-      setHata('')
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.sifre,
-      })
-      if (error) {
-        if (error.message.includes('Email not confirmed')) {
-          setHata('E-posta adresin henüz onaylanmamış. Lütfen gelen kutunu kontrol et.')
-        } else if (error.message.includes('Invalid login credentials')) {
-          setHata('E-posta veya şifre hatalı.')
-        } else {
-          setHata('Giriş yapılamadı: ' + error.message)
-        }
-      } else if (data.session) {
-        await ensureProfile(data.session.user).catch(() => null)
-        router.push('/')
-        router.refresh()
+    setYukleniyor(true)
+    setHata('')
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.sifre,
+    })
+    if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        setHata('E-posta adresin henüz onaylanmamış. Lütfen gelen kutunu kontrol et.')
+      } else if (error.message.includes('Invalid login credentials')) {
+        setHata('E-posta veya şifre hatalı.')
       } else {
-        setHata('Giriş tamamlanamadı. Lütfen tekrar dene.')
+        setHata('Giriş yapılamadı: ' + error.message)
       }
-    } catch (error) {
-      setHata('Giriş sırasında beklenmeyen bir hata oluştu.')
-      console.error('handleGiris error', error)
-    } finally {
-      setYukleniyor(false)
+    } else if (data.session) {
+      router.push('/')
+      router.refresh()
     }
+    setYukleniyor(false)
   }
 
   async function handleKayit(e) {

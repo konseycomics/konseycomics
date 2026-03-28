@@ -254,11 +254,11 @@ function BolumKart({ bolum }) {
   if (!seri) return null
   const cover = bolum.kapak_url || seri.kapak_url
   return (
-    <Link href={`/oku/${seri.slug}/${bolum.sayi}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/oku/${seri.slug}/${bolum.sayi}`} style={{ display: 'block', width: '100%', minWidth: 0, textDecoration: 'none' }}>
       <div
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        style={{ cursor: 'pointer' }}
+        style={{ width: '100%', minWidth: 0, cursor: 'pointer' }}
       >
         <div style={{
           position: 'relative', aspectRatio: '2/3', borderRadius: '10px',

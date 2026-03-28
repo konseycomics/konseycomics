@@ -7,6 +7,18 @@ import Footer from '../../components/Footer'
 import SeriPuan from '../../components/SeriPuan'
 import Link from 'next/link'
 
+function tarih(dateStr) {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatCount(value) {
+  const count = Number(value || 0)
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1).replace('.0', '')}M`
+  if (count >= 1000) return `${(count / 1000).toFixed(1).replace('.0', '')}B`
+  return `${count}`
+}
+
 export default function SeriDetay() {
   const { slug } = useParams()
   const [seri, setSeri] = useState(null)
@@ -19,214 +31,504 @@ export default function SeriDetay() {
   const [kullanici, setKullanici] = useState(null)
   const [listeYukleniyor, setListeYukleniyor] = useState(false)
   const [sonOkunan, setSonOkunan] = useState(null)
+  const [detayAyar, setDetayAyar] = useState({})
+  const [onerilenSeri, setOnerilenSeri] = useState(null)
 
   useEffect(() => {
     async function fetchData() {
       const { data: seriData } = await supabase
-        .from('seriler').select('*, kategoriler(isim)').eq('slug', slug).single()
+        .from('seriler')
+        .select('*, kategoriler(isim)')
+        .eq('slug', slug)
+        .single()
 
       if (seriData) {
         setSeri(seriData)
         await supabase.rpc('increment_seri_goruntuleme', { seri_id: seriData.id })
 
-        const [b, y, c, t] = await Promise.all([
+        const [b, y, c, t, detay, onerilen] = await Promise.all([
           supabase.from('bolumler')
             .select('*, cevirmen:ekip!cevirmen_id(isim), balonlama:ekip!balonlama_id(isim), grafik:ekip!grafik_id(isim)')
-            .eq('seri_id', seriData.id).order('sayi'),
+            .eq('seri_id', seriData.id)
+            .order('sayi'),
           supabase.from('seri_yazarlar').select('yazarlar(isim)').eq('seri_id', seriData.id),
           supabase.from('seri_cizerler').select('cizerler(isim)').eq('seri_id', seriData.id),
           seriData.turler?.length > 0
             ? supabase.from('turler').select('isim').in('id', seriData.turler)
             : Promise.resolve({ data: [] }),
+          supabase.from('site_ayarlari').select('deger').eq('anahtar', 'seri_detay_vitrin').maybeSingle(),
+          supabase.from('seriler')
+            .select('id, slug, baslik, kapak_url, ortalama_puan, kategoriler(isim)')
+            .eq('kategori_id', seriData.kategori_id)
+            .neq('id', seriData.id)
+            .limit(1)
+            .maybeSingle(),
         ])
-        setBolumler(b.data || [])
-        setYazarlar(y.data?.map(x => x.yazarlar?.isim).filter(Boolean) || [])
-        setCizerler(c.data?.map(x => x.cizerler?.isim).filter(Boolean) || [])
-        setTurler(t.data?.map(x => x.isim) || [])
 
-        // Kullanıcı bilgileri
+        setBolumler(b.data || [])
+        setYazarlar(y.data?.map(item => item.yazarlar?.isim).filter(Boolean) || [])
+        setCizerler(c.data?.map(item => item.cizerler?.isim).filter(Boolean) || [])
+        setTurler(t.data?.map(item => item.isim) || [])
+        setDetayAyar(detay.data?.deger?.[String(seriData.id)] || {})
+        setOnerilenSeri(onerilen.data || null)
+
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           setKullanici(session.user)
-          // Liste durumu
+
           const { data: liste } = await supabase.from('okuma_listesi')
-            .select('durum').eq('kullanici_id', session.user.id).eq('seri_id', seriData.id).single()
+            .select('durum')
+            .eq('kullanici_id', session.user.id)
+            .eq('seri_id', seriData.id)
+            .single()
           if (liste) setListeDurumu(liste.durum)
-          // Son okunan bölüm
+
           const { data: gecmis } = await supabase.from('okuma_gecmisi')
-            .select('bolum_id, bolumler(sayi, baslik)').eq('kullanici_id', session.user.id).eq('seri_id', seriData.id)
-            .order('okundu_at', { ascending: false }).limit(1).single()
+            .select('bolum_id, bolumler(sayi, baslik)')
+            .eq('kullanici_id', session.user.id)
+            .eq('seri_id', seriData.id)
+            .order('okundu_at', { ascending: false })
+            .limit(1)
+            .single()
           if (gecmis) setSonOkunan(gecmis.bolumler)
         }
       }
+
       setLoading(false)
     }
+
     fetchData()
   }, [slug])
 
   async function listeGuncelle(durum) {
     if (!kullanici || !seri) return
     setListeYukleniyor(true)
+
     if (listeDurumu === durum) {
       await supabase.from('okuma_listesi').delete().eq('kullanici_id', kullanici.id).eq('seri_id', seri.id)
       setListeDurumu(null)
     } else {
-      await supabase.from('okuma_listesi').upsert([{ kullanici_id: kullanici.id, seri_id: seri.id, durum, updated_at: new Date().toISOString() }], { onConflict: 'kullanici_id,seri_id' })
+      await supabase.from('okuma_listesi').upsert(
+        [{ kullanici_id: kullanici.id, seri_id: seri.id, durum, updated_at: new Date().toISOString() }],
+        { onConflict: 'kullanici_id,seri_id' }
+      )
       setListeDurumu(durum)
     }
+
     setListeYukleniyor(false)
   }
 
-  if (loading) return (<><Navbar /><div style={{ padding: '80px 24px', color: 'var(--text-muted)', fontSize: '14px' }}>Yükleniyor...</div></>)
-  if (!seri) return (<><Navbar /><div style={{ padding: '80px 24px', color: 'var(--text-muted)', fontSize: '14px' }}>Seri bulunamadı.</div></>)
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="site-shell" style={{ paddingTop: '80px', paddingBottom: '80px', color: 'var(--text-muted)', fontSize: '14px' }}>
+          Yükleniyor...
+        </div>
+      </>
+    )
+  }
+
+  if (!seri) {
+    return (
+      <>
+        <Navbar />
+        <div className="site-shell" style={{ paddingTop: '80px', paddingBottom: '80px', color: 'var(--text-muted)', fontSize: '14px' }}>
+          Seri bulunamadı.
+        </div>
+      </>
+    )
+  }
+
+  const heroBackground = detayAyar.arka_plan_url || seri.hero_gorsel_url || seri.arkaplan_url || seri.kapak_url || '/demo/hero.jpg'
+  const heroBackgroundFit = detayAyar.arka_plan_fit || 'cover'
+  const heroBackgroundPosition = `${detayAyar.arka_plan_x ?? 50}% ${detayAyar.arka_plan_y ?? 50}%`
+  const ilkBolum = bolumler[0]
+  const sonBolum = bolumler[bolumler.length - 1]
+  const gosterilenTurler = turler.length > 0 ? turler.slice(0, 4) : (seri.kategoriler?.isim ? [seri.kategoriler.isim] : [])
 
   const listeDurumlari = [
-    { durum: 'okunuyor', label: '📖 Okunuyor', aktifRenk: '#3b82f6' },
-    { durum: 'okumak_istiyorum', label: '🔖 Okuyacaklar', aktifRenk: '#8b5cf6' },
-    { durum: 'okundu', label: '✅ Okundu', aktifRenk: '#10b981' },
+    { durum: 'okunuyor', label: 'Okunuyor', aciklama: 'Takipte', aktifRenk: '#2563eb' },
+    { durum: 'okumak_istiyorum', label: 'Okuyacaklar', aciklama: 'Listeye ekle', aktifRenk: '#7c3aed' },
+    { durum: 'okundu', label: 'Okundu', aciklama: 'Tamamlandi', aktifRenk: '#10b981' },
+  ]
+
+  const metaSatirlari = [
+    ['Yayıncı', seri.kategoriler?.isim || 'Belirtilmemiş'],
+    ['Kategori', seri.kategoriler?.isim || 'Belirtilmemiş'],
+    ['Yıl', seri.yil || 'Belirtilmemiş'],
+    ['Durum', seri.durum || 'Belirtilmemiş'],
+    ['Yazar', yazarlar.join(', ') || 'Belirtilmemiş'],
+    ['Çizer', cizerler.join(', ') || 'Belirtilmemiş'],
   ]
 
   return (
     <>
       <Navbar />
-      <div style={{ margin: '24px 24px 0' }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}>
-          ← Kütüphaneye Dön
-        </Link>
-      </div>
 
-      <div style={{ margin: '24px 24px', display: 'grid', gridTemplateColumns: 'minmax(0, 220px) 1fr', gap: '40px', alignItems: 'start' }} className="seri-grid">
-        {/* Kapak */}
-        <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', aspectRatio: '2/3' }}>
-          {seri.kapak_url
-            ? <img src={seri.kapak_url} alt={seri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '32px', color: '#fff', letterSpacing: '2px', padding: '16px', textAlign: 'center' }}>{seri.baslik}</div>
+      <main style={{ background: '#060606', minHeight: '100vh' }}>
+        <style>{`
+          .seri-hero {
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: #060606;
           }
-        </div>
+          .seri-hero-shell {
+            position: relative;
+            z-index: 1;
+            padding-top: 36px;
+            padding-bottom: 56px;
+          }
+          .seri-hero-grid {
+            display: grid;
+            grid-template-columns: 210px minmax(0, 1fr);
+            gap: 42px;
+            align-items: start;
+          }
+          .seri-stat-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+          }
+          .seri-stat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #d4d4cf;
+            font-size: 14px;
+            letter-spacing: 0.2px;
+          }
+          .seri-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+          }
+          .seri-bottom-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.65fr) minmax(290px, 0.85fr);
+            gap: 28px;
+            align-items: start;
+          }
+          .seri-side-card {
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            border-radius: 18px;
+            padding: 22px;
+          }
+          .seri-meta-list {
+            display: grid;
+            gap: 14px;
+          }
+          .seri-meta-item {
+            display: grid;
+            grid-template-columns: 96px minmax(0, 1fr);
+            gap: 12px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+          }
+          .seri-meta-item:last-child {
+            padding-bottom: 0;
+            border-bottom: 0;
+          }
+          .seri-reco {
+            display: grid;
+            grid-template-columns: 76px minmax(0, 1fr);
+            gap: 14px;
+            align-items: center;
+            text-decoration: none;
+          }
+          .seri-archive-head {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: end;
+            margin-bottom: 16px;
+          }
+          .seri-row {
+            display: grid;
+            grid-template-columns: 42px 52px minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+          }
+          @media (max-width: 960px) {
+            .seri-bottom-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+          @media (max-width: 860px) {
+            .seri-hero-grid {
+              grid-template-columns: 1fr !important;
+            }
+            .seri-cover {
+              max-width: 210px;
+            }
+          }
+          @media (max-width: 640px) {
+            .seri-hero-shell {
+              padding-top: 22px;
+              padding-bottom: 36px;
+            }
+            .seri-title {
+              font-size: clamp(44px, 14vw, 74px) !important;
+            }
+            .seri-actions {
+              flex-direction: column;
+              align-items: stretch;
+            }
+            .seri-stat-row {
+              gap: 12px;
+            }
+            .seri-meta-item {
+              grid-template-columns: 1fr !important;
+              gap: 6px !important;
+            }
+            .seri-row {
+              grid-template-columns: 42px 44px minmax(0, 1fr) !important;
+            }
+            .seri-row-date {
+              display: none !important;
+            }
+          }
+        `}</style>
 
-        {/* Bilgiler */}
-        <div style={{ minWidth: 0 }}>
-          {/* Kategori + türler */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-            {seri.kategoriler?.isim && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block' }} />
-                {seri.kategoriler.isim}
-              </span>
-            )}
-            {turler.map(t => (
-              <span key={t} style={{ padding: '3px 10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '100px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)' }}>{t}</span>
-            ))}
-          </div>
+        <section className="seri-hero">
+          <img
+            src={heroBackground}
+            alt=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: heroBackgroundFit,
+              objectPosition: heroBackgroundPosition,
+              opacity: detayAyar.arka_plan_url ? 1 : 0.24,
+              transform: 'scale(1.02)',
+            }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(6,6,6,0.98) 0%, rgba(6,6,6,0.92) 22%, rgba(6,6,6,0.7) 44%, rgba(6,6,6,0.34) 100%), linear-gradient(180deg, rgba(6,6,6,0.22) 0%, rgba(6,6,6,0.78) 100%)' }} />
 
-          {/* Başlık */}
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(28px, 5vw, 44px)', lineHeight: 1, letterSpacing: '0.5px', marginBottom: '10px' }}>
-            {seri.baslik}
-          </div>
+          <div className="site-shell seri-hero-shell">
+            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', marginBottom: '26px' }}>
+              ← Kütüphaneye Dön
+            </Link>
 
-          {/* Yazar · çizer · yıl */}
-          <div style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {yazarlar.length > 0 && <span style={{ color: 'var(--text)', fontWeight: 500 }}>{yazarlar.join(', ')}</span>}
-            {yazarlar.length > 0 && cizerler.length > 0 && <span>·</span>}
-            {cizerler.length > 0 && <span>{cizerler.join(', ')}</span>}
-            {seri.yil && <><span>·</span><span>{seri.yil}</span></>}
-          </div>
-
-          {/* Meta + Puan */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-            {[['Yayıncı', seri.kategoriler?.isim], ['Yıl', seri.yil], ['Durum', seri.durum]].filter(([, v]) => v).map(([label, value]) => (
-              <div key={label}>
-                <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '4px' }}>{label}</div>
-                <div style={{ fontSize: '14px', fontWeight: 500 }}>{value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Puan sistemi */}
-          <div style={{ marginBottom: '24px' }}>
-            <SeriPuan seriId={seri.id} ortalama={seri.ortalama_puan} puanSayisi={seri.puan_sayisi} />
-          </div>
-
-          {/* Özet */}
-          {seri.ozet && (
-            <>
-              <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '8px' }}>Özet</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '24px' }}>{seri.ozet}</div>
-            </>
-          )}
-
-          {/* Okuma aksiyonları */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px' }}>
-            {bolumler.length > 0 && (
-              sonOkunan ? (
-                <Link href={`/oku/${slug}/${sonOkunan.sayi}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--text)', color: '#fff', fontSize: '14px', fontWeight: 500, padding: '12px 20px', borderRadius: '10px', textDecoration: 'none' }}>
-                  ▶ Kaldığın Yerden Devam Et
-                </Link>
-              ) : (
-                <Link href={`/oku/${slug}/${bolumler[0].sayi}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--text)', color: '#fff', fontSize: '14px', fontWeight: 500, padding: '12px 20px', borderRadius: '10px', textDecoration: 'none' }}>
-                  📖 Okumaya Başla
-                </Link>
-              )
-            )}
-
-            {kullanici && (
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {listeDurumlari.map(ld => (
-                  <button key={ld.durum} onClick={() => listeGuncelle(ld.durum)} disabled={listeYukleniyor}
-                    style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', border: `1px solid ${listeDurumu === ld.durum ? ld.aktifRenk : 'var(--border)'}`, background: listeDurumu === ld.durum ? ld.aktifRenk + '15' : 'var(--surface)', color: listeDurumu === ld.durum ? ld.aktifRenk : 'var(--text-muted)' }}>
-                    {ld.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Bölüm listesi */}
-          <div style={{ borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--text-light)', padding: '12px 0 8px', marginBottom: '4px' }}>
-              {bolumler.length} Bölüm
-            </div>
-            {bolumler.length === 0 ? (
-              <div style={{ padding: '20px 0', color: 'var(--text-muted)', fontSize: '14px' }}>Henüz bölüm eklenmemiş.</div>
-            ) : bolumler.map((ch) => (
-              <Link key={ch.id} href={`/oku/${slug}/${ch.sayi}`} style={{ textDecoration: 'none' }}>
-                <div onMouseEnter={e => e.currentTarget.style.background = 'var(--surface)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '10px 8px', borderBottom: '1px solid var(--border)', borderRadius: '6px', transition: 'background 0.1s', background: sonOkunan?.sayi === ch.sayi ? 'var(--bg)' : 'transparent' }}>
-                  <div style={{ width: '48px', height: '64px', borderRadius: '6px', overflow: 'hidden', background: 'var(--border)', flexShrink: 0 }}>
-                    {ch.kapak_url
-                      ? <img src={ch.kapak_url} alt={ch.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: 'var(--text-light)', fontWeight: 600 }}>#{ch.sayi}</div>
-                    }
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-light)' }}>#{ch.sayi}</span>
-                      <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.baslik}</span>
-                      {sonOkunan?.sayi === ch.sayi && <span style={{ fontSize: '10px', padding: '2px 6px', background: '#dbeafe', color: '#1e40af', borderRadius: '4px', fontWeight: 600 }}>Kaldın</span>}
+            <div className="seri-hero-grid">
+              <div className="seri-cover" style={{ width: '100%' }}>
+                <div style={{ borderRadius: '18px', overflow: 'hidden', background: '#111', boxShadow: '0 18px 42px rgba(0,0,0,0.28)', aspectRatio: '2 / 3' }}>
+                  {seri.kapak_url ? (
+                    <img src={seri.kapak_url} alt={seri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: '28px', padding: '16px', textAlign: 'center' }}>
+                      {seri.baslik}
                     </div>
-                    {(ch.cevirmen?.isim || ch.balonlama?.isim || ch.grafik?.isim) && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>
-                        {[ch.cevirmen?.isim && `Çev: ${ch.cevirmen.isim}`, ch.balonlama?.isim && `Bal: ${ch.balonlama.isim}`, ch.grafik?.isim && `Grfk: ${ch.grafik.isim}`].filter(Boolean).join(' · ')}
-                      </div>
-                    )}
+                  )}
+                </div>
+              </div>
+
+              <div style={{ minWidth: 0, maxWidth: '920px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  {gosterilenTurler.map(tur => (
+                    <span
+                      key={tur}
+                      style={{
+                        padding: '6px 12px',
+                        background: tur === seri.kategoriler?.isim ? '#17c964' : 'rgba(255,255,255,0.1)',
+                        borderRadius: '999px',
+                        fontSize: '10px',
+                        color: '#fff',
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {tur}
+                    </span>
+                  ))}
+                </div>
+
+                <h1 className="seri-title" style={{ margin: '0 0 14px', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(56px, 5vw, 86px)', lineHeight: 0.92, letterSpacing: '0.4px', color: '#fff', textTransform: 'uppercase' }}>
+                  {seri.baslik}
+                </h1>
+
+                <div className="seri-stat-row">
+                  <div className="seri-stat-item" style={{ color: '#fff', fontWeight: 700 }}>
+                    <span style={{ color: '#22c55e', fontSize: '18px' }}>★</span>
+                    <span>{Number(seri.ortalama_puan || 0).toFixed(1)}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{new Date(ch.created_at).toLocaleDateString('tr-TR')}</span>
-                    <span style={{ color: 'var(--text-light)' }}>→</span>
+                  <div className="seri-stat-item">
+                    <span style={{ opacity: 0.8 }}>◉</span>
+                    <span>{formatCount(seri.goruntuleme_sayisi)} okuma</span>
+                  </div>
+                  <div className="seri-stat-item">
+                    <span style={{ opacity: 0.8 }}>↻</span>
+                    <span>Güncellendi {tarih(sonBolum?.created_at)}</span>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
 
-      <style>{`
-        @media (max-width: 600px) {
-          .seri-grid { grid-template-columns: 1fr !important; }
-          .seri-grid > div:first-child { max-width: 180px; margin: 0 auto; }
-        }
-      `}</style>
+                <div style={{ marginBottom: '20px' }}>
+                  <SeriPuan seriId={seri.id} ortalama={seri.ortalama_puan} puanSayisi={seri.puan_sayisi} />
+                </div>
+
+                {seri.ozet && (
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ maxWidth: '88ch', fontSize: '16px', color: 'var(--text-muted)', lineHeight: 1.75 }}>
+                      {seri.ozet}
+                    </div>
+                  </div>
+                )}
+
+                <div className="seri-actions">
+                  {bolumler.length > 0 && (
+                    sonOkunan ? (
+                      <Link href={`/oku/${slug}/${sonOkunan.sayi}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '250px', padding: '16px 24px', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, borderRadius: '14px', textDecoration: 'none', letterSpacing: '0.8px', textTransform: 'uppercase', boxShadow: '0 12px 30px rgba(255,255,255,0.08)' }}>
+                        Kaldığın Yerden Devam Et
+                      </Link>
+                    ) : (
+                      <Link href={`/oku/${slug}/${ilkBolum?.sayi}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '250px', padding: '16px 24px', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, borderRadius: '14px', textDecoration: 'none', letterSpacing: '0.8px', textTransform: 'uppercase', boxShadow: '0 12px 30px rgba(255,255,255,0.08)' }}>
+                        Okumaya Başla
+                      </Link>
+                    )
+                  )}
+
+                  {kullanici && listeDurumlari.map(item => (
+                    <button
+                      key={item.durum}
+                      onClick={() => listeGuncelle(item.durum)}
+                      disabled={listeYukleniyor}
+                      style={{
+                        minWidth: '148px',
+                        padding: '14px 18px',
+                        background: listeDurumu === item.durum ? item.aktifRenk : 'rgba(255,255,255,0.06)',
+                        border: `1px solid ${listeDurumu === item.durum ? item.aktifRenk : 'rgba(255,255,255,0.12)'}`,
+                        borderRadius: '14px',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        display: 'grid',
+                        gap: '4px',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ fontSize: '13px', lineHeight: 1.1 }}>{item.label}</span>
+                      <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', opacity: 0.78 }}>{item.aciklama}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="site-shell" style={{ paddingTop: '22px', paddingBottom: '72px' }}>
+          <div className="seri-bottom-grid">
+            <div style={{ minWidth: 0 }}>
+              <div className="seri-archive-head">
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(42px, 4vw, 58px)', color: '#fff', lineHeight: 0.92, textTransform: 'uppercase' }}>
+                  Bölümler
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+                  {bolumler.length} bölüm
+                </div>
+              </div>
+
+              {bolumler.length === 0 ? (
+                <div style={{ padding: '20px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
+                  Henüz bölüm eklenmemiş.
+                </div>
+              ) : bolumler.map(ch => (
+                <Link key={ch.id} href={`/oku/${slug}/${ch.sayi}`} style={{ textDecoration: 'none' }}>
+                  <div className="seri-row">
+                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#6a6a64', lineHeight: 1, textAlign: 'right' }}>
+                      {ch.sayi}
+                    </div>
+                    <div style={{ width: '44px', height: '56px', borderRadius: '6px', overflow: 'hidden', background: '#111' }}>
+                      {ch.kapak_url ? (
+                        <img src={ch.kapak_url} alt={ch.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#888', fontSize: '11px' }}>#{ch.sayi}</div>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '16px', color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ch.baslik}
+                        </span>
+                        {sonOkunan?.sayi === ch.sayi && (
+                          <span style={{ padding: '3px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '999px', fontSize: '10px', fontWeight: 700 }}>
+                            KALDIĞIN YER
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                        Yüklendi {tarih(ch.created_at)}
+                      </div>
+                    </div>
+                    <div className="seri-row-date" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-light)', fontSize: '13px', flexShrink: 0 }}>
+                      <span>{tarih(ch.created_at)}</span>
+                      <span>→</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <aside style={{ display: 'grid', gap: '18px' }}>
+              <div className="seri-side-card">
+                <div style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '18px' }}>
+                  Seri Detayları
+                </div>
+                <div className="seri-meta-list">
+                  {metaSatirlari.map(([label, value]) => (
+                    <div key={label} className="seri-meta-item">
+                      <div style={{ fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
+                      <div style={{ fontSize: '15px', color: '#fff', fontWeight: 500 }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="seri-side-card">
+                <div style={{ fontSize: '12px', color: '#22c55e', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '18px', fontWeight: 800 }}>
+                  Bunları da Beğenebilirsiniz
+                </div>
+                {onerilenSeri ? (
+                  <Link href={`/seri/${onerilenSeri.slug}`} className="seri-reco">
+                    <div style={{ width: '76px', aspectRatio: '2 / 3', borderRadius: '10px', overflow: 'hidden', background: '#111' }}>
+                      {onerilenSeri.kapak_url ? (
+                        <img src={onerilenSeri.kapak_url} alt={onerilenSeri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#888', fontSize: '11px' }}>Seri</div>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '18px', color: '#fff', fontWeight: 700, lineHeight: 1.25, marginBottom: '8px' }}>
+                        {onerilenSeri.baslik}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d4d4cf', fontSize: '13px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#22c55e' }}>★</span>
+                        <span>{Number(onerilenSeri.ortalama_puan || 0).toFixed(1)}</span>
+                        {onerilenSeri.kategoriler?.isim && <span style={{ color: 'var(--text-light)' }}>{onerilenSeri.kategoriler.isim}</span>}
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6 }}>
+                    Yakında bu seri için önerilen başka içerikler de burada görünecek.
+                  </div>
+                )}
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </>

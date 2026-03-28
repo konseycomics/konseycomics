@@ -35,6 +35,67 @@ function ResimYukle({ onizleme, onChange, bucket = 'kapaklar', width = '100px', 
   )
 }
 
+function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' }) {
+  async function handle(e) {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    const yuklenenler = await Promise.all(files.map(async (file) => {
+      const path = `sayfa-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${file.name.split('.').pop()}`
+      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+      if (error) return null
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+      return data.publicUrl
+    }))
+
+    onChange([...(gorseller || []), ...yuklenenler.filter(Boolean)])
+    e.target.value = ''
+  }
+
+  function kaldir(index) {
+    onChange(gorseller.filter((_, i) => i !== index))
+  }
+
+  function tasi(index, direction) {
+    const hedef = index + direction
+    if (hedef < 0 || hedef >= gorseller.length) return
+    const yeni = [...gorseller]
+    const gecici = yeni[index]
+    yeni[index] = yeni[hedef]
+    yeni[hedef] = gecici
+    onChange(yeni)
+  }
+
+  return (
+    <div>
+      <label style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'10px 16px', border:'2px dashed #e8e6e0', borderRadius:'10px', cursor:'pointer', background:'#f5f4f0', fontSize:'13px', fontWeight:500 }}>
+        + Sayfa Gorselleri Yukle
+        <input type="file" accept="image/*" multiple onChange={handle} style={{ display:'none' }} />
+      </label>
+      <div style={{ fontSize:'12px', color:'#888', lineHeight:1.6, marginTop:'10px', marginBottom:'12px' }}>
+        Gorselleri yukleme sirasi okuyucudaki okuma sirasi olur. Sonradan asagi yukari tasiyabilirsin.
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))', gap:'12px' }}>
+        {gorseller.map((url, index) => (
+          <div key={`${url}-${index}`} style={{ border:'1px solid #e8e6e0', borderRadius:'10px', overflow:'hidden', background:'#fff' }}>
+            <div style={{ aspectRatio:'3 / 4', background:'#f5f4f0' }}>
+              <img src={url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            </div>
+            <div style={{ padding:'8px' }}>
+              <div style={{ fontSize:'11px', color:'#666', marginBottom:'8px' }}>Sayfa {index + 1}</div>
+              <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+                <button type="button" onClick={() => tasi(index, -1)} style={BS}>↑</button>
+                <button type="button" onClick={() => tasi(index, 1)} style={BS}>↓</button>
+                <button type="button" onClick={() => kaldir(index)} style={BD}>Sil</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AramaSecim({ liste, secili, onChange, placeholder }) {
   const [ara, setAra] = useState('')
   const [acik, setAcik] = useState(false)
@@ -411,31 +472,58 @@ function SerilerSayfasi() {
   const [turler, setTurler] = useState([])
   const [yazarlar, setYazarlar] = useState([])
   const [cizerler, setCizerler] = useState([])
+  const [detayVitrinAyarMap, setDetayVitrinAyarMap] = useState({})
   const [mod, setMod] = useState('liste')
   const [gorunum, setGorunum] = useState('liste')
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [kapakOnizleme, setKapakOnizleme] = useState(null)
+  const [detayArkaOnizleme, setDetayArkaOnizleme] = useState(null)
   const [aramaMetni, setAramaMetni] = useState('')
   const [katFiltre, setKatFiltre] = useState('tumu')
-  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false }
+  const detayPreviewRef = useRef(null)
+  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false, detay_arka_plan_url:'', detay_arka_plan_fit:'cover', detay_arka_plan_pozisyon:'center center', detay_arka_plan_x:50, detay_arka_plan_y:50 }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
   async function fetchHepsi() {
-    const [s,k,t,y,c] = await Promise.all([
+    const [s,k,t,y,c,ayar] = await Promise.all([
       supabase.from('seriler').select('*, kategoriler(isim)').order('created_at',{ascending:false}),
       supabase.from('kategoriler').select('*').order('isim'),
       supabase.from('turler').select('*').order('isim'),
       supabase.from('yazarlar').select('*').order('isim'),
       supabase.from('cizerler').select('*').order('isim'),
+      supabase.from('site_ayarlari').select('deger').eq('anahtar', 'seri_detay_vitrin').maybeSingle(),
     ])
-    setSeriler(s.data||[]); setKategoriler(k.data||[]); setTurler(t.data||[]); setYazarlar(y.data||[]); setCizerler(c.data||[])
+    setSeriler(s.data||[]); setKategoriler(k.data||[]); setTurler(t.data||[]); setYazarlar(y.data||[]); setCizerler(c.data||[]); setDetayVitrinAyarMap(ayar.data?.deger || {})
   }
 
   function slugOlustur(v) {
     return v.toLowerCase().replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')
+  }
+
+  async function kaydetDetayVitrinAyar(seriId, detayForm) {
+    if (!seriId) return
+    const yeniMap = {
+      ...detayVitrinAyarMap,
+      [String(seriId)]: {
+        arka_plan_url: detayForm.detay_arka_plan_url || '',
+        arka_plan_fit: detayForm.detay_arka_plan_fit || 'cover',
+        arka_plan_pozisyon: detayForm.detay_arka_plan_pozisyon || 'center center',
+        arka_plan_x: Number(detayForm.detay_arka_plan_x ?? 50),
+        arka_plan_y: Number(detayForm.detay_arka_plan_y ?? 50),
+      }
+    }
+    const temizMap = Object.fromEntries(
+      Object.entries(yeniMap).filter(([, ayar]) => ayar?.arka_plan_url)
+    )
+    await supabase.from('site_ayarlari').upsert({
+      anahtar: 'seri_detay_vitrin',
+      deger: temizMap,
+      guncellendi_at: new Date().toISOString()
+    }, { onConflict:'anahtar' })
+    setDetayVitrinAyarMap(temizMap)
   }
 
   async function kaydet() {
@@ -450,9 +538,10 @@ function SerilerSayfasi() {
       if (form.yazar_ids.length>0) await supabase.from('seri_yazarlar').insert(form.yazar_ids.map(id=>({seri_id:seriId,yazar_id:id})))
       await supabase.from('seri_cizerler').delete().eq('seri_id',seriId)
       if (form.cizer_ids.length>0) await supabase.from('seri_cizerler').insert(form.cizer_ids.map(id=>({seri_id:seriId,cizer_id:id})))
+      await kaydetDetayVitrinAyar(seriId, form)
     }
     setMsg(duzenleId?'✅ Güncellendi!':'✅ Seri eklendi!')
-    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
+    setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setDetayArkaOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
 
   async function sil(id) {
@@ -466,8 +555,42 @@ function SerilerSayfasi() {
 
   async function duzenle(s) {
     setDuzenleId(s.id); setKapakOnizleme(s.kapak_url)
+    const detayAyar = detayVitrinAyarMap[String(s.id)] || {}
+    setDetayArkaOnizleme(detayAyar.arka_plan_url || null)
     const [yz,cz] = await Promise.all([supabase.from('seri_yazarlar').select('yazar_id').eq('seri_id',s.id),supabase.from('seri_cizerler').select('cizer_id').eq('seri_id',s.id)])
-    setForm({...bos,...s,yazar_ids:yz.data?.map(x=>x.yazar_id)||[],cizer_ids:cz.data?.map(x=>x.cizer_id)||[]}); setMod('form')
+    setForm({
+      ...bos,
+      ...s,
+      detay_arka_plan_url: detayAyar.arka_plan_url || '',
+      detay_arka_plan_fit: detayAyar.arka_plan_fit || 'cover',
+      detay_arka_plan_pozisyon: detayAyar.arka_plan_pozisyon || 'center center',
+      detay_arka_plan_x: detayAyar.arka_plan_x ?? 50,
+      detay_arka_plan_y: detayAyar.arka_plan_y ?? 50,
+      yazar_ids:yz.data?.map(x=>x.yazar_id)||[],
+      cizer_ids:cz.data?.map(x=>x.cizer_id)||[]
+    }); setMod('form')
+  }
+
+  function detayPozisyonGuncelle(clientX, clientY) {
+    if (!detayPreviewRef.current) return
+    const rect = detayPreviewRef.current.getBoundingClientRect()
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+    setForm(f => ({
+      ...f,
+      detay_arka_plan_x: Math.round(x),
+      detay_arka_plan_y: Math.round(y),
+      detay_arka_plan_pozisyon: `${Math.round(x)}% ${Math.round(y)}%`,
+    }))
+  }
+
+  function handleDetayPreviewPointerDown(e) {
+    detayPozisyonGuncelle(e.clientX, e.clientY)
+  }
+
+  function handleDetayPreviewPointerMove(e) {
+    if (e.buttons !== 1) return
+    detayPozisyonGuncelle(e.clientX, e.clientY)
   }
 
   const filtreli = seriler.filter(s=>katFiltre==='tumu'||s.kategori_id===katFiltre).filter(s=>!aramaMetni||s.baslik.toLowerCase().includes(aramaMetni.toLowerCase()))
@@ -475,7 +598,7 @@ function SerilerSayfasi() {
   if (mod==='form') return (
     <div style={{ maxWidth:'700px' }}>
       <div style={{ display:'flex',alignItems:'center',gap:'12px',marginBottom:'24px' }}>
-        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null);setKapakOnizleme(null)}} style={BS}>← Geri</button>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null);setKapakOnizleme(null);setDetayArkaOnizleme(null)}} style={BS}>← Geri</button>
         <div style={{ fontSize:'16px',fontWeight:600 }}>{duzenleId?'Seri Düzenle':'Yeni Seri'}</div>
       </div>
       <Msg text={msg} />
@@ -495,6 +618,64 @@ function SerilerSayfasi() {
         <div><div style={LB}>Durum</div><select value={form.durum} onChange={e=>setForm(f=>({...f,durum:e.target.value}))} style={S}><option>Devam Eden</option><option>Tamamlandı</option><option>Askıya Alındı</option><option>Tek Sayılık</option></select></div>
       </div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>Özet</div><textarea value={form.ozet} onChange={e=>setForm(f=>({...f,ozet:e.target.value}))} style={{...I,height:'80px',resize:'vertical'}} /></div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',padding:'16px',marginBottom:'16px' }}>
+        <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'14px' }}>Seri Detay Hero Alanı</div>
+        <div style={{ display:'flex',gap:'16px',flexWrap:'wrap',marginBottom:'14px' }}>
+          <div>
+            <div style={LB}>Detay Arka Planı</div>
+            <ResimYukle onizleme={detayArkaOnizleme || form.detay_arka_plan_url} onChange={(url,prev)=>{setForm(f=>({...f,detay_arka_plan_url:url}));setDetayArkaOnizleme(prev)}} bucket="site" width="180px" height="100px" />
+          </div>
+          <div style={{ flex:'1 1 280px', minWidth:'260px' }}>
+            <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'12px' }}>
+              <div><div style={LB}>Görsel Boyutu</div><select value={form.detay_arka_plan_fit || 'cover'} onChange={e=>setForm(f=>({...f,detay_arka_plan_fit:e.target.value}))} style={S}><option value="cover">Cover</option><option value="contain">Contain</option></select></div>
+              <div><div style={LB}>Görsel Hizası</div><select value={form.detay_arka_plan_pozisyon || 'center center'} onChange={e=>{
+                const value = e.target.value
+                const [xToken, yToken] = value.split(' ')
+                const harita = { left: 0, center: 50, right: 100, top: 0, bottom: 100 }
+                setForm(f=>({
+                  ...f,
+                  detay_arka_plan_pozisyon:value,
+                  detay_arka_plan_x: harita[xToken] ?? 50,
+                  detay_arka_plan_y: harita[yToken] ?? 50
+                }))
+              }} style={S}><option value="left center">Sol</option><option value="center center">Orta</option><option value="right center">Sağ</option><option value="center top">Üst</option><option value="center bottom">Alt</option></select></div>
+            </div>
+            <div style={{ fontSize:'12px',color:'#888',lineHeight:1.6 }}>
+              Bu görsel seri detay sayfasının üst hero alanında kullanılır. Boş bırakılırsa kapak görseli arka plan olarak kullanılır.
+            </div>
+          </div>
+        </div>
+        {(detayArkaOnizleme || form.detay_arka_plan_url || form.kapak_url) && (
+          <div
+            ref={detayPreviewRef}
+            onPointerDown={handleDetayPreviewPointerDown}
+            onPointerMove={handleDetayPreviewPointerMove}
+            style={{ position:'relative',height:'180px',borderRadius:'14px',overflow:'hidden',background:'#111',cursor:'grab',touchAction:'none' }}
+          >
+            <img src={detayArkaOnizleme || form.detay_arka_plan_url || form.kapak_url} style={{ position:'absolute',inset:0,width:'100%',height:'100%',objectFit:form.detay_arka_plan_fit || 'cover',objectPosition:`${form.detay_arka_plan_x ?? 50}% ${form.detay_arka_plan_y ?? 50}%`,opacity:0.68 }} />
+            <div style={{ position:'absolute',inset:0,background:'linear-gradient(90deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.72) 34%, rgba(0,0,0,0.26) 100%), linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.82) 100%)' }} />
+            <div style={{ position:'absolute',top:'10px',right:'10px',zIndex:1,padding:'6px 10px',borderRadius:'999px',background:'rgba(10,10,10,0.72)',color:'#fff',fontSize:'11px' }}>
+              {form.detay_arka_plan_x ?? 50}% / {form.detay_arka_plan_y ?? 50}%
+            </div>
+            <div style={{ position:'absolute',left:'18px',bottom:'18px',right:'18px',display:'grid',gridTemplateColumns:'96px minmax(0,1fr)',gap:'16px',alignItems:'end' }}>
+              <div style={{ borderRadius:'10px',overflow:'hidden',background:'#1a1a1a',aspectRatio:'2 / 3',boxShadow:'0 14px 28px rgba(0,0,0,0.35)' }}>
+                {(form.kapak_url || kapakOnizleme) && <img src={kapakOnizleme || form.kapak_url} style={{ width:'100%',height:'100%',objectFit:'cover' }} />}
+              </div>
+              <div>
+                <div style={{ display:'flex',gap:'6px',flexWrap:'wrap',marginBottom:'10px' }}>
+                  <span style={{ padding:'4px 10px',borderRadius:'999px',background:'#16a34a',color:'#fff',fontSize:'10px',fontWeight:700,letterSpacing:'1px',textTransform:'uppercase' }}>{form.durum || 'Devam Eden'}</span>
+                  {(kategoriler.find(k=>k.id===form.kategori_id)?.isim || form.kategori) && <span style={{ padding:'4px 10px',borderRadius:'999px',background:'rgba(255,255,255,0.12)',color:'#fff',fontSize:'10px',fontWeight:700,letterSpacing:'1px',textTransform:'uppercase' }}>{kategoriler.find(k=>k.id===form.kategori_id)?.isim || form.kategori}</span>}
+                </div>
+                <div style={{ fontFamily:"'Bebas Neue', sans-serif",fontSize:'42px',lineHeight:0.9,color:'#fff',marginBottom:'10px' }}>{(form.baslik || 'Seri Başlığı').toUpperCase()}</div>
+                <div style={{ color:'rgba(255,255,255,0.78)',fontSize:'13px',maxWidth:'54ch',lineHeight:1.6 }}>{form.ozet || 'Seri detay sayfasındaki büyük açılış alanı burada bu görselle önizlenir.'}</div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div style={{ fontSize:'12px',color:'#888',lineHeight:1.6,marginTop:'10px' }}>
+          Görseli fareyle sürükleyerek kadrajı elle ayarlayabilirsin.
+        </div>
+      </div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>Yazarlar</div><AramaSecim liste={yazarlar.map(y=>({id:y.id,isim:y.isim}))} secili={form.yazar_ids} onChange={v=>setForm(f=>({...f,yazar_ids:v}))} placeholder="Yazar ekle..." /></div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>Çizerler</div><AramaSecim liste={cizerler.map(c=>({id:c.id,isim:c.isim}))} secili={form.cizer_ids} onChange={v=>setForm(f=>({...f,cizer_ids:v}))} placeholder="Çizer ekle..." /></div>
       <div style={{ marginBottom:'12px' }}>
@@ -512,7 +693,7 @@ function SerilerSayfasi() {
       </div>
       <div style={{ display:'flex',gap:'10px' }}>
         <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button>
-        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button>
+        <button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null);setKapakOnizleme(null);setDetayArkaOnizleme(null)}} style={BS}>İptal</button>
       </div>
     </div>
   )
@@ -576,6 +757,7 @@ function BolumlerSayfasi() {
   const [bolumler, setBolumler] = useState([])
   const [seriler, setSeriler] = useState([])
   const [ekip, setEkip] = useState([])
+  const [bolumSayfaMap, setBolumSayfaMap] = useState({})
   const [mod, setMod] = useState('liste')
   const [gorunum, setGorunum] = useState('liste')
   const [duzenleId, setDuzenleId] = useState(null)
@@ -584,25 +766,48 @@ function BolumlerSayfasi() {
   const [kapakOnizleme, setKapakOnizleme] = useState(null)
   const [seriFiltre, setSeriFiltre] = useState('tumu')
   const [aramaMetni, setAramaMetni] = useState('')
-  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'' }
+  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'', sayfa_gorselleri:[] }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
   async function fetchHepsi() {
-    const [b,s,e] = await Promise.all([
+    const [b,s,e,ayar] = await Promise.all([
       supabase.from('bolumler').select('*, seriler(baslik)').order('created_at',{ascending:false}),
       supabase.from('seriler').select('id, baslik').order('baslik'),
       supabase.from('ekip').select('*').order('isim'),
+      supabase.from('site_ayarlari').select('deger').eq('anahtar', 'bolum_okuma_sayfalari').maybeSingle(),
     ])
-    setBolumler(b.data||[]); setSeriler(s.data||[]); setEkip(e.data||[])
+    setBolumler(b.data||[]); setSeriler(s.data||[]); setEkip(e.data||[]); setBolumSayfaMap(ayar.data?.deger || {})
+  }
+
+  async function kaydetBolumSayfalari(bolumId, sayfalar) {
+    if (!bolumId) return
+    const yeniMap = {
+      ...bolumSayfaMap,
+      [String(bolumId)]: (sayfalar || []).filter(Boolean)
+    }
+    const temizMap = Object.fromEntries(
+      Object.entries(yeniMap).filter(([, value]) => Array.isArray(value) && value.length > 0)
+    )
+    await supabase.from('site_ayarlari').upsert({
+      anahtar:'bolum_okuma_sayfalari',
+      deger: temizMap,
+      guncellendi_at: new Date().toISOString()
+    }, { onConflict:'anahtar' })
+    setBolumSayfaMap(temizMap)
   }
 
   async function kaydet() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     setYukleniyor(true)
     const payload = { seri_id:form.seri_id, sayi:parseInt(form.sayi), baslik:form.baslik, kapak_url:form.kapak_url, drive_link:form.drive_link, indirme_link:form.indirme_link, cevirmen_id:form.cevirmen_id||null, balonlama_id:form.balonlama_id||null, grafik_id:form.grafik_id||null }
+    let bolumId = duzenleId
     if (duzenleId) await supabase.from('bolumler').update(payload).eq('id',duzenleId)
-    else await supabase.from('bolumler').insert([payload])
+    else {
+      const { data } = await supabase.from('bolumler').insert([payload]).select().single()
+      bolumId = data?.id
+    }
+    if (bolumId) await kaydetBolumSayfalari(bolumId, form.sayfa_gorselleri)
     setMsg(duzenleId?'✅ Güncellendi!':'✅ Bölüm eklendi!')
     setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
   }
@@ -633,6 +838,10 @@ function BolumlerSayfasi() {
       </div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>Drive Linki</div><input value={form.drive_link} onChange={e=>setForm(f=>({...f,drive_link:e.target.value}))} style={I} placeholder="https://drive.google.com/..." /></div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>İndirme Linki</div><input value={form.indirme_link} onChange={e=>setForm(f=>({...f,indirme_link:e.target.value}))} style={I} /></div>
+      <div style={{ background:'#fff', border:'1px solid #e8e6e0', borderRadius:'12px', padding:'16px', marginBottom:'16px' }}>
+        <div style={{ fontSize:'13px', fontWeight:600, marginBottom:'14px' }}>Okuyucu Sayfalari</div>
+        <CokluResimYukle gorseller={form.sayfa_gorselleri || []} onChange={(liste) => setForm(f => ({ ...f, sayfa_gorselleri: liste }))} />
+      </div>
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'12px',marginBottom:'20px' }}>
         {[['cevirmen_id','Çevirmen'],['balonlama_id','Balonlama'],['grafik_id','Grafik']].map(([key,label])=>(
           <div key={key}><div style={LB}>{label}</div><AramaSecimTek liste={ekip.map(e=>({id:e.id,isim:e.isim}))} secili={form[key]} onChange={v=>setForm(f=>({...f,[key]:v}))} placeholder={label+' seç'} /></div>
@@ -669,8 +878,9 @@ function BolumlerSayfasi() {
               <div style={{ padding:'10px' }}>
                 <div style={{ fontSize:'11px',color:'#aaa',marginBottom:'2px' }}>{b.seriler?.baslik}</div>
                 <div style={{ fontSize:'13px',fontWeight:600 }}>#{b.sayi} {b.baslik}</div>
+                <div style={{ fontSize:'11px',color:'#888',marginTop:'4px' }}>{bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
                 <div style={{ display:'flex',gap:'6px',marginTop:'8px' }}>
-                  <button onClick={()=>{setForm({...bos,...b});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={{...BS,flex:1}}>Düzenle</button>
+                  <button onClick={()=>{setForm({...bos,...b,sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={{...BS,flex:1}}>Düzenle</button>
                   <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
                 </div>
               </div>
@@ -685,9 +895,9 @@ function BolumlerSayfasi() {
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:'12px',color:'#aaa' }}>{b.seriler?.baslik}</div>
                 <div style={{ fontSize:'14px',fontWeight:500 }}>#{b.sayi} {b.baslik}</div>
-                <div style={{ fontSize:'12px',color:'#888' }}>{b.goruntuleme_sayisi||0} görüntülenme</div>
+                <div style={{ fontSize:'12px',color:'#888' }}>{b.goruntuleme_sayisi||0} görüntülenme · {bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
               </div>
-              <button onClick={()=>{setForm({...bos,...b});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
+              <button onClick={()=>{setForm({...bos,...b,sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
               <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
             </div>
           ))}

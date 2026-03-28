@@ -1038,16 +1038,28 @@ function YorumlarSayfasi() {
 // ---- ANA SAYFA & SEO ----
 function AnaSayfaSayfasi() {
   const [ayarlar, setAyarlar] = useState({})
+  const [seriler, setSeriler] = useState([])
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [logoOnizleme, setLogoOnizleme] = useState(null)
   const [ogOnizleme, setOgOnizleme] = useState(null)
+  const heroBos = { id:'', seri_id:'', aktif:true, badge:'', baslik:'', aciklama:'', arka_plan_url:'', kapak_url:'', arka_plan_fit:'cover', arka_plan_pozisyon:'center center', arka_plan_x:50, arka_plan_y:50, buton1_metin:'', buton1_link:'', buton2_metin:'', buton2_link:'', kategori_etiket:'', durum:'' }
+  const [heroForm, setHeroForm] = useState(heroBos)
+  const [heroDuzenleIndex, setHeroDuzenleIndex] = useState(null)
+  const [heroArkaOnizleme, setHeroArkaOnizleme] = useState(null)
+  const [heroKapakOnizleme, setHeroKapakOnizleme] = useState(null)
+  const heroPreviewRef = useRef(null)
 
   useEffect(() => { fetchAyarlar() }, [])
   async function fetchAyarlar() {
-    const { data } = await supabase.from('site_ayarlari').select('*')
+    const [{ data, error: ayarError }, { data: seriData, error: seriError }] = await Promise.all([
+      supabase.from('site_ayarlari').select('*'),
+      supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, durum, one_cikan, kategori').order('baslik')
+    ])
+    if (ayarError) setMsg(`❌ Site ayarları yüklenemedi: ${ayarError.message}`)
+    if (seriError) setMsg(`❌ Seriler yüklenemedi: ${seriError.message}`)
     const obj = {}; data?.forEach(r=>{obj[r.anahtar]=r.deger})
-    setAyarlar(obj); setLogoOnizleme(typeof obj.logo_url==='string'?obj.logo_url:obj.logo_url?.url); setOgOnizleme(typeof obj.og_image==='string'?obj.og_image:obj.og_image?.url)
+    setAyarlar(obj); setSeriler(seriData || []); setLogoOnizleme(typeof obj.logo_url==='string'?obj.logo_url:obj.logo_url?.url); setOgOnizleme(typeof obj.og_image==='string'?obj.og_image:obj.og_image?.url)
   }
 
   async function kaydet() {
@@ -1057,6 +1069,84 @@ function AnaSayfaSayfasi() {
   }
 
   function guncelle(k,v) { setAyarlar(prev=>({...prev,[k]:v})) }
+  const heroSlides = Array.isArray(ayarlar.anasayfa_hero_slider) ? ayarlar.anasayfa_hero_slider : []
+
+  async function tekAyarKaydet(anahtar, deger, basariMesaji) {
+    setYukleniyor(true)
+    const { error } = await supabase
+      .from('site_ayarlari')
+      .upsert({ anahtar, deger, guncellendi_at: new Date().toISOString() }, { onConflict: 'anahtar' })
+    if (error) setMsg(`❌ ${error.message}`)
+    else {
+      setAyarlar(prev => ({ ...prev, [anahtar]: deger }))
+      if (basariMesaji) setMsg(basariMesaji)
+    }
+    setYukleniyor(false)
+  }
+
+  function heroFormSifirla() {
+    setHeroForm(heroBos); setHeroDuzenleIndex(null); setHeroArkaOnizleme(null); setHeroKapakOnizleme(null)
+  }
+
+  function heroPozisyonGuncelle(clientX, clientY) {
+    if (!heroPreviewRef.current) return
+    const rect = heroPreviewRef.current.getBoundingClientRect()
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100))
+    setHeroForm(prev => ({
+      ...prev,
+      arka_plan_x: Math.round(x),
+      arka_plan_y: Math.round(y),
+      arka_plan_pozisyon: `${Math.round(x)}% ${Math.round(y)}%`,
+    }))
+  }
+
+  function handleHeroPreviewPointerDown(e) {
+    heroPozisyonGuncelle(e.clientX, e.clientY)
+  }
+
+  function handleHeroPreviewPointerMove(e) {
+    if (e.buttons !== 1) return
+    heroPozisyonGuncelle(e.clientX, e.clientY)
+  }
+
+  async function heroSlaytKaydet() {
+    const seciliSeri = seriler.find(s => String(s.id) === String(heroForm.seri_id))
+    if (!heroForm.seri_id && !heroForm.baslik) { setMsg('❌ Hero slide için en az bir seri ya da manuel başlık gerekli!'); return }
+    const kayit = {
+      ...heroForm,
+      id: heroForm.id || `hero-${Date.now()}`,
+      badge: heroForm.badge || (seciliSeri?.one_cikan ? 'Öne Çıkan' : ''),
+    }
+    const yeni = [...heroSlides]
+    if (heroDuzenleIndex !== null) yeni[heroDuzenleIndex] = kayit
+    else yeni.push(kayit)
+    await tekAyarKaydet('anasayfa_hero_slider', yeni, heroDuzenleIndex !== null ? '✅ Hero slide güncellendi!' : '✅ Hero slide eklendi!')
+    heroFormSifirla()
+  }
+
+  function heroSlaytDuzenle(slide, index) {
+    setHeroDuzenleIndex(index)
+    setHeroForm({ ...heroBos, ...slide })
+    setHeroArkaOnizleme(slide.arka_plan_url || null)
+    setHeroKapakOnizleme(slide.kapak_url || null)
+  }
+
+  async function heroSlaytSil(index) {
+    const yeni = heroSlides.filter((_, i) => i !== index)
+    await tekAyarKaydet('anasayfa_hero_slider', yeni, '✅ Hero slide kaldırıldı!')
+    if (heroDuzenleIndex === index) heroFormSifirla()
+  }
+
+  async function heroSlaytTasi(index, yon) {
+    const hedef = index + yon
+    if (hedef < 0 || hedef >= heroSlides.length) return
+    const yeni = [...heroSlides]
+    const gecici = yeni[index]
+    yeni[index] = yeni[hedef]
+    yeni[hedef] = gecici
+    await tekAyarKaydet('anasayfa_hero_slider', yeni, '✅ Hero sırası güncellendi!')
+  }
 
   return (
     <div style={{ maxWidth:'700px' }}>
@@ -1078,6 +1168,169 @@ function AnaSayfaSayfasi() {
         <div style={{ marginBottom:'12px' }}><div style={LB}>Meta Açıklama</div><textarea value={ayarlar.meta_aciklama||''} onChange={e=>guncelle('meta_aciklama',e.target.value)} style={{...I,height:'80px'}} placeholder="Türkçe çeviri manga, manhwa ve webtoon oku..." /></div>
         <div style={{ marginBottom:'12px' }}><div style={LB}>Anahtar Kelimeler</div><input value={ayarlar.anahtar_kelimeler||''} onChange={e=>guncelle('anahtar_kelimeler',e.target.value)} style={I} placeholder="manga oku, türkçe manga, manhwa..." /></div>
         <div><div style={LB}>OG Image (Sosyal Medya Önizleme)</div><ResimYukle onizleme={ogOnizleme} onChange={(url,prev)=>{guncelle('og_image',url);setOgOnizleme(prev)}} bucket="site" width="120px" height="63px" /></div>
+      </div>
+      <div style={{ background:'#fff',border:'1px solid #e8e6e0',borderRadius:'12px',padding:'24px',marginBottom:'16px' }}>
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',marginBottom:'16px' }}>
+          <div>
+            <div style={{ fontSize:'14px',fontWeight:600,marginBottom:'4px' }}>Hero Slider</div>
+            <div style={{ fontSize:'12px',color:'#888' }}>Ana sayfadaki büyük slider alanını buradan yönet.</div>
+          </div>
+          <div style={{ fontSize:'12px',color:'#888' }}>{heroSlides.length} slide</div>
+        </div>
+
+        <div style={{ display:'flex',flexDirection:'column',gap:'10px',marginBottom:'18px' }}>
+          {heroSlides.map((slide, index) => {
+            const seciliSeri = seriler.find(s => String(s.id) === String(slide.seri_id))
+            return (
+              <div key={slide.id || index} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px',border:'1px solid #e8e6e0',borderRadius:'10px',background:'#faf9f6' }}>
+                <div style={{ width:'64px',height:'40px',borderRadius:'8px',overflow:'hidden',background:'#eee',flexShrink:0 }}>
+                  {(slide.arka_plan_url || seciliSeri?.hero_gorsel_url || seciliSeri?.arkaplan_url || seciliSeri?.kapak_url) && (
+                    <img src={slide.arka_plan_url || seciliSeri?.hero_gorsel_url || seciliSeri?.arkaplan_url || seciliSeri?.kapak_url} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
+                  )}
+                </div>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'2px' }}>{slide.baslik || seciliSeri?.baslik || 'Başlıksız Slide'}</div>
+                  <div style={{ fontSize:'12px',color:'#888',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>
+                    {seciliSeri ? `Bağlı seri: ${seciliSeri.baslik}` : 'Manuel içerik'} {slide.aktif === false ? '· Pasif' : '· Aktif'}
+                  </div>
+                </div>
+                <button onClick={()=>heroSlaytTasi(index,-1)} style={BS}>↑</button>
+                <button onClick={()=>heroSlaytTasi(index,1)} style={BS}>↓</button>
+                <button onClick={()=>heroSlaytDuzenle(slide,index)} style={BS}>Düzenle</button>
+                <button onClick={()=>heroSlaytSil(index)} style={BD}>Sil</button>
+              </div>
+            )
+          })}
+          {heroSlides.length===0 && <div style={{ padding:'18px',textAlign:'center',color:'#aaa',border:'1px dashed #e8e6e0',borderRadius:'10px' }}>Henüz hero slide yok</div>}
+        </div>
+
+        <div style={{ padding:'18px',border:'1px solid #e8e6e0',borderRadius:'12px',background:'#fcfcfa' }}>
+          <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'14px' }}>{heroDuzenleIndex !== null ? 'Hero Slide Düzenle' : 'Yeni Hero Slide'}</div>
+
+          <div style={{ marginBottom:'12px' }}>
+            <div style={LB}>Bağlı Seri</div>
+            <select value={heroForm.seri_id || ''} onChange={e=>setHeroForm(f=>({...f,seri_id:e.target.value}))} style={{...S, maxWidth:'420px'}}>
+              <option value="">Seri seç (opsiyonel)</option>
+              {seriler.map(s => (
+                <option key={s.id} value={s.id}>{s.baslik}</option>
+              ))}
+            </select>
+            <div style={{ fontSize:'12px', color:'#888', marginTop:'6px' }}>
+              Toplam {seriler.length} seri arasından seçim yapabilirsin.
+            </div>
+          </div>
+
+          <div style={{ display:'flex',gap:'16px',marginBottom:'14px',flexWrap:'wrap' }}>
+            <div>
+              <div style={LB}>Arka Plan Görseli</div>
+              <ResimYukle onizleme={heroArkaOnizleme||heroForm.arka_plan_url} onChange={(url,prev)=>{setHeroForm(f=>({...f,arka_plan_url:url}));setHeroArkaOnizleme(prev)}} bucket="site" width="160px" height="90px" />
+            </div>
+            <div>
+              <div style={LB}>Kapak Görseli</div>
+              <ResimYukle onizleme={heroKapakOnizleme||heroForm.kapak_url} onChange={(url,prev)=>{setHeroForm(f=>({...f,kapak_url:url}));setHeroKapakOnizleme(prev)}} bucket="site" width="100px" height="140px" />
+            </div>
+          </div>
+
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'14px' }}>
+            <div>
+              <div style={LB}>Arka Plan Boyutlandırma</div>
+              <select value={heroForm.arka_plan_fit || 'cover'} onChange={e=>setHeroForm(f=>({...f,arka_plan_fit:e.target.value}))} style={S}>
+                <option value="cover">Cover</option>
+                <option value="contain">Contain</option>
+              </select>
+            </div>
+            <div>
+              <div style={LB}>Arka Plan Hizası</div>
+              <select value={heroForm.arka_plan_pozisyon || 'center center'} onChange={e=>{
+                const value = e.target.value
+                const [xToken, yToken] = value.split(' ')
+                const harita = { left: 0, center: 50, right: 100, top: 0, bottom: 100 }
+                setHeroForm(f=>({
+                  ...f,
+                  arka_plan_pozisyon:value,
+                  arka_plan_x: harita[xToken] ?? 50,
+                  arka_plan_y: harita[yToken] ?? 50
+                }))
+              }} style={S}>
+                <option value="left center">Sol</option>
+                <option value="center center">Orta</option>
+                <option value="right center">Sağ</option>
+                <option value="center top">Üst Orta</option>
+                <option value="center bottom">Alt Orta</option>
+              </select>
+            </div>
+          </div>
+
+          {(heroArkaOnizleme || heroForm.arka_plan_url) && (
+            <div style={{ marginBottom:'16px' }}>
+              <div style={LB}>Hero Önizleme</div>
+              <div
+                ref={heroPreviewRef}
+                onPointerDown={handleHeroPreviewPointerDown}
+                onPointerMove={handleHeroPreviewPointerMove}
+                style={{ position:'relative', height:'180px', borderRadius:'14px', overflow:'hidden', background:'#111', border:'1px solid #e8e6e0', cursor:'grab', touchAction:'none' }}
+              >
+                <img
+                  src={heroArkaOnizleme || heroForm.arka_plan_url}
+                  alt="Hero önizleme"
+                  style={{
+                    position:'absolute',
+                    inset:0,
+                    width:'100%',
+                    height:'100%',
+                    objectFit: heroForm.arka_plan_fit || 'cover',
+                    objectPosition: `${heroForm.arka_plan_x ?? 50}% ${heroForm.arka_plan_y ?? 50}%`,
+                    opacity:0.86
+                  }}
+                />
+                <div style={{ position:'absolute', inset:0, background:'linear-gradient(90deg, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.55) 42%, rgba(0,0,0,0.18) 100%)' }} />
+                <div style={{ position:'absolute', top:'10px', right:'10px', zIndex:1, padding:'6px 10px', borderRadius:'999px', background:'rgba(10,10,10,0.72)', color:'#fff', fontSize:'11px' }}>
+                  {heroForm.arka_plan_x ?? 50}% / {heroForm.arka_plan_y ?? 50}%
+                </div>
+                <div style={{ position:'absolute', left:'16px', bottom:'16px', zIndex:1 }}>
+                  <div style={{ display:'inline-flex', padding:'4px 10px', borderRadius:'999px', background:'#f59e0b', color:'#fff', fontSize:'10px', fontWeight:700, marginBottom:'10px', letterSpacing:'1px', textTransform:'uppercase' }}>
+                    {heroForm.badge || 'Badge'}
+                  </div>
+                  <div style={{ color:'#fff', fontFamily:"'Bebas Neue', sans-serif", fontSize:'32px', lineHeight:0.92, marginBottom:'8px' }}>
+                    {(heroForm.baslik || 'Başlık').toUpperCase()}
+                  </div>
+                  <div style={{ color:'rgba(255,255,255,0.78)', fontSize:'12px', maxWidth:'34ch', lineHeight:1.5 }}>
+                    {heroForm.aciklama || 'Açıklama önizlemesi burada görünür.'}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize:'12px', color:'#888', marginTop:'8px' }}>
+                Görseli fareyle sürükleyerek kadrajı elle ayarlayabilirsin.
+              </div>
+            </div>
+          )}
+
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'12px' }}>
+            <div><div style={LB}>Badge</div><input value={heroForm.badge} onChange={e=>setHeroForm(f=>({...f,badge:e.target.value}))} style={I} placeholder="Öne Çıkan" /></div>
+            <div><div style={LB}>Durum Etiketi</div><input value={heroForm.durum} onChange={e=>setHeroForm(f=>({...f,durum:e.target.value}))} style={I} placeholder="Devam Eden" /></div>
+          </div>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Başlık Override</div><input value={heroForm.baslik} onChange={e=>setHeroForm(f=>({...f,baslik:e.target.value}))} style={I} placeholder="Boş bırakılırsa seçili seriden gelir" /></div>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Açıklama Override</div><textarea value={heroForm.aciklama} onChange={e=>setHeroForm(f=>({...f,aciklama:e.target.value}))} style={{...I,height:'80px'}} placeholder="Boş bırakılırsa seçili seriden gelir" /></div>
+          <div style={{ marginBottom:'12px' }}><div style={LB}>Kategori Etiketi Override</div><input value={heroForm.kategori_etiket} onChange={e=>setHeroForm(f=>({...f,kategori_etiket:e.target.value}))} style={I} placeholder="Marvel / Manga / Webtoon..." /></div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'12px' }}>
+            <div><div style={LB}>Birincil Buton Metni</div><input value={heroForm.buton1_metin} onChange={e=>setHeroForm(f=>({...f,buton1_metin:e.target.value}))} style={I} placeholder="İncele →" /></div>
+            <div><div style={LB}>Birincil Buton Linki</div><input value={heroForm.buton1_link} onChange={e=>setHeroForm(f=>({...f,buton1_link:e.target.value}))} style={I} placeholder="/seri/ornek-seri" /></div>
+          </div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'16px' }}>
+            <div><div style={LB}>İkincil Buton Metni</div><input value={heroForm.buton2_metin} onChange={e=>setHeroForm(f=>({...f,buton2_metin:e.target.value}))} style={I} placeholder="Tüm Seriler" /></div>
+            <div><div style={LB}>İkincil Buton Linki</div><input value={heroForm.buton2_link} onChange={e=>setHeroForm(f=>({...f,buton2_link:e.target.value}))} style={I} placeholder="/seriler" /></div>
+          </div>
+          <div style={{ marginBottom:'16px' }}>
+            <label style={{ display:'flex',alignItems:'center',gap:'8px',cursor:'pointer',fontSize:'13px' }}>
+              <input type="checkbox" checked={heroForm.aktif} onChange={e=>setHeroForm(f=>({...f,aktif:e.target.checked}))} />
+              Slide aktif
+            </label>
+          </div>
+          <div style={{ display:'flex',gap:'10px',flexWrap:'wrap' }}>
+            <button onClick={heroSlaytKaydet} style={BP}>{heroDuzenleIndex !== null ? 'Slide Güncelle' : 'Slide Ekle'}</button>
+            <button onClick={heroFormSifirla} style={BS}>Formu Temizle</button>
+          </div>
+        </div>
       </div>
       <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Tüm Ayarları Kaydet'}</button>
     </div>

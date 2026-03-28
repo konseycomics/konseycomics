@@ -5,21 +5,48 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f5f4f0;
-  --surface: #ffffff;
-  --border: #e8e6e0;
-  --text: #111110;
-  --text-muted: #888780;
-  --text-light: #b4b2aa;
+  --bg: #000000;
+  --surface: #111111;
+  --border: #1f1f1f;
+  --text: #f5f5f3;
+  --text-muted: #a2a2a0;
+  --text-light: #6f6f6c;
   --radius: 12px;
+  --page-max-width: 1480px;
+  --page-gutter: clamp(18px, 4vw, 42px);
+  --section-gap: clamp(40px, 5vw, 56px);
+  color-scheme: dark;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  background: #000;
+  min-height: 100%;
+}
 
 body {
   font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
+  background: #000;
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+}
+
+body, #__next {
+  background: #000;
+}
+
+.site-shell {
+  width: min(100%, var(--page-max-width));
+  margin: 0 auto;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
+}
+
+.site-section {
+  width: min(100%, var(--page-max-width));
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--page-gutter);
+  padding-right: var(--page-gutter);
 }

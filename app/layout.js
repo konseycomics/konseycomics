@@ -48,7 +48,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
       </head>
-      <body style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', sans-serif)", margin: 0, padding: 0 }}>
+      <body style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', sans-serif)", margin: 0, padding: 0, background: '#000' }}>
         <ZiyaretTracker />
         {children}
       </body>

@@ -4,11 +4,18 @@ import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 const FILTRELER = ['Tümü', 'Marvel', 'DC', 'Bağımsız', 'Manga', 'Webtoon']
 const DURUMLAR = ['Tümü', 'Devam Eden', 'Tamamlandı', 'Tek Sayılık']
 
+function temizFiltre(deger) {
+  if (!deger) return 'Tümü'
+  return FILTRELER.find(item => item.toLocaleLowerCase('tr-TR') === String(deger).toLocaleLowerCase('tr-TR')) || 'Tümü'
+}
+
 export default function SerilerSayfasi() {
+  const searchParams = useSearchParams()
   const [seriler, setSeriler] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtre, setFiltre] = useState('Tümü')
@@ -23,6 +30,10 @@ export default function SerilerSayfasi() {
     }
     fetchData()
   }, [])
+
+  useEffect(() => {
+    setFiltre(temizFiltre(searchParams.get('filtre')))
+  }, [searchParams])
 
   let filtered = seriler
   if (filtre !== 'Tümü') filtered = filtered.filter(s => s.kategoriler?.isim === filtre || s.kategori?.toLowerCase() === filtre.toLowerCase())

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -14,7 +14,7 @@ function temizFiltre(deger) {
   return FILTRELER.find(item => item.toLocaleLowerCase('tr-TR') === String(deger).toLocaleLowerCase('tr-TR')) || 'Tümü'
 }
 
-export default function SerilerSayfasi() {
+function SerilerIcerik() {
   const searchParams = useSearchParams()
   const [seriler, setSeriler] = useState([])
   const [loading, setLoading] = useState(true)
@@ -92,5 +92,13 @@ export default function SerilerSayfasi() {
       </div>
       <Footer />
     </>
+  )
+}
+
+export default function SerilerSayfasi() {
+  return (
+    <Suspense fallback={<><Navbar /><div style={{ margin: '32px 24px', color: 'var(--text-muted)' }}>Yükleniyor...</div><Footer /></>}>
+      <SerilerIcerik />
+    </Suspense>
   )
 }

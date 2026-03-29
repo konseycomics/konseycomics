@@ -5,7 +5,7 @@ async function getSeriesSeoData(slug) {
   const supabase = createSupabaseServerClient()
   const { data } = await supabase
     .from('seriler')
-    .select('id, baslik, slug, aciklama, kapak_url, hero_gorsel_url, arkaplan_url, durum, yil, ortalama_puan, goruntuleme_sayisi, kategoriler(isim)')
+    .select('id, baslik, slug, ozet, kapak_url, arkaplan_url, arkaplan_pozisyon, durum, yil, ortalama_puan, goruntuleme_sayisi, kategoriler(isim)')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }) {
 
   const category = seri.kategoriler?.isim || 'Cizgi Roman'
   const description = createSeoDescription(
-    seri.aciklama,
+    seri.ozet,
     `${seri.baslik} serisini KonseyComics arsivinde incele. ${category} kategorisinde bolumler, puanlar ve okuma detaylari seni bekliyor.`
   )
 
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }) {
     title: `${seri.baslik} Oku`,
     description,
     path: `/seri/${seri.slug}`,
-    image: seri.hero_gorsel_url || seri.arkaplan_url || seri.kapak_url,
+    image: seri.arkaplan_url || seri.kapak_url,
     type: 'article',
     keywords: [seri.baslik, category, seri.durum, 'cizgi roman', 'manga', 'webtoon'].filter(Boolean),
   })
@@ -50,10 +50,10 @@ export default async function SeriDetayPage({ params }) {
         '@context': 'https://schema.org',
         '@type': 'BookSeries',
         name: seri.baslik,
-        description: createSeoDescription(seri.aciklama, `${seri.baslik} KonseyComics arşivinde yer alıyor.`),
+        description: createSeoDescription(seri.ozet, `${seri.baslik} KonseyComics arşivinde yer alıyor.`),
         genre: seri.kategoriler?.isim || undefined,
         url: absoluteUrl(`/seri/${seri.slug}`),
-        image: seri.kapak_url || seri.hero_gorsel_url || undefined,
+        image: seri.kapak_url || seri.arkaplan_url || undefined,
         aggregateRating: Number(seri.ortalama_puan || 0) > 0
           ? {
               '@type': 'AggregateRating',

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
@@ -54,7 +55,7 @@ export default function Navbar() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: '#000', borderBottom: '1px solid #121212' }}>
         <div className="site-shell" style={{ height: '90px', display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
-            <img src="/demo/logo.png" alt="Konsey Comics" style={{ height: '60px', width: 'auto', display: 'block' }} />
+            <Image src="/demo/logo.png" alt="Konsey Comics" width={164} height={60} priority style={{ height: '60px', width: 'auto', display: 'block' }} />
           </Link>
 
           <ul style={{ display: 'flex', gap: '4px', listStyle: 'none', flex: 1, margin: 0, padding: 0 }} className="desktop-nav">
@@ -79,7 +80,7 @@ export default function Navbar() {
               <BildirimZili kullaniciId={kullanici.id} />
               <Link href={`/profil/${profil.kullanici_adi}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', padding: '6px 12px', borderRadius: '10px', background: '#111', border: '1px solid #222' }}>
                 <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#222', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#fff', fontWeight: 700 }}>
-                  {profil.avatar_url ? <img src={profil.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profil.kullanici_adi[0].toUpperCase()}
+                  {profil.avatar_url ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profil.kullanici_adi[0].toUpperCase()}
                 </div>
                 <span style={{ fontSize: '14px', fontWeight: 500, color: '#f5f5f3' }}>{profil.kullanici_adi}</span>
               </Link>

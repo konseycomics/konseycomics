@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const kesfet = [
   { label: 'Tüm Seriler', href: '/seriler' },
@@ -33,7 +34,7 @@ export default function Footer() {
         }} className="footer-hero">
           <div>
             <Link href="/" style={{ display: 'inline-flex', textDecoration: 'none', marginBottom: '18px' }}>
-              <img src="/demo/logo.png" alt="Konsey Comics" style={{ width: 'min(340px, 100%)', height: 'auto', display: 'block' }} />
+              <Image src="/demo/logo.png" alt="Konsey Comics" width={340} height={124} style={{ width: 'min(340px, 100%)', height: 'auto', display: 'block' }} />
             </Link>
 
             <div style={{ maxWidth: '42ch', color: '#d2d2cd', fontSize: '15px', lineHeight: 1.75 }}>

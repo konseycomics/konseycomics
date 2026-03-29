@@ -20,11 +20,10 @@ export default function ZiyaretTracker() {
     const track = async () => {
       try {
         const oturum_id = getOturumId()
-        const { data: { session } } = await supabase.auth.getSession()
         await supabase.from('ziyaretler').insert({
           sayfa: pathname,
           oturum_id,
-          kullanici_id: session?.user?.id || null
+          kullanici_id: null
         })
       } catch {}
     }

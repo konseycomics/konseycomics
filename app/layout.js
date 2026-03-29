@@ -2,6 +2,7 @@ import { DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import ZiyaretTracker from './components/ZiyaretTracker'
+import { Analytics } from '@vercel/analytics/next'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],

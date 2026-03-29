@@ -2,6 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function proxy(req) {
+  const host = req.headers.get('host') || ''
+  const canonicalHost = 'konseycomics.com'
+  const legacyHost = 'konseycomics.vercel.app'
+
+  if (host === legacyHost) {
+    const redirectUrl = req.nextUrl.clone()
+    redirectUrl.protocol = 'https:'
+    redirectUrl.host = canonicalHost
+    return NextResponse.redirect(redirectUrl, 308)
+  }
+
   let res = NextResponse.next({
     request: { headers: req.headers },
   })

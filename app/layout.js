@@ -1,6 +1,7 @@
 import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import ZiyaretTracker from './components/ZiyaretTracker'
+import { Analytics } from '@vercel/analytics/next'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
       <body style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', sans-serif)", margin: 0, padding: 0, background: '#000' }}>
         <ZiyaretTracker />
         {children}
+        <Analytics />
       </body>
     </html>
   )

@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import SeriPuan from '../../components/SeriPuan'
+import YorumSistemi from '../../components/YorumSistemi'
 import Link from 'next/link'
 import { trackSeriesFavoriteAndUnlock } from '../../lib/unvanClient'
 
@@ -534,6 +535,8 @@ export default function SeriDetay() {
                   </div>
                 </Link>
               ))}
+
+              <YorumSistemi seriId={seri.id} />
             </div>
 
             <aside style={{ display: 'grid', gap: '18px' }}>

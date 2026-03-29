@@ -12,21 +12,28 @@ export default function YorumSistemi({ bolumId, seriId }) {
   const [profil, setProfil] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [cevapVerilenId, setCevapVerilenId] = useState(null)
   const [begeniler, setBegeniler] = useState({})
+  const seriModu = !bolumId && !!seriId
+  const baslik = seriModu ? 'Seri Yorumlari' : 'Yorumlar'
+  const placeholder = seriModu ? 'Bu seri hakkında ne düşünüyorsun?' : 'Bu bölüm hakkında ne düşünüyorsun?'
 
   const fetchYorumlar = useCallback(async () => {
-    const { data } = await supabase
+    const query = supabase
       .from('yorumlar')
       .select('*')
-      .eq('bolum_id', bolumId)
+      .eq('seri_id', seriId)
       .is('ust_yorum_id', null)
       .eq('silindi', false)
       .order('begeni_sayisi', { ascending: false })
+
+    if (bolumId) query.eq('bolum_id', bolumId)
+    else query.is('bolum_id', null)
+
+    const { data } = await query
     const profilMap = await getPublicProfilesByIds((data || []).map(yorum => yorum.kullanici_id))
     setYorumlar((data || []).map(yorum => ({ ...yorum, profiller: profilMap[yorum.kullanici_id] || null })))
     setLoading(false)
-  }, [bolumId])
+  }, [bolumId, seriId])
 
   useEffect(() => {
     fetchYorumlar()
@@ -62,7 +69,6 @@ export default function YorumSistemi({ bolumId, seriId }) {
     if (!error) {
       setYeniYorum('')
       setSpoiler(false)
-      setCevapVerilenId(null)
       fetchYorumlar()
     }
     setYukleniyor(false)
@@ -192,7 +198,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
   return (
     <div style={{ marginTop: '32px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
       <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '20px' }}>
-        Yorumlar {yorumlar.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({yorumlar.length})</span>}
+        {baslik} {yorumlar.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({yorumlar.length})</span>}
       </div>
 
       {/* Yorum formu */}
@@ -202,7 +208,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
             {profil?.avatar_url ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profil?.kullanici_adi?.[0]?.toUpperCase()}
           </div>
           <div style={{ flex: 1 }}>
-            <textarea value={yeniYorum} onChange={e => setYeniYorum(e.target.value)} placeholder="Bu bölüm hakkında ne düşünüyorsun?" rows={3} style={{ width: '100%', padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.6, boxSizing: 'border-box' }} />
+            <textarea value={yeniYorum} onChange={e => setYeniYorum(e.target.value)} placeholder={placeholder} rows={3} style={{ width: '100%', padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.6, boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={spoiler} onChange={e => setSpoiler(e.target.checked)} />

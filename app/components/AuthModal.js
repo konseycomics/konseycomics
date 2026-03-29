@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 
 export default function AuthModal({ open, onClose }) {
   const [mod, setMod] = useState('giris')
@@ -33,7 +33,7 @@ export default function AuthModal({ open, onClose }) {
   async function handleSifre(e) {
     e.preventDefault()
     setYukleniyor(true); setHata(''); setMesaj('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: getAuthRedirectUrl('/sifre-sifirla') })
     if (error) setHata(error.message)
     else setMesaj('Şifre sıfırlama bağlantısı gönderildi.')
     setYukleniyor(false)

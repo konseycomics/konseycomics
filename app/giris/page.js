@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 import { getPublicProfileByUsername } from '../lib/publicProfiles'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -90,7 +90,7 @@ export default function GirisKayit() {
       password: form.sifre,
       options: {
         data: { kullanici_adi: form.kullaniciAdi },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: getAuthRedirectUrl('/auth/callback'),
       },
     })
     if (error) {
@@ -109,7 +109,7 @@ export default function GirisKayit() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: getAuthRedirectUrl('/auth/callback') },
     })
   }
 
@@ -119,7 +119,7 @@ export default function GirisKayit() {
     setHata('')
     setMesaj('')
     const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
-      redirectTo: `${window.location.origin}/sifre-sifirla`,
+      redirectTo: getAuthRedirectUrl('/sifre-sifirla'),
     })
     if (error) setHata(error.message)
     else setMesaj('Şifre sıfırlama bağlantısı e-postana gönderildi.')

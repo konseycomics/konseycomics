@@ -37,19 +37,23 @@ export const metadata = {
     siteName: 'KonseyComics',
     title: 'KonseyComics – Türkçe Çizgi Roman & Manga Okuma Platformu',
     description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu. Marvel, DC, bağımsız seriler ve daha fazlası.',
-    images: [{ url: '/demo/hero.jpg', width: 1600, height: 900, alt: 'KonseyComics' }],
+    images: [{ url: '/konseycomics.jpg', width: 883, height: 883, alt: 'KonseyComics' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'KonseyComics – Türkçe Çizgi Roman & Manga',
     description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu.',
-    images: ['/demo/hero.jpg'],
+    images: ['/konseycomics.jpg'],
   },
   robots: {
     index: true, follow: true,
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
-  icons: { icon: '/demo/logo.png', shortcut: '/demo/logo.png' },
+  icons: {
+    icon: '/konseycomics.jpg',
+    shortcut: '/konseycomics.jpg',
+    apple: '/konseycomics.jpg',
+  },
 }
 
 export default function RootLayout({ children }) {

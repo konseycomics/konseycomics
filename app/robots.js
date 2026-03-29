@@ -1,5 +1,5 @@
 function normalizeSiteUrl(value) {
-  if (!value) return 'https://konseycomics.vercel.app'
+  if (!value) return 'https://konseycomics.com'
   return value.startsWith('http') ? value : `https://${value}`
 }
 

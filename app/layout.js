@@ -1,5 +1,6 @@
 import { DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import ZiyaretTracker from './components/ZiyaretTracker'
 
@@ -63,6 +64,7 @@ export default function RootLayout({ children }) {
         <ZiyaretTracker />
         {children}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

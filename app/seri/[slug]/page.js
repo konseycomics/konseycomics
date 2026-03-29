@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import SeriPuan from '../../components/SeriPuan'
 import Link from 'next/link'
+import { trackSeriesFavoriteAndUnlock } from '../../lib/unvanClient'
 
 function tarih(dateStr) {
   if (!dateStr) return ''
@@ -33,6 +34,9 @@ export default function SeriDetay() {
   const [sonOkunan, setSonOkunan] = useState(null)
   const [detayAyar, setDetayAyar] = useState({})
   const [onerilenSeri, setOnerilenSeri] = useState(null)
+  const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
+  const [seriUnvanlari, setSeriUnvanlari] = useState([])
+  const [acikUnvanIdleri, setAcikUnvanIdleri] = useState(new Set())
 
   useEffect(() => {
     async function fetchData() {
@@ -46,7 +50,7 @@ export default function SeriDetay() {
         setSeri(seriData)
         await supabase.rpc('increment_seri_goruntuleme', { seri_id: seriData.id })
 
-        const [b, y, c, t, detay, onerilen] = await Promise.all([
+        const [b, y, c, t, detay, onerilen, unvanlar] = await Promise.all([
           supabase.from('bolumler')
             .select('*, cevirmen:ekip!cevirmen_id(isim), balonlama:ekip!balonlama_id(isim), grafik:ekip!grafik_id(isim)')
             .eq('seri_id', seriData.id)
@@ -63,6 +67,11 @@ export default function SeriDetay() {
             .neq('id', seriData.id)
             .limit(1)
             .maybeSingle(),
+          supabase.from('unvan_tanimlari')
+            .select('*')
+            .or(`seri_id.eq.${seriData.id}${seriData.character_group ? `,character_group.eq.${seriData.character_group}` : ''}`)
+            .eq('aktif', true)
+            .order('siralama'),
         ])
 
         setBolumler(b.data || [])
@@ -71,6 +80,7 @@ export default function SeriDetay() {
         setTurler(t.data?.map(item => item.isim) || [])
         setDetayAyar(detay.data?.deger?.[String(seriData.id)] || {})
         setOnerilenSeri(onerilen.data || null)
+        setSeriUnvanlari(unvanlar.data || [])
 
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
@@ -91,6 +101,17 @@ export default function SeriDetay() {
             .limit(1)
             .single()
           if (gecmis) setSonOkunan(gecmis.bolumler)
+
+          const unvanIds = (unvanlar.data || []).map(item => item.id).filter(Boolean)
+          if (unvanIds.length > 0) {
+            const { data: unlockedTitles } = await supabase
+              .from('kullanici_unvanlari')
+              .select('unvan_id')
+              .eq('kullanici_id', session.user.id)
+              .in('unvan_id', unvanIds)
+
+            setAcikUnvanIdleri(new Set((unlockedTitles || []).map(item => item.unvan_id)))
+          }
         }
       }
 
@@ -113,6 +134,14 @@ export default function SeriDetay() {
         { onConflict: 'kullanici_id,seri_id' }
       )
       setListeDurumu(durum)
+
+      if (durum === 'okumak_istiyorum') {
+        const unlocked = await trackSeriesFavoriteAndUnlock({ userId: kullanici.id, seriId: seri.id })
+        if (unlocked.length > 0) {
+          setAcilanUnvanlar(unlocked)
+          window.setTimeout(() => setAcilanUnvanlar([]), 4200)
+        }
+      }
     }
 
     setListeYukleniyor(false)
@@ -167,6 +196,33 @@ export default function SeriDetay() {
       <Navbar />
 
       <main style={{ background: '#060606', minHeight: '100vh' }}>
+        {acilanUnvanlar.length > 0 && (
+          <div style={{ position: 'fixed', top: '92px', right: '20px', zIndex: 80, display: 'grid', gap: '10px', maxWidth: 'min(92vw, 360px)' }}>
+            {acilanUnvanlar.map((unvan) => (
+              <div
+                key={`${unvan.unvanId}-${unvan.kod}`}
+                style={{
+                  borderRadius: '18px',
+                  padding: '16px 18px',
+                  background: 'rgba(12,12,12,0.92)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 18px 38px rgba(0,0,0,0.28)',
+                  backdropFilter: 'blur(16px)',
+                }}
+              >
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Yeni Unvan Acildi
+                </div>
+                <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', lineHeight: 0.95, marginBottom: '8px' }}>
+                  {unvan.isim}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.64)', fontSize: '13px', lineHeight: 1.6 }}>
+                  {unvan.aciklama || 'Bu etkileşim yeni bir unvanin kilidini acti.'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <style>{`
           .seri-hero {
             position: relative;
@@ -494,6 +550,56 @@ export default function SeriDetay() {
                   ))}
                 </div>
               </div>
+
+              {seriUnvanlari.length > 0 && (
+                <div className="seri-side-card">
+                  <div style={{ fontSize: '12px', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '18px', fontWeight: 800 }}>
+                    Açılabilir Unvanlar
+                  </div>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {seriUnvanlari.slice(0, 6).map((unvan) => {
+                      const unlocked = acikUnvanIdleri.has(unvan.id)
+                      return (
+                        <div
+                          key={unvan.id}
+                          style={{
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '16px',
+                            padding: '14px',
+                            background: unlocked ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.03)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
+                            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '28px', lineHeight: 0.95, color: '#fff' }}>
+                              {unvan.isim}
+                            </div>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                minHeight: '24px',
+                                padding: '0 10px',
+                                borderRadius: '999px',
+                                background: unlocked ? 'rgba(250,204,21,0.16)' : 'rgba(255,255,255,0.08)',
+                                color: unlocked ? '#fde68a' : 'rgba(255,255,255,0.56)',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.8px',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {unlocked ? 'Açıldı' : 'Kilitli'}
+                            </span>
+                          </div>
+                          <div style={{ color: 'rgba(255,255,255,0.62)', fontSize: '13px', lineHeight: 1.65 }}>
+                            {unvan.aciklama || 'Bu seriyle veya ayni karakter evreniyle ilgili bir kilometre tasi.'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="seri-side-card">
                 <div style={{ fontSize: '12px', color: '#22c55e', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '18px', fontWeight: 800 }}>

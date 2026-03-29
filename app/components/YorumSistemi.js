@@ -135,6 +135,21 @@ export default function YorumSistemi({ bolumId, seriId }) {
               )}
             </div>
 
+            {yorum.profiller?.secili_unvan?.isim && (
+              <div
+                style={{
+                  marginBottom: '6px',
+                  color: 'rgba(255,255,255,0.64)',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {yorum.profiller.secili_unvan.isim}
+              </div>
+            )}
+
             {/* İçerik */}
             {yorum.spoiler && !spoilerAcik ? (
               <div onClick={() => setSpoilerAcik(true)} style={{ cursor: 'pointer', padding: '8px 12px', background: '#111', borderRadius: '8px', fontSize: '13px', color: '#888', userSelect: 'none' }}>

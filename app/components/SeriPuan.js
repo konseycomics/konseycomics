@@ -1,12 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { trackSeriesRatingAndUnlock } from '../lib/unvanClient'
 
 export default function SeriPuan({ seriId, ortalama, puanSayisi }) {
   const [benimPuan, setBenimPuan] = useState(0)
   const [hover, setHover] = useState(0)
   const [kullanici, setKullanici] = useState(null)
   const [yukleniyor, setYukleniyor] = useState(false)
+  const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,11 +24,38 @@ export default function SeriPuan({ seriId, ortalama, puanSayisi }) {
     setYukleniyor(true)
     await supabase.from('seri_puanlari').upsert([{ kullanici_id: kullanici.id, seri_id: seriId, puan: p, updated_at: new Date().toISOString() }])
     setBenimPuan(p)
+    const unlocked = await trackSeriesRatingAndUnlock({ userId: kullanici.id, seriId })
+    if (unlocked.length > 0) {
+      setAcilanUnvanlar(unlocked)
+      window.setTimeout(() => setAcilanUnvanlar([]), 4200)
+    }
     setYukleniyor(false)
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {acilanUnvanlar.length > 0 && (
+        <div style={{ display: 'grid', gap: '8px', marginBottom: '8px' }}>
+          {acilanUnvanlar.map((unvan) => (
+            <div
+              key={`${unvan.unvanId}-${unvan.kod}`}
+              style={{
+                borderRadius: '14px',
+                padding: '10px 12px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
+                Yeni Unvan
+              </div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '24px', lineHeight: 1, color: '#fff' }}>
+                {unvan.isim}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '20px', fontWeight: 700 }}>{ortalama > 0 ? ortalama : '—'}</span>
         <div>

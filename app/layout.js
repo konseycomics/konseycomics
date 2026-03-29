@@ -8,8 +8,18 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
 })
 
+function normalizeSiteUrl(value) {
+  if (!value) return 'https://konseycomics.vercel.app'
+  return value.startsWith('http') ? value : `https://${value}`
+}
+
+const SITE_URL = normalizeSiteUrl(
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+)
+
 export const metadata = {
-  metadataBase: new URL('https://konseycomics.vercel.app'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'KonseyComics – Türkçe Çizgi Roman & Manga Okuma Platformu',
     template: '%s | KonseyComics',
@@ -21,23 +31,23 @@ export const metadata = {
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
-    url: 'https://konseycomics.vercel.app',
+    url: SITE_URL,
     siteName: 'KonseyComics',
     title: 'KonseyComics – Türkçe Çizgi Roman & Manga Okuma Platformu',
     description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu. Marvel, DC, bağımsız seriler ve daha fazlası.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'KonseyComics' }],
+    images: [{ url: '/demo/hero.jpg', width: 1600, height: 900, alt: 'KonseyComics' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'KonseyComics – Türkçe Çizgi Roman & Manga',
     description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu.',
-    images: ['/og-image.png'],
+    images: ['/demo/hero.jpg'],
   },
   robots: {
     index: true, follow: true,
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
-  icons: { icon: '/favicon.ico', shortcut: '/favicon.ico' },
+  icons: { icon: '/demo/logo.png', shortcut: '/demo/logo.png' },
 }
 
 export default function RootLayout({ children }) {

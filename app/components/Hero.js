@@ -25,9 +25,72 @@ export default function Hero({ seriler = [], slides = [] }) {
   const seri = slideList.length > 0 ? slideList[aktifIndex % slideList.length] : null
 
   if (!seri) return (
-    <div style={{ height: '400px', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Yükleniyor...</div>
-    </div>
+    <section style={{
+      position: 'relative',
+      width: '100%',
+      minHeight: 'clamp(360px, 62vh, 560px)',
+      overflow: 'hidden',
+      background: 'radial-gradient(circle at top center, rgba(120,119,198,0.18), transparent 38%), linear-gradient(180deg, #090909 0%, #050505 100%)',
+      borderBottom: '1px solid rgba(255,255,255,0.06)'
+    }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent 24%, rgba(0,0,0,0.46) 100%)' }} />
+      <div style={{ position: 'relative', zIndex: 1, minHeight: 'inherit', display: 'flex', alignItems: 'center' }}>
+        <div className="site-shell">
+          <div style={{ maxWidth: '720px', padding: '48px 0' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(245,158,11,0.14)',
+              border: '1px solid rgba(245,158,11,0.25)',
+              color: '#f5f5f3',
+              fontSize: '10px',
+              fontWeight: 700,
+              padding: '5px 12px',
+              borderRadius: '999px',
+              marginBottom: '18px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px'
+            }}>
+              Konsey Arşivi
+            </div>
+            <h1 style={{
+              margin: '0 0 14px',
+              color: '#fff',
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: 'clamp(48px, 7vw, 82px)',
+              lineHeight: 0.92,
+              letterSpacing: '0.8px'
+            }}>
+              Yeni içerikler yayına hazırlanıyor
+            </h1>
+            <p style={{
+              margin: '0 0 24px',
+              color: 'rgba(255,255,255,0.72)',
+              fontSize: 'clamp(15px, 1.3vw, 18px)',
+              lineHeight: 1.7,
+              maxWidth: '58ch'
+            }}>
+              Arşiv, vitrin ve son eklenen bölümler otomatik olarak burada görünecek. İçerik eklendikçe ana sayfa kendini doldurur.
+            </p>
+            <Link href="/seriler" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#fff',
+              color: '#111',
+              fontSize: '13px',
+              fontWeight: 700,
+              padding: '12px 24px',
+              borderRadius: '999px',
+              textDecoration: 'none'
+            }}>
+              Arşivi Keşfet
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   )
 
   const heroBackground = seri.hero_gorsel_url || seri.arkaplan_url || '/demo/hero.jpg'
@@ -175,7 +238,7 @@ export default function Hero({ seriler = [], slides = [] }) {
                 lineHeight: 0.9, letterSpacing: '0.7px',
                 textShadow: '0 2px 20px rgba(0,0,0,0.5)'
               }}>
-                {baslik.toUpperCase()}
+                {baslik}
               </h1>
 
               {ozet && (

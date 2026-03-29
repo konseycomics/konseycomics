@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+.vscode/
+.agents/
+supabase/.temp/
+skills-lock.json
 
 # debug
 npm-debug.log*

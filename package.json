@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "titles:backfill": "node scripts/backfill-unvanlar.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

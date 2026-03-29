@@ -6,6 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import YorumSistemi from '../../../components/YorumSistemi'
+import { trackIssueReadAndUnlock } from '../../../lib/unvanClient'
 
 function driveEmbedUrl(link) {
   if (!link) return null
@@ -32,7 +33,9 @@ export default function Okuyucu() {
   const [aktifSayfa, setAktifSayfa] = useState(1)
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
+  const okumaTakipRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
+  const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
 
   useEffect(() => {
     async function fetchData() {
@@ -89,6 +92,43 @@ export default function Okuyucu() {
 
     fetchData()
   }, [slug, bolum])
+
+  useEffect(() => {
+    if (!bolumData?.id || !seriData?.id) return
+    if (okumaTakipRef.current === `${seriData.id}:${bolumData.id}`) return
+
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user || cancelled) return
+
+        const unlocked = await trackIssueReadAndUnlock({
+          userId: session.user.id,
+          seriId: seriData.id,
+          bolumId: bolumData.id,
+          completionRatio: 1,
+          readingTimeSec: 20,
+        })
+
+        if (!cancelled && unlocked.length > 0) {
+          setAcilanUnvanlar(unlocked)
+          window.setTimeout(() => {
+            setAcilanUnvanlar(current => (current === unlocked ? [] : current))
+          }, 5200)
+        }
+
+        okumaTakipRef.current = `${seriData.id}:${bolumData.id}`
+      } catch (error) {
+        console.warn('Okuma unvan takibi atlandi:', error?.message || error)
+      }
+    }, 18000)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [bolumData?.id, seriData?.id])
 
   useEffect(() => {
     async function fetchOkumaSayfalari() {
@@ -206,6 +246,33 @@ export default function Okuyucu() {
       <Navbar />
 
       <main style={{ background: '#050505', minHeight: '100vh' }}>
+        {acilanUnvanlar.length > 0 && (
+          <div style={{ position: 'fixed', top: '92px', right: '20px', zIndex: 80, display: 'grid', gap: '10px', maxWidth: 'min(92vw, 360px)' }}>
+            {acilanUnvanlar.map((unvan) => (
+              <div
+                key={`${unvan.unvanId}-${unvan.kod}`}
+                style={{
+                  borderRadius: '18px',
+                  padding: '16px 18px',
+                  background: 'rgba(12,12,12,0.92)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 18px 38px rgba(0,0,0,0.28)',
+                  backdropFilter: 'blur(16px)',
+                }}
+              >
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Yeni Unvan Acildi
+                </div>
+                <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', lineHeight: 0.95, marginBottom: '8px' }}>
+                  {unvan.isim}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.64)', fontSize: '13px', lineHeight: 1.6 }}>
+                  {unvan.aciklama || 'Okuma ilerlemen bu unvanin kilidini acti.'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <style>{`
           .reader-shell {
             position: relative;

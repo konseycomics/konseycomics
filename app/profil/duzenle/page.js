@@ -546,13 +546,13 @@ export default function ProfilDuzenle() {
   const onizlemeIstatistikleri = [
     { label: 'Okundu', value: 1 },
     { label: 'Takip', value: profil.takip_sayisi || 0 },
-    { label: 'Takipci', value: profil.takipci_sayisi || 1 },
+    { label: 'Takipçi', value: profil.takipci_sayisi || 1 },
   ]
   const anaVitrinSecenekleri = [
-    ['show_featured_series', 'One Cikan Seriler', 'Profilindeki secili seri vitrini gorunsun.'],
-    ['show_reading_shelf', 'Okuma Rafi', 'Okuma rafin profil sayfanda yer alsin.'],
-    ['show_comments', 'Yorumlar', 'Biraktigin son yorumlar profilde gorunsun.'],
-    ['show_stats', 'Istatistikler', 'Okundu, takip ve takipci sayilari profilde yer alsin.'],
+    ['show_featured_series', 'Öne Çıkan Seriler', 'Profilindeki seçili seri vitrini görünsün.'],
+    ['show_reading_shelf', 'Okuma Rafı', 'Okuma rafın profil sayfanda yer alsın.'],
+    ['show_comments', 'Yorumlar', 'Bıraktığın son yorumlar profilde görünsün.'],
+    ['show_stats', 'İstatistikler', 'Okundu, takip ve takipçi sayıları profilde yer alsın.'],
   ]
   const rafDetaylari = [
     ['show_reading_okunuyor', 'Okunuyor', 'Devam eden serileri rafta goster.'],
@@ -560,9 +560,9 @@ export default function ProfilDuzenle() {
     ['show_reading_okuyacak', 'Okuyacak', 'Daha sonra okuyacagin serileri rafta goster.'],
   ]
   const istatistikDetaylari = [
-    ['show_stats_okundu', 'Okundu sayisi', 'Toplam bitirdigin seri adedi gorunsun.'],
-    ['show_stats_takip', 'Takip sayisi', 'Takip ettigin uye sayisi gorunsun.'],
-    ['show_stats_takipci', 'Takipci sayisi', 'Seni takip eden uye sayisi gorunsun.'],
+    ['show_stats_okundu', 'Okundu sayısı', 'Toplam bitirdiğin seri adedi görünsün.'],
+    ['show_stats_takip', 'Takip sayısı', 'Takip ettiğin üye sayısı görünsün.'],
+    ['show_stats_takipci', 'Takipçi sayısı', 'Seni takip eden üye sayısı görünsün.'],
   ]
 
   function handleBannerPointerDown(e) {
@@ -648,7 +648,7 @@ export default function ProfilDuzenle() {
                 fontSize: '14px',
               }}
             >
-              Henuz arka plan gorseli secilmedi
+              Henüz arka plan görseli seçilmedi
             </div>
           )}
           <div
@@ -759,7 +759,7 @@ export default function ProfilDuzenle() {
                   letterSpacing: '-0.03em',
                 }}
               >
-                {form.kullanici_adi || 'KullaniciAdi'}
+                {form.kullanici_adi || 'KullanıcıAdı'}
               </div>
               {!mobil && (
                 <span
@@ -895,9 +895,9 @@ export default function ProfilDuzenle() {
   function renderOneCikanSerilerEditor() {
     return (
       <div style={{ display: 'grid', gap: '12px' }}>
-        <label style={L}>One Cikan Seriler</label>
+        <label style={L}>Öne Çıkan Seriler</label>
         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
-          Profil vitrininin ilk bolumunde yer alacak serileri tum seri arsivinden arayarak sec. En fazla <strong style={{ color: '#fff' }}>3</strong> seri one cikabilir.
+          Profil vitrininin ilk bölümünde yer alacak serileri tüm seri arşivinden arayarak seç. En fazla <strong style={{ color: '#fff' }}>3</strong> seri öne çıkabilir.
         </div>
 
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -941,7 +941,7 @@ export default function ProfilDuzenle() {
                   }}
                 >
                   <span>{seri.baslik}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', textTransform: 'uppercase' }}>Kaldir</span>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', textTransform: 'uppercase' }}>Kaldır</span>
                 </button>
               ))}
             </div>
@@ -1002,13 +1002,13 @@ export default function ProfilDuzenle() {
                 </div>
               ) : (
                 <div style={{ minHeight: '54px', display: 'flex', alignItems: 'center', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
-                  Bu arama icin sonuc bulunamadi.
+                  Bu arama için sonuç bulunamadı.
                 </div>
               )}
             </div>
           ) : (
             <div style={{ minHeight: '54px', display: 'flex', alignItems: 'center', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.48)', fontSize: '13px' }}>
-              Tum seriler arasindan secmek icin en az 2 karakter yaz.
+              Tüm seriler arasından seçmek için en az 2 karakter yaz.
             </div>
           )}
         </div>
@@ -1019,9 +1019,9 @@ export default function ProfilDuzenle() {
   function renderVitrinAyarlariEditor() {
     return (
       <div style={{ display: 'grid', gap: '14px' }}>
-        <label style={L}>Vitrin ve Gizlilik Ayarlari</label>
+        <label style={L}>Vitrin ve Gizlilik Ayarları</label>
         <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
-          Profil sayfanda hangi bolumlerin gorunecegini ve bu bolumlerin icindeki detaylari buradan yonetebilirsin.
+          Profil sayfanda hangi bölümlerin görüneceğini ve bu bölümlerin içindeki detayları buradan yönetebilirsin.
         </div>
 
         <div style={{ display: 'grid', gap: '12px' }}>
@@ -1071,7 +1071,7 @@ export default function ProfilDuzenle() {
 
         {vitrinAyarlari.show_reading_shelf && (
           <div style={{ display: 'grid', gap: '10px', padding: '16px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.025)' }}>
-            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>Okuma Rafi Detaylari</div>
+            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>Okuma Rafı Detayları</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
               {rafDetaylari.map(([key, label, desc]) => (
                 <button
@@ -1106,7 +1106,7 @@ export default function ProfilDuzenle() {
 
         {vitrinAyarlari.show_stats && (
           <div style={{ display: 'grid', gap: '10px', padding: '16px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.025)' }}>
-            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>Istatistik Detaylari</div>
+            <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>İstatistik Detayları</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
               {istatistikDetaylari.map(([key, label, desc]) => (
                 <button
@@ -1220,7 +1220,7 @@ export default function ProfilDuzenle() {
                     fontFamily: 'inherit',
                   }}
                 >
-                  ← Profile Don
+                  ← Profile Dön
                 </button>
 
                 <div
@@ -1298,10 +1298,10 @@ export default function ProfilDuzenle() {
                         letterSpacing: '0.02em',
                       }}
                     >
-                      PROFIL DUZENLE
+                      PROFİL DÜZENLE
                     </h1>
                     <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.62)', fontSize: '15px', lineHeight: 1.8, maxWidth: '52ch' }}>
-                      Avatarini, kullanici adini ve biyografini yeni profil vitrinine uygun sekilde burada duzenleyebilirsin.
+                      Avatarını, kullanıcı adını ve biyografini yeni profil vitrinine uygun şekilde burada düzenleyebilirsin.
                     </p>
                   </div>
                 </div>
@@ -1326,11 +1326,11 @@ export default function ProfilDuzenle() {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Profil Onerisi
+                  Profil Önerisi
                 </div>
                 <p style={{ margin: 0, color: 'rgba(255,255,255,0.62)', fontSize: '14px', lineHeight: 1.75 }}>
-                  Kisa, akilda kalici bir kullanici adi ve net bir bio profile cok daha guclu bir vitrin etkisi verir.
-                  Gorsel seciminde kontrasti yuksek avatarlar daha iyi durur.
+                  Kısa, akılda kalıcı bir kullanıcı adı ve net bir bio profile çok daha güçlü bir vitrin etkisi verir.
+                  Görsel seçiminde kontrastı yüksek avatarlar daha iyi durur.
                 </p>
               </aside>
             </div>
@@ -1353,15 +1353,15 @@ export default function ProfilDuzenle() {
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '26px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Profil Arka Plani</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Profil Arka Planı</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.46)', marginTop: '6px' }}>
-                    Masaustu ve mobil gorunumu ayni kadraj verisiyle burada duzenleyebilirsin.
+                    Masaüstü ve mobil görünümü aynı kadraj verisiyle burada düzenleyebilirsin.
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {[
-                    { key: 'desktop', label: 'Masaustu Onizleme' },
-                    { key: 'mobile', label: 'Mobil Onizleme' },
+                    { key: 'desktop', label: 'Masaüstü Önizleme' },
+                    { key: 'mobile', label: 'Mobil Önizleme' },
                   ].map((item) => {
                     const aktif = onizlemeModu === item.key
                     return (
@@ -1501,20 +1501,20 @@ export default function ProfilDuzenle() {
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '26px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Profil Bilgileri</div>
                   <div>
-                    <label style={L}>Kullanici Adi</label>
+                    <label style={L}>Kullanıcı Adı</label>
                     <input value={form.kullanici_adi} onChange={e => setForm(f => ({ ...f, kullanici_adi: e.target.value }))} style={I} />
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.42)', marginTop: '6px' }}>konseycomics.com/profil/{form.kullanici_adi}</div>
                   </div>
                   <div>
                     <label style={L}>Hakkimda</label>
-                    <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} placeholder="Kendinden kisaca bahset..." rows={4} maxLength={200} style={{ ...I, minHeight: '150px', padding: '14px 16px', resize: 'none', lineHeight: 1.7 }} />
+                    <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} placeholder="Kendinden kısaca bahset..." rows={4} maxLength={200} style={{ ...I, minHeight: '150px', padding: '14px 16px', resize: 'none', lineHeight: 1.7 }} />
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.42)', marginTop: '6px', textAlign: 'right' }}>{form.bio.length}/200</div>
                   </div>
 
                   <div style={{ display: 'grid', gap: '12px' }}>
                     <label style={L}>Aktif Unvan</label>
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
-                      Sectigin unvan profilinde kullanici adinin altinda, yorumlarda ise kullanici adinin hemen altinda gorunur.
+                      Seçtiğin ünvan profilinde kullanıcı adının altında, yorumlarda ise kullanıcı adının hemen altında görünür.
                       Sadece <strong style={{ color: '#fff' }}>1</strong> unvan aktif olabilir.
                     </div>
 
@@ -1662,9 +1662,9 @@ export default function ProfilDuzenle() {
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>Degisiklikleri Kaydet</div>
+                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700 }}>Değişiklikleri Kaydet</div>
                       <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: '12px', lineHeight: 1.6, marginTop: '4px' }}>
-                        Profil bilgileri, vitrin secimleri ve gizlilik ayarlari tek seferde kaydedilir.
+                        Profil bilgileri, vitrin seçimleri ve gizlilik ayarları tek seferde kaydedilir.
                       </div>
                     </div>
                     <button
@@ -1686,7 +1686,7 @@ export default function ProfilDuzenle() {
                         textTransform: 'uppercase',
                       }}
                     >
-                      {yukleniyor ? 'Kaydediliyor...' : 'Tum Degisiklikleri Kaydet'}
+                      {yukleniyor ? 'Kaydediliyor...' : 'Tüm Değişiklikleri Kaydet'}
                     </button>
                   </div>
                 </div>
@@ -1702,7 +1702,7 @@ export default function ProfilDuzenle() {
 
                 <form onSubmit={handleSifreDegistir}>
                   <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '26px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Hesap Guvenligi</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Hesap Güvenliği</div>
                     <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: '12px', lineHeight: 1.7 }}>
                       Sifre degistirme gibi hesap guvenligi islemleri profil vitrini ayarlerinden ayri tutulur.
                     </div>
@@ -1715,7 +1715,7 @@ export default function ProfilDuzenle() {
                       <input type="password" value={sifreForm.tekrar} onChange={e => setSifreForm(f => ({ ...f, tekrar: e.target.value }))} placeholder="Sifreyi tekrar gir" style={I} />
                     </div>
                     <button type="submit" disabled={yukleniyor} style={{ minHeight: '52px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '14px', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: yukleniyor ? 'not-allowed' : 'pointer', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
-                      Sifreyi Guncelle
+                      Şifreyi Güncelle
                     </button>
                   </div>
                 </form>

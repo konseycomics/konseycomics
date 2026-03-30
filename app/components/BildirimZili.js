@@ -8,6 +8,7 @@ export default function BildirimZili({ kullaniciId }) {
   const [bildirimler, setBildirimler] = useState([])
   const [acik, setAcik] = useState(false)
   const [okunmamis, setOkunmamis] = useState(0)
+  const [okumaIsleniyor, setOkumaIsleniyor] = useState(false)
   const ref = useRef()
 
   const fetchBildirimler = useCallback(async () => {
@@ -39,12 +40,36 @@ export default function BildirimZili({ kullaniciId }) {
     return () => document.removeEventListener('mousedown', kapat)
   }, [fetchBildirimler, kullaniciId])
 
+  async function tumunuOkunduYap() {
+    if (!kullaniciId || okunmamis === 0 || okumaIsleniyor) return
+
+    setOkumaIsleniyor(true)
+
+    const { error: updateError } = await supabase
+      .from('bildirimler')
+      .update({ okundu: true })
+      .eq('alici_id', kullaniciId)
+      .eq('okundu', false)
+
+    if (updateError) {
+      const { error: rpcError } = await supabase.rpc('bildirimleri_okundu_yap', { kullanici: kullaniciId })
+      if (rpcError) {
+        console.error('Bildirimler okundu olarak isaretlenemedi.', rpcError)
+        setOkumaIsleniyor(false)
+        return
+      }
+    }
+
+    await fetchBildirimler()
+    setOkumaIsleniyor(false)
+  }
+
   async function handleAc() {
-    setAcik(!acik)
-    if (!acik && okunmamis > 0) {
-      await supabase.rpc('bildirimleri_okundu_yap', { kullanici: kullaniciId })
-      setBildirimler(b => b.map(x => ({ ...x, okundu: true })))
-      setOkunmamis(0)
+    const nextAcik = !acik
+    setAcik(nextAcik)
+
+    if (nextAcik && okunmamis > 0) {
+      await tumunuOkunduYap()
     }
   }
 

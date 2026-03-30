@@ -30,11 +30,11 @@ export default function IletisimPage() {
     if (isim.trim()) subjectParts.push(`- ${isim.trim()}`)
 
     const body = [
-      isim.trim() ? `Isim: ${isim.trim()}` : null,
+      isim.trim() ? `İsim: ${isim.trim()}` : null,
       email.trim() ? `E-posta: ${email.trim()}` : null,
       `Konu: ${konu}`,
       '',
-      mesaj.trim() || 'Mesajinizi buraya yazabilirsiniz.',
+      mesaj.trim() || 'Mesajınızı buraya yazabilirsiniz.',
     ]
       .filter(Boolean)
       .join('\n')
@@ -105,8 +105,8 @@ export default function IletisimPage() {
                   lineHeight: 1.8,
                 }}
               >
-                Telif, is birligi, topluluk, teknik destek ya da genel sorular icin dogrudan bize ulasabilecegin tum
-                kanallar burada. Bizim estetikte ama daha islevsel bir iletisim alani kuruyoruz.
+                Telif, iş birliği, topluluk, teknik destek ya da genel sorular için doğrudan bize ulaşabileceğin tüm
+                kanallar burada. Bizim estetikte ama daha işlevsel bir iletişim alanı kuruyoruz.
               </p>
             </div>
 
@@ -279,9 +279,9 @@ export default function IletisimPage() {
                       lineHeight: 1.8,
                     }}
                   >
-                    Konsey Comics olarak telif konusunda son derece hassas davraniyoruz. Hak sahiplerinden gelen resmi
-                    bildirimleri dikkatle inceler, gerekli durumlarda hizli aksiyon aliriz. Is birligi taleplerinde de
-                    sureci net ve dogrudan ilerletmeyi tercih ediyoruz.
+                    Konsey Comics olarak telif konusunda son derece hassas davranıyoruz. Hak sahiplerinden gelen resmî
+                    bildirimleri dikkatle inceler, gerekli durumlarda hızlı aksiyon alırız. İş birliği taleplerinde de
+                    süreci net ve doğrudan ilerletmeyi tercih ediyoruz.
                   </p>
                 </div>
 

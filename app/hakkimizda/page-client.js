@@ -415,13 +415,13 @@ export default function Hakkimizda() {
                     Telif konusunda son derece hassas davranıyoruz. Hak sahiplerinden, yayıncılardan ya da temsilcilerden gelen bildirimleri ciddiyetle ele alıyor; gerekli durumlarda inceleme ve kaldırma süreçlerini hızlı biçimde işletiyoruz.
                   </p>
                   <p style={{ marginTop: '14px' }}>
-                    İşbirliği, iletişim, telif bildirimi ya da resmi talepler için bizimle doğrudan aşağıdaki kanallar üzerinden iletişime geçebilirsin.
+                    İşbirliği, iletişim, telif bildirimi ya da resmi talepler için bizimle doğrudan aşağıdaki kanallar üzerinden iletişime geçebilirsiniz. Konseycomics bir fansub projeisidir.
                   </p>
 
                   <div className="about-contact-list" style={{ marginTop: '18px' }}>
                     <div className="about-contact-item">
                       <span>E-posta</span>
-                      <a href="mailto:konseycomics@gmail.com">konseycomics@gmail.com</a>
+                      <a href="mailto:destek@konseycomics.com">destek@konseycomics.com</a>
                     </div>
                     <div className="about-contact-item">
                       <span>İletişim Sayfası</span>
@@ -429,7 +429,7 @@ export default function Hakkimizda() {
                     </div>
                     <div className="about-contact-item">
                       <span>Not</span>
-                      <span>Resmi telif ve işbirliği başvurularında mümkünse eser, bağlantı ve talep detaylarını açık şekilde paylaş.</span>
+                      <span>Resmi telif ve işbirliği başvurularında mümkünse eser, bağlantı ve talep detaylarını açık şekilde paylaşın.</span>
                     </div>
                   </div>
                 </div>

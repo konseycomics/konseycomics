@@ -157,10 +157,10 @@ export default function ProfilSayfasi() {
   const gosterilecekIstatistikler = [
     vitrinAyarlari.show_stats_okundu ? { label: 'Okundu', deger: okundu.length } : null,
     vitrinAyarlari.show_stats_takip ? { label: 'Takip', deger: profil.takip_sayisi || 0 } : null,
-    vitrinAyarlari.show_stats_takipci ? { label: 'Takipci', deger: profil.takipci_sayisi || 0 } : null,
+    vitrinAyarlari.show_stats_takipci ? { label: 'Takipçi', deger: profil.takipci_sayisi || 0 } : null,
   ].filter(Boolean)
   const rafSekmeleri = [
-    { key: 'liste', label: `Tumu (${toplamListe})`, aktif: true },
+    { key: 'liste', label: `Tümü (${toplamListe})`, aktif: true },
     vitrinAyarlari.show_reading_okunuyor ? { key: 'okunuyor', label: `Okunuyor (${okunuyor.length})` } : null,
     vitrinAyarlari.show_reading_okundu ? { key: 'okundu', label: `Okundu (${okundu.length})` } : null,
     vitrinAyarlari.show_reading_okuyacak ? { key: 'okuyacak', label: `Okuyacak (${okuyacaklar.length})` } : null,
@@ -504,12 +504,12 @@ export default function ProfilSayfasi() {
                       marginBottom: '8px',
                     }}
                   >
-                    One Cikan Seriler
+                    Öne Çıkan Seriler
                   </div>
                   <p style={{ margin: 0, color: 'rgba(255,255,255,0.56)', fontSize: '14px', lineHeight: 1.75 }}>
                     {benimProfil
-                      ? 'Kisisel vitrinin on siraya aldigin seriler burada yer alir.'
-                      : `${profil.kullanici_adi} profilinde on plana cikan seri secimlerini burada sergiliyor.`}
+                      ? 'Kişisel vitrinin ön sıraya aldığın seriler burada yer alır.'
+                      : `${profil.kullanici_adi} profilinde ön plana çıkan seri seçimlerini burada sergiliyor.`}
                   </p>
                 </div>
               </div>
@@ -594,7 +594,7 @@ export default function ProfilSayfasi() {
                             textTransform: 'uppercase',
                           }}
                         >
-                          One Cikan Seri
+                          Öne Çıkan Seri
                         </div>
                       </div>
                       <div style={{ padding: '16px 18px 18px' }}>
@@ -602,7 +602,7 @@ export default function ProfilSayfasi() {
                           {seri.baslik}
                         </div>
                         <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginTop: '8px', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
-                          Arsiv vitrini
+                          Arşiv vitrini
                         </div>
                       </div>
                     </article>

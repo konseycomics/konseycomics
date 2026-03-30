@@ -3,24 +3,24 @@ import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '
 
 const KATEGORI_SEO = {
   'cizgi-roman': {
-    title: 'Cizgi Roman Arsivi',
-    description: 'Marvel, DC ve bagimsiz evrenlerden Turkce cizgi roman arsivini kesfet.',
+    title: 'Çizgi Roman Arşivi',
+    description: 'Marvel, DC ve bağımsız evrenlerden Türkçe çizgi roman arşivini keşfet.',
   },
   manga: {
-    title: 'Manga Arsivi',
-    description: 'KonseyComics icindeki Turkce manga arsivini kesfet, serileri filtrele ve yeni hikayeler bul.',
+    title: 'Manga Arşivi',
+    description: 'KonseyComics içindeki Türkçe manga arşivini keşfet, serileri filtrele ve yeni hikâyeler bul.',
   },
   webtoon: {
-    title: 'Webtoon Arsivi',
-    description: 'Dikey okumaya uygun Turkce webtoon arsivini kesfet ve yeni seriler bul.',
+    title: 'Webtoon Arşivi',
+    description: 'Dikey okumaya uygun Türkçe webtoon arşivini keşfet ve yeni seriler bul.',
   },
 }
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const seo = KATEGORI_SEO[slug] || {
-    title: 'Kategori Arsivi',
-    description: 'KonseyComics kategorilerini kesfet ve arsivdeki serilere ulas.',
+    title: 'Kategori Arşivi',
+    description: 'KonseyComics kategorilerini keşfet ve arşivdeki serilere ulaş.',
   }
 
   return buildMetadata({
@@ -35,8 +35,8 @@ export async function generateMetadata({ params }) {
 export default async function KategoriPage({ params }) {
   const { slug } = await params
   const seo = KATEGORI_SEO[slug] || {
-    title: 'Kategori Arsivi',
-    description: 'KonseyComics kategorilerini kesfet ve arsivdeki serilere ulas.',
+    title: 'Kategori Arşivi',
+    description: 'KonseyComics kategorilerini keşfet ve arşivdeki serilere ulaş.',
   }
 
   const structuredData = {

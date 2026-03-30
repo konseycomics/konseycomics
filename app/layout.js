@@ -50,9 +50,9 @@ export const metadata = {
     googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
   icons: {
-    icon: '/konseycomics.jpg',
-    shortcut: '/konseycomics.jpg',
-    apple: '/konseycomics.jpg',
+    icon: '/icon.png?v=2',
+    shortcut: '/icon.png?v=2',
+    apple: '/apple-icon.png?v=2',
   },
 }
 

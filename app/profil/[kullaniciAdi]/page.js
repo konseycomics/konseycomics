@@ -18,8 +18,8 @@ export async function generateMetadata({ params }) {
 
   if (!profil) {
     return buildMetadata({
-      title: 'Profil Bulunamadi',
-      description: 'Aradigin kullanici profili bulunamadi.',
+      title: 'Profil Bulunamadı',
+      description: 'Aradığın kullanıcı profili bulunamadı.',
       path: `/profil/${kullaniciAdi}`,
       type: 'profile',
     })
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
     title: `${profil.kullanici_adi} Profili`,
     description: createSeoDescription(
       profil.bio,
-      `${profil.kullanici_adi} kullanicisinin KonseyComics profilini incele. Rozetler, unvanlar ve vitrin secimleri burada yer aliyor.`
+      `${profil.kullanici_adi} kullanıcısının KonseyComics profilini incele. Rozetler, unvanlar ve vitrin seçimleri burada yer alıyor.`
     ),
     path: `/profil/${profil.kullanici_adi}`,
     image: profil.banner_url || profil.avatar_url,
@@ -50,7 +50,7 @@ export default async function ProfilPage({ params }) {
         mainEntity: {
           '@type': 'Person',
           name: profil.kullanici_adi,
-          description: createSeoDescription(profil.bio, `${profil.kullanici_adi} KonseyComics kullanicisi.`),
+          description: createSeoDescription(profil.bio, `${profil.kullanici_adi} KonseyComics kullanıcısı.`),
           image: profil.avatar_url || undefined,
         },
       }

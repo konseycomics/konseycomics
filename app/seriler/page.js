@@ -555,8 +555,8 @@ function SerilerIcerik() {
           <header className="series-hero">
             <div className="site-shell series-hero-grid">
               <div>
-                <div className="series-kicker">Konsey Arsivi</div>
-                <h1>Tum Seriler</h1>
+                <div className="series-kicker">Konsey Arşivi</div>
+                <h1>Tüm Seriler</h1>
               </div>
             </div>
           </header>
@@ -571,7 +571,7 @@ function SerilerIcerik() {
                     setGorunenAdet(ILK_GORUNEN_KART)
                     replaceParams({ q: e.target.value })
                   }}
-                  placeholder="Seri, yazar, cizer veya evren ara..."
+                  placeholder="Seri, yazar, çizer veya evren ara..."
                 />
 
                 <select className="series-select" value={siralama} onChange={e => {
@@ -603,19 +603,19 @@ function SerilerIcerik() {
           <section className="site-shell series-section">
             <div className="series-section-top">
               <div className="series-results-count">
-                {loading ? 'Yukleniyor...' : `${filtrelenmis.length} seri gosteriliyor`}
+                {loading ? 'Yükleniyor...' : `${filtrelenmis.length} seri gösteriliyor`}
               </div>
             </div>
 
             {loading ? (
               <div className="series-empty">
-                <h3>Arsiv Yukleniyor</h3>
-                <p>Seriler guclu bir raf duzeninde hazırlanıyor. Birkac saniye sonra tum arsiv burada olacak.</p>
+                <h3>Arşiv Yükleniyor</h3>
+                <p>Seriler güçlü bir raf düzeninde hazırlanıyor. Birkaç saniye sonra tüm arşiv burada olacak.</p>
               </div>
             ) : filtrelenmis.length === 0 ? (
               <div className="series-empty">
-                <h3>Sonuc Bulunamadi</h3>
-                <p>Bu secimle uyusan bir seri bulamadik. Filtreleri sifirlayip tum arsive geri donebiliriz.</p>
+                <h3>Sonuç Bulunamadı</h3>
+                <p>Bu seçimle uyuşan bir seri bulamadık. Filtreleri sıfırlayıp tüm arşive geri dönebiliriz.</p>
                 <button onClick={() => {
                   setGorunenAdet(ILK_GORUNEN_KART)
                   replaceParams({ evren: 'Tümü', sirala: 'yeni', q: '' })
@@ -632,7 +632,7 @@ function SerilerIcerik() {
                 {gosterilenSeriler.length < filtrelenmis.length && (
                   <div className="series-load-more">
                     <button onClick={() => setGorunenAdet(count => count + ILK_GORUNEN_KART)}>
-                      Daha Fazla Goster
+                      Daha Fazla Göster
                     </button>
                   </div>
                 )}
@@ -648,7 +648,7 @@ function SerilerIcerik() {
 
 export default function SerilerSayfasi() {
   return (
-    <Suspense fallback={<><Navbar /><div className="site-shell" style={{ paddingTop: '40px', paddingBottom: '60px', color: 'rgba(255,255,255,0.58)' }}>Seriler yukleniyor...</div><Footer /></>}>
+    <Suspense fallback={<><Navbar /><div className="site-shell" style={{ paddingTop: '40px', paddingBottom: '60px', color: 'rgba(255,255,255,0.58)' }}>Seriler yükleniyor...</div><Footer /></>}>
       <SerilerIcerik />
     </Suspense>
   )

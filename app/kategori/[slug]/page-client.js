@@ -593,7 +593,7 @@ export default function KategoriSayfasi() {
                     setGorunenAdet(ILK_GORUNEN_KART)
                     replaceParams({ q: e.target.value })
                   }}
-                  placeholder="Seri, yazar, cizer veya tur ara..."
+                  placeholder="Seri, yazar, çizer veya tür ara..."
                 />
 
                 <select className="series-select" value={siralama} onChange={e => {
@@ -639,19 +639,19 @@ export default function KategoriSayfasi() {
           <section className="site-shell series-section">
             <div className="series-section-top">
               <div className="series-results-count">
-                {loading ? 'Yukleniyor...' : `${filtrelenmis.length} seri gosteriliyor`}
+                {loading ? 'Yükleniyor...' : `${filtrelenmis.length} seri gösteriliyor`}
               </div>
             </div>
 
             {loading ? (
               <div className="series-empty">
-                <h3>Arsiv Yukleniyor</h3>
-                <p>Bu kategori icin kapaklar ve filtreler hazirlaniyor.</p>
+                <h3>Arşiv Yükleniyor</h3>
+                <p>Bu kategori için kapaklar ve filtreler hazırlanıyor.</p>
               </div>
             ) : filtrelenmis.length === 0 ? (
               <div className="series-empty">
-                <h3>Sonuc Bulunamadi</h3>
-                <p>Bu secimle uyusan bir seri bulamadik. Aramayi ya da tur filtresini temizleyebilirsin.</p>
+                <h3>Sonuç Bulunamadı</h3>
+                <p>Bu seçimle uyuşan bir seri bulamadık. Aramayı ya da tür filtresini temizleyebilirsin.</p>
                 <button onClick={() => {
                   setGorunenAdet(ILK_GORUNEN_KART)
                   replaceParams({ sirala: 'yeni', q: '', tur: 'Tümü' })

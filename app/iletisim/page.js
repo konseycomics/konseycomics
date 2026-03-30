@@ -2,8 +2,8 @@ import IletisimClient from './page-client'
 import { absoluteUrl, buildMetadata, jsonLdScript } from '../lib/seo'
 
 export const metadata = buildMetadata({
-  title: 'Iletisim',
-  description: 'Telif, isbirligi, teknik destek ve topluluk konulari icin KonseyComics ile iletisime gec.',
+  title: 'İletişim',
+  description: 'Telif, işbirliği, teknik destek ve topluluk konuları için KonseyComics ile iletişime geç.',
   path: '/iletisim',
   keywords: ['KonseyComics iletisim', 'destek', 'telif', 'isbirligi'],
 })
@@ -12,9 +12,9 @@ export default function IletisimPage() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'ContactPage',
-    name: 'KonseyComics Iletisim',
+    name: 'KonseyComics İletişim',
     url: absoluteUrl('/iletisim'),
-    description: 'Telif, isbirligi, teknik destek ve topluluk konulari icin KonseyComics ile iletisime gec.',
+    description: 'Telif, işbirliği, teknik destek ve topluluk konuları için KonseyComics ile iletişime geç.',
   }
 
   return (

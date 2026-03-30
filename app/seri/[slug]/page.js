@@ -18,17 +18,17 @@ export async function generateMetadata({ params }) {
 
   if (!seri) {
     return buildMetadata({
-      title: 'Seri Bulunamadi',
-      description: 'Aradigin seri KonseyComics arsivinde bulunamadi.',
+      title: 'Seri Bulunamadı',
+      description: 'Aradığın seri KonseyComics arşivinde bulunamadı.',
       path: `/seri/${slug}`,
       type: 'article',
     })
   }
 
-  const category = seri.kategoriler?.isim || 'Cizgi Roman'
+  const category = seri.kategoriler?.isim || 'Çizgi Roman'
   const description = createSeoDescription(
     seri.ozet,
-    `${seri.baslik} serisini KonseyComics arsivinde incele. ${category} kategorisinde bolumler, puanlar ve okuma detaylari seni bekliyor.`
+    `${seri.baslik} serisini KonseyComics arşivinde incele. ${category} kategorisinde bölümler, puanlar ve okuma detayları seni bekliyor.`
   )
 
   return buildMetadata({

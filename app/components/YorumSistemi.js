@@ -123,7 +123,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
           <Link href={`/profil/${yorum.profiller?.kullanici_adi}`} style={{ flexShrink: 0 }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#111', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#fff', fontFamily: "'Bebas Neue', sans-serif" }}>
               {yorum.profiller?.avatar_url
-                ? <img src={yorum.profiller.avatar_url} alt={yorum.profiller.kullanici_adi || 'Kullanici avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ? <img src={yorum.profiller.avatar_url} alt={yorum.profiller.kullanici_adi || 'Kullanıcı avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : yorum.profiller?.kullanici_adi?.[0]?.toUpperCase()
               }
             </div>

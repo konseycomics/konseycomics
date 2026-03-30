@@ -227,7 +227,7 @@ export default function Okuyucu() {
         <Navbar />
         <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
           <div style={{ maxWidth: '460px', textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', color: '#fff', marginBottom: '10px' }}>Bolum Bulunamadi</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', color: '#fff', marginBottom: '10px' }}>Bölüm Bulunamadı</div>
             <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '15px', lineHeight: 1.7, marginBottom: '20px' }}>
               Bu bolum su anda ulasilabilir durumda degil. Seri sayfasina donup diger bolumleri kontrol edebiliriz.
             </div>

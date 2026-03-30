@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import Footer from './components/Footer'
@@ -118,6 +119,11 @@ function normalizeCategory(value) {
     .toLocaleLowerCase('tr-TR')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+}
+
+function hasCategoryMatch(seri, matchers = []) {
+  const kategoriIsmi = normalizeCategory(seri.kategoriler?.isim)
+  return matchers.some(match => kategoriIsmi === normalizeCategory(match))
 }
 
 function SeriKart({ seri }) {
@@ -470,7 +476,12 @@ function TurKart({ tur, count }) {
 }
 
 export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} }) {
+  const router = useRouter()
   const loading = false
+  const [arama, setArama] = useState('')
+  const [aramaAcik, setAramaAcik] = useState(false)
+  const [oneriIndex, setOneriIndex] = useState(0)
+  const aramaRef = useRef(null)
 
   function findSeriById(id) {
     return seriler.find(item => String(item.id) === String(id))
@@ -519,19 +530,60 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
   const sonBolumlerAlt = bolumler.slice(5, 10)
   const turKartlari = SERI_TURLERI.map(tur => ({
     ...tur,
-    count: seriler.filter(seri => normalizeCategory(seri.kategoriler?.isim) === normalizeCategory(tur.key) || normalizeCategory(seri.kategori) === normalizeCategory(tur.key)).length,
+    count: seriler.filter(seri => hasCategoryMatch(seri, [tur.key])).length,
   }))
   const kategoriKartlari = KATEGORI_KARTLARI.map(kategori => ({
     ...kategori,
-    count: seriler.filter(seri => {
-      const kategoriIsmi = normalizeCategory(seri.kategoriler?.isim)
-      const kategoriAlani = normalizeCategory(seri.kategori)
-      return kategori.matchers.some(match => {
-        const normalizedMatch = normalizeCategory(match)
-        return kategoriIsmi === normalizedMatch || kategoriAlani === normalizedMatch
-      })
-    }).length,
+    count: seriler.filter(seri => hasCategoryMatch(seri, kategori.matchers)).length,
   }))
+  const onerilenSeriHavuzu = [...oneCikanlar, ...populerSeriler, ...seriler]
+    .filter((seri, index, arr) => arr.findIndex(item => String(item.id) === String(seri.id)) === index)
+    .slice(0, 8)
+  const bugunOnerisi = onerilenSeriHavuzu[oneriIndex % Math.max(onerilenSeriHavuzu.length, 1)] || null
+  const hizliAramaChipleri = onerilenSeriHavuzu.slice(0, 4)
+  const temizArama = normalizeCategory(arama.trim())
+  const hizliAramaSonuclari = temizArama
+    ? seriler.filter(seri => {
+        const havuz = [
+          seri.baslik,
+          seri.aciklama,
+          seri.kategoriler?.isim,
+          seri.kategori,
+          seri.yazar,
+          seri.cizer,
+          seri.yayinci,
+        ].map(normalizeCategory).join(' ')
+
+        return havuz.includes(temizArama)
+      }).slice(0, 6)
+    : []
+
+  useEffect(() => {
+    function handleDisTiklama(e) {
+      if (aramaRef.current && !aramaRef.current.contains(e.target)) {
+        setAramaAcik(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleDisTiklama)
+    return () => document.removeEventListener('mousedown', handleDisTiklama)
+  }, [])
+
+  function aramayaGit() {
+    const deger = arama.trim()
+    setAramaAcik(false)
+    router.push(deger ? `/seriler?q=${encodeURIComponent(deger)}` : '/seriler')
+  }
+
+  function handleHizliArama(e) {
+    e.preventDefault()
+    aramayaGit()
+  }
+
+  function siradakiOneri() {
+    if (onerilenSeriHavuzu.length <= 1) return
+    setOneriIndex(prev => (prev + 1) % onerilenSeriHavuzu.length)
+  }
 
   return (
     <main style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -543,6 +595,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
         .grid-bolumler { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
         .home-categories { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; }
         .home-categories-right { display: grid; grid-template-rows: 1fr 1fr; gap: 18px; }
+        .home-search-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr); gap: 18px; align-items: stretch; }
         .series-showcase-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
         .series-showcase-grid > *:nth-child(1),
         .series-showcase-grid > *:nth-child(2) { grid-column: span 6; }
@@ -554,6 +607,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
           .grid-bolumler { grid-template-columns: repeat(3, 1fr) !important; }
           .home-categories { grid-template-columns: 1fr !important; }
           .home-categories-right { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none !important; }
+          .home-search-grid { grid-template-columns: 1fr !important; }
           .series-showcase-grid > *:nth-child(1),
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
@@ -567,6 +621,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
           .grid-bolumler,
           .home-categories,
           .home-categories-right,
+          .home-search-grid,
           .series-showcase-grid { gap: 12px !important; }
           .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
           .grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
@@ -584,6 +639,314 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
 
       <Navbar />
       <Hero seriler={heroSeriler} slides={heroSlides} />
+
+      <section className="site-section" style={{ marginTop: '28px' }}>
+        <div className="home-search-grid">
+          <div style={{
+            padding: '22px',
+            borderRadius: '28px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+            boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.4px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Hızlı Arama
+              </div>
+              <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(32px, 5vw, 48px)', lineHeight: 0.92, marginBottom: '8px' }}>
+                Aradığın Seriyi Direkt Bul
+              </div>
+              <p style={{ margin: 0, color: '#9c9c96', fontSize: '14px', lineHeight: 1.7 }}>
+                Seri, yazar, çizer veya evren ara. Sonuçları tam arşiv sayfasında açalım.
+              </p>
+            </div>
+
+            <div ref={aramaRef} style={{ position: 'relative' }}>
+              <form onSubmit={handleHizliArama} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '12px' }}>
+                <input
+                  value={arama}
+                  onChange={e => {
+                    setArama(e.target.value)
+                    setAramaAcik(true)
+                  }}
+                  onFocus={() => {
+                    if (arama.trim()) setAramaAcik(true)
+                  }}
+                  placeholder="Örnek: Daredevil, Spider-Man, Punisher..."
+                  aria-label="Ana sayfa hızlı arama"
+                  style={{
+                    width: '100%',
+                    minHeight: '54px',
+                    padding: '0 18px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(0,0,0,0.32)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    minHeight: '54px',
+                    padding: '0 20px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: '#fff',
+                    color: '#111',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    fontFamily: 'inherit',
+                    letterSpacing: '0.7px',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Ara
+                </button>
+              </form>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '12px' }}>
+                {hizliAramaChipleri.map(chip => (
+                  <Link
+                    key={chip.id}
+                    href={`/seri/${chip.slug}`}
+                    style={{
+                      minHeight: '34px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0 12px',
+                      borderRadius: '999px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.04)',
+                      color: '#d8d8d2',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      letterSpacing: '0.7px',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {chip.baslik}
+                  </Link>
+                ))}
+              </div>
+
+              {aramaAcik && temizArama && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 10px)',
+                  left: 0,
+                  right: 0,
+                  padding: '10px',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(10,10,10,0.96)',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.32)',
+                  backdropFilter: 'blur(16px)',
+                  zIndex: 20,
+                }}>
+                  {hizliAramaSonuclari.length > 0 ? (
+                    <>
+                      <div style={{ padding: '6px 8px 10px', color: 'rgba(255,255,255,0.44)', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                        Eşleşen Seriler
+                      </div>
+                      <div style={{ display: 'grid', gap: '8px' }}>
+                        {hizliAramaSonuclari.map(seri => (
+                          <Link
+                            key={seri.id}
+                            href={`/seri/${seri.slug}`}
+                            onClick={() => setAramaAcik(false)}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '56px minmax(0, 1fr)',
+                              gap: '12px',
+                              alignItems: 'center',
+                              padding: '10px',
+                              borderRadius: '16px',
+                              textDecoration: 'none',
+                              background: 'rgba(255,255,255,0.03)',
+                              border: '1px solid rgba(255,255,255,0.04)',
+                            }}
+                          >
+                            <div style={{
+                              position: 'relative',
+                              width: '56px',
+                              aspectRatio: '0.72',
+                              borderRadius: '12px',
+                              overflow: 'hidden',
+                              background: '#161616',
+                            }}>
+                              {seri.kapak_url ? (
+                                <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="56px" style={{ objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '10px', textAlign: 'center', padding: '6px' }}>
+                                  {seri.baslik}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ minWidth: 0, textAlign: 'left' }}>
+                              <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px' }}>
+                                {seri.baslik}
+                              </div>
+                              <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                                {seri.kategoriler?.isim || 'Arşiv'}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={aramayaGit}
+                        style={{
+                          width: '100%',
+                          marginTop: '10px',
+                          minHeight: '44px',
+                          borderRadius: '14px',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'rgba(255,255,255,0.04)',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          fontFamily: 'inherit',
+                          letterSpacing: '0.8px',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Tüm Sonuçları Gör
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ padding: '14px 10px', color: 'rgba(255,255,255,0.52)', fontSize: '13px' }}>
+                      Bu arama için hızlı sonuç bulamadık. Yine de tüm arşivde arayabilirsin.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: '28px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+            minHeight: '100%',
+          }}>
+            {bugunOnerisi?.kapak_url && (
+              <Image
+                src={bugunOnerisi.kapak_url}
+                alt={bugunOnerisi.baslik}
+                fill
+                sizes="(max-width: 960px) 100vw, 360px"
+                style={{ objectFit: 'cover', opacity: 0.24 }}
+              />
+            )}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.88) 100%)' }} />
+            <div style={{ position: 'relative', zIndex: 1, height: '100%', padding: '22px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '18px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase' }}>
+                    Bugün Ne Okusak?
+                  </div>
+                  {onerilenSeriHavuzu.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={siradakiOneri}
+                      style={{
+                        minHeight: '28px',
+                        padding: '0 10px',
+                        borderRadius: '999px',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        background: 'rgba(255,255,255,0.05)',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        fontFamily: 'inherit',
+                        letterSpacing: '0.8px',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Değiştir
+                    </button>
+                  )}
+                </div>
+                <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(30px, 4vw, 42px)', lineHeight: 0.92, marginBottom: '10px' }}>
+                  {bugunOnerisi?.baslik || 'Konsey Önerisi'}
+                </div>
+                <p style={{ margin: 0, color: '#c2c2bd', fontSize: '14px', lineHeight: 1.7 }}>
+                  {bugunOnerisi?.ozet
+                    ? `${String(bugunOnerisi.ozet).slice(0, 120)}${String(bugunOnerisi.ozet).length > 120 ? '...' : ''}`
+                    : 'Aramak istemiyorsan, bugünün öne çıkan serisini tek dokunuşla aç.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                  {bugunOnerisi?.kategoriler?.isim || 'Arşiv'}
+                </span>
+                <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                  {formatCount(bugunOnerisi?.goruntuleme_sayisi || 0)} okuma
+                </span>
+                {bugunOnerisi?.durum && (
+                  <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                    {bugunOnerisi.durum}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gap: '10px' }}>
+                <Link
+                  href={bugunOnerisi?.slug ? `/seri/${bugunOnerisi.slug}` : '/seriler'}
+                  style={{
+                    minHeight: '48px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '16px',
+                    background: '#fff',
+                    color: '#111',
+                    textDecoration: 'none',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    letterSpacing: '0.7px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Hemen Oku
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => router.push('/seriler?sirala=okunan')}
+                  style={{
+                    minHeight: '42px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    fontFamily: 'inherit',
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Konsey Önerileri
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {!loading && populerSeriler.length > 0 && (
         <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>

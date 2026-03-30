@@ -117,7 +117,7 @@ export default function SifreSifirla() {
         )}
         {mesaj && (
           <div style={{ fontSize: '13px', color: '#166534', marginBottom: '16px', padding: '10px 12px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-            {mesaj} <Link href="/giris" style={{ color: '#166534', fontWeight: 600 }}>Giris yap</Link>
+            {mesaj} <Link href="/giris" style={{ color: '#166534', fontWeight: 600 }}>Giriş yap</Link>
           </div>
         )}
 
@@ -167,14 +167,14 @@ export default function SifreSifirla() {
                 opacity: yukleniyor ? 0.7 : 1
               }}
             >
-              {yukleniyor ? 'Guncelleniyor...' : 'Sifreyi Guncelle'}
+              {yukleniyor ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
             </button>
           </form>
         )}
 
         {!hazir && !hata && (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-            Yukleniyor...
+            Yükleniyor...
           </div>
         )}
       </div>

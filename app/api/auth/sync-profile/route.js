@@ -51,7 +51,36 @@ async function ensureProfile(adminClient, user, explicitUsername) {
     .maybeSingle()
 
   if (existingError) throw existingError
-  if (existingProfile?.id) return existingProfile
+  if (existingProfile?.id) {
+    const preferredUsername = getPreferredUsername(user, explicitUsername)
+
+    if (
+      preferredUsername &&
+      existingProfile.kullanici_adi &&
+      existingProfile.kullanici_adi.toLowerCase() !== preferredUsername.toLowerCase()
+    ) {
+      const { data: usedProfile } = await adminClient
+        .from('profiller')
+        .select('id')
+        .ilike('kullanici_adi', preferredUsername)
+        .maybeSingle()
+
+      if (!usedProfile?.id || usedProfile.id === user.id) {
+        const { data: updatedProfile, error: updateError } = await adminClient
+          .from('profiller')
+          .update({ kullanici_adi: preferredUsername })
+          .eq('id', user.id)
+          .select('id, kullanici_adi')
+          .single()
+
+        if (!updateError && updatedProfile?.id) {
+          return updatedProfile
+        }
+      }
+    }
+
+    return existingProfile
+  }
 
   const preferredUsername = getPreferredUsername(user, explicitUsername)
 

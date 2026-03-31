@@ -141,7 +141,7 @@ function SeriKart({ seri }) {
         }}>
           {seri.kapak_url
             ? <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="(max-width: 640px) 50vw, (max-width: 960px) 33vw, 25vw" style={{ objectFit: 'cover', transition: 'transform 0.3s', transform: hover ? 'scale(1.04)' : 'scale(1)' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '16px', color: '#fff', padding: '12px', textAlign: 'center', lineHeight: 1.2 }}>{seri.baslik}</div>
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '16px', color: '#fff', padding: '12px', textAlign: 'center', lineHeight: 1.2 }}>{seri.baslik}</div>
           }
           {seri.one_cikan && (
             <div style={{ position: 'absolute', top: '8px', left: '8px', background: '#f59e0b', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
@@ -194,7 +194,7 @@ function PopulerSeriKart({ seri, sira }) {
         }}>
           {seri.kapak_url
             ? <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="(max-width: 640px) 50vw, (max-width: 960px) 33vw, 20vw" style={{ objectFit: 'cover', transform: hover ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.3s ease' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '22px', color: '#fff', textAlign: 'center', padding: '16px' }}>{seri.baslik}</div>
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '22px', color: '#fff', textAlign: 'center', padding: '16px' }}>{seri.baslik}</div>
           }
 
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 52%)' }} />
@@ -375,7 +375,7 @@ function ShowcaseCard({ title, subtitle, image, large = false, accent = '#f5f5f3
 
         <div>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: accent, boxShadow: `0 0 20px ${accent}`, marginBottom: '14px' }} />
-          <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: large ? 'clamp(48px, 5vw, 72px)' : 'clamp(34px, 4vw, 48px)', lineHeight: 0.92, textTransform: 'uppercase', marginBottom: '10px' }}>
+          <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: large ? 'clamp(48px, 5vw, 72px)' : 'clamp(34px, 4vw, 48px)', lineHeight: 0.92, textTransform: 'uppercase', marginBottom: '10px' }}>
             {title}
           </div>
           <div style={{ maxWidth: '34ch', color: '#c8c8c3', fontSize: large ? '14px' : '13px', lineHeight: 1.55 }}>
@@ -447,7 +447,7 @@ function CategoryBlock({ title, subtitle, image, href, large = false, accent = '
 
         <div style={{ position: 'absolute', left: large ? '22px' : '20px', right: large ? '22px' : '20px', bottom: large ? '24px' : '20px', zIndex: 1 }}>
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: accent, boxShadow: `0 0 20px ${accent}`, marginBottom: '14px' }} />
-          <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: large ? 'clamp(48px, 5vw, 72px)' : 'clamp(32px, 4vw, 44px)', lineHeight: 0.92, textTransform: 'uppercase', marginBottom: '10px' }}>
+          <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: large ? 'clamp(48px, 5vw, 72px)' : 'clamp(32px, 4vw, 44px)', lineHeight: 0.92, textTransform: 'uppercase', marginBottom: '10px' }}>
             {title}
           </div>
           <div style={{ maxWidth: large ? '34ch' : '28ch', color: '#c8c8c3', fontSize: large ? '14px' : '12px', lineHeight: 1.55 }}>
@@ -653,7 +653,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
               <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.4px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Hızlı Arama
               </div>
-              <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(32px, 5vw, 48px)', lineHeight: 0.92, marginBottom: '8px' }}>
+              <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(32px, 5vw, 48px)', lineHeight: 0.92, marginBottom: '8px' }}>
                 Aradığın Seriyi Direkt Bul
               </div>
               <p style={{ margin: 0, color: '#9c9c96', fontSize: '14px', lineHeight: 1.7 }}>
@@ -879,7 +879,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
                     </button>
                   )}
                 </div>
-                <div style={{ color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(30px, 4vw, 42px)', lineHeight: 0.92, marginBottom: '10px' }}>
+                <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4vw, 42px)', lineHeight: 0.92, marginBottom: '10px' }}>
                   {bugunOnerisi?.baslik || 'Konsey Önerisi'}
                 </div>
                 <p style={{ margin: 0, color: '#c2c2bd', fontSize: '14px', lineHeight: 1.7 }}>
@@ -951,7 +951,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
       {!loading && populerSeriler.length > 0 && (
         <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
           <div className="home-section-heading" style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <h2 style={{ margin: 0, fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(38px, 5vw, 62px)', lineHeight: 0.95, letterSpacing: '0.8px', color: 'var(--text)' }}>
+            <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(38px, 5vw, 62px)', lineHeight: 0.95, letterSpacing: '0.8px', color: 'var(--text)' }}>
               En Çok Okunan Seriler
             </h2>
           </div>
@@ -965,7 +965,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
 
       <section style={{ background: '#111', marginTop: 'var(--section-gap)' }}>
         <div className="site-section home-section-heading" style={{ paddingTop: '40px', textAlign: 'center' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
+          <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
             Kategoriler
           </h2>
         </div>
@@ -1002,10 +1002,10 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
       {(bolumler.length > 0 || loading) && (
         <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
           <div className="home-section-heading" style={{ marginBottom: '30px', textAlign: 'center' }}>
-            <h2 style={{ margin: 0, color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
+            <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
               Son Eklenen Bölümler
             </h2>
-            <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#6f6f6f', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+            <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
               Yeni eklenen bölümler
             </p>
           </div>
@@ -1022,10 +1022,10 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
       {/* Tüm Seriler */}
       <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
         <div className="home-section-heading" style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
+          <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
             Tüm Seriler
           </h2>
-          <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#6f6f6f', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+          <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
             Evrenlere göre keşfet
           </p>
         </div>

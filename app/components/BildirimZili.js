@@ -83,7 +83,14 @@ export default function BildirimZili({ kullaniciId }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button onClick={handleAc} style={{ position: 'relative', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+      <button
+        type="button"
+        onClick={handleAc}
+        aria-label={okunmamis > 0 ? `${okunmamis} okunmamis bildirim` : 'Bildirimler'}
+        aria-expanded={acik}
+        aria-haspopup="dialog"
+        style={{ position: 'relative', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center' }}
+      >
         🔔
         {okunmamis > 0 && (
           <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '18px', height: '18px', background: '#ef4444', borderRadius: '50%', fontSize: '10px', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -93,7 +100,7 @@ export default function BildirimZili({ kullaniciId }) {
       </button>
 
       {acik && (
-        <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: '320px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
+        <div role="dialog" aria-label="Bildirimler" style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', width: '320px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', zIndex: 200, overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontSize: '14px', fontWeight: 600 }}>Bildirimler</div>
           <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
             {bildirimler.length === 0 ? (

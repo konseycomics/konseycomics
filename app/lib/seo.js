@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
 export function normalizeSiteUrl(value) {
-  if (!value) return 'https://konseycomics.com'
-  return value.startsWith('http') ? value : `https://${value}`
+  if (!value) return 'https://www.konseycomics.com'
+  const normalized = value.startsWith('http') ? value : `https://${value}`
+  return normalized.replace('https://konseycomics.com', 'https://www.konseycomics.com')
 }
 
 export function getSiteUrl() {

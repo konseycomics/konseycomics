@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { getAuthRedirectUrl, supabase } from '../../lib/supabase'
+import { getCaptchaErrorMessage, isCaptchaEnabled, mapAuthError, validatePassword } from '../../lib/authSecurity'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import { useRouter } from 'next/navigation'
+import TurnstileWidget from '../../components/TurnstileWidget'
 
 function parseBannerMeta(url) {
   if (!url) return { src: '', x: 50, y: 50, z: 1.12 }
@@ -243,8 +245,11 @@ function AvatarModal({ src, onKaydet, onIptal }) {
 export default function ProfilDuzenle() {
   const bannerPointerRef = useRef(null)
   const [profil, setProfil] = useState(null)
+  const [sessionUser, setSessionUser] = useState(null)
+  const [securityCaptchaToken, setSecurityCaptchaToken] = useState('')
   const [form, setForm] = useState({ kullanici_adi: '', bio: '', avatar_url: '', banner_url: '' })
-  const [sifreForm, setSifreForm] = useState({ yeni: '', tekrar: '' })
+  const [sifreForm, setSifreForm] = useState({ mevcut: '', yeni: '', tekrar: '' })
+  const [emailForm, setEmailForm] = useState({ yeni: '', sifre: '' })
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const [seciliUnvanId, setSeciliUnvanId] = useState(null)
   const [acilanRozetler, setAcilanRozetler] = useState([])
@@ -267,12 +272,15 @@ export default function ProfilDuzenle() {
   const [bannerDrag, setBannerDrag] = useState(false)
   const [onizlemeModu, setOnizlemeModu] = useState('desktop')
   const [modalSrc, setModalSrc] = useState(null)
+  const securityCaptchaRef = useRef(null)
   const router = useRouter()
+  const captchaActive = isCaptchaEnabled()
 
   useEffect(() => {
     async function fetchProfil() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/giris'); return }
+      setSessionUser(session.user)
       const [{ data }, { data: unvanlar }, { data: rozetler }, { data: liste }] = await Promise.all([
         supabase.from('profiller').select('*').eq('id', session.user.id).single(),
         supabase
@@ -500,12 +508,74 @@ export default function ProfilDuzenle() {
 
   async function handleSifreDegistir(e) {
     e.preventDefault()
+    if (!sessionUser?.email) { setHata('Hesap bilgileri yüklenemedi. Sayfayı yenileyip tekrar dene.'); return }
+    if (!sifreForm.mevcut) { setHata('Mevcut şifreni gir.'); return }
     if (sifreForm.yeni !== sifreForm.tekrar) { setHata('Şifreler eşleşmiyor.'); return }
-    if (sifreForm.yeni.length < 8) { setHata('Şifre en az 8 karakter olmalı.'); return }
+    if (captchaActive && !securityCaptchaToken) { setHata(getCaptchaErrorMessage()); return }
+
+    const passwordError = validatePassword(sifreForm.yeni)
+    if (passwordError) { setHata(passwordError); return }
+    if (sifreForm.mevcut === sifreForm.yeni) { setHata('Yeni şifre mevcut şifreyle aynı olamaz.'); return }
+
     setYukleniyor(true); setHata(''); setMesaj('')
+    const { error: mevcutSifreError } = await supabase.auth.signInWithPassword({
+      email: sessionUser.email,
+      password: sifreForm.mevcut,
+      options: securityCaptchaToken ? { captchaToken: securityCaptchaToken } : undefined,
+    })
+    if (mevcutSifreError) {
+      setHata(mapAuthError(mevcutSifreError, 'password-check'))
+      securityCaptchaRef.current?.reset?.()
+      setSecurityCaptchaToken('')
+      setYukleniyor(false)
+      return
+    }
     const { error } = await supabase.auth.updateUser({ password: sifreForm.yeni })
-    if (error) setHata(error.message)
-    else { setMesaj('Şifre güncellendi!'); setSifreForm({ yeni: '', tekrar: '' }) }
+    if (error) setHata(mapAuthError(error, 'password-update'))
+    else {
+      setMesaj('Şifre güncellendi!')
+      setSifreForm({ mevcut: '', yeni: '', tekrar: '' })
+    }
+    securityCaptchaRef.current?.reset?.()
+    setSecurityCaptchaToken('')
+    setYukleniyor(false)
+  }
+
+  async function handleEmailDegistir(e) {
+    e.preventDefault()
+    if (!sessionUser?.email) { setHata('Hesap bilgileri yüklenemedi. Sayfayı yenileyip tekrar dene.'); return }
+    if (!emailForm.yeni) { setHata('Yeni e-posta adresini gir.'); return }
+    if (emailForm.yeni.toLowerCase() === sessionUser.email.toLowerCase()) { setHata('Yeni e-posta mevcut adresle aynı olamaz.'); return }
+    if (!emailForm.sifre) { setHata('E-posta değişimi için mevcut şifreni doğrula.'); return }
+    if (captchaActive && !securityCaptchaToken) { setHata(getCaptchaErrorMessage()); return }
+
+    setYukleniyor(true); setHata(''); setMesaj('')
+    const { error: mevcutSifreError } = await supabase.auth.signInWithPassword({
+      email: sessionUser.email,
+      password: emailForm.sifre,
+      options: securityCaptchaToken ? { captchaToken: securityCaptchaToken } : undefined,
+    })
+    if (mevcutSifreError) {
+      setHata(mapAuthError(mevcutSifreError, 'password-check'))
+      securityCaptchaRef.current?.reset?.()
+      setSecurityCaptchaToken('')
+      setYukleniyor(false)
+      return
+    }
+
+    const { error } = await supabase.auth.updateUser(
+      { email: emailForm.yeni.trim().toLowerCase() },
+      { emailRedirectTo: getAuthRedirectUrl('/auth/callback') }
+    )
+
+    if (error) {
+      setHata(mapAuthError(error, 'email-update'))
+    } else {
+      setMesaj('E-posta değişikliği başlatıldı. Yeni adresini onayladıktan sonra hesabın güncellenecek.')
+      setEmailForm({ yeni: '', sifre: '' })
+    }
+    securityCaptchaRef.current?.reset?.()
+    setSecurityCaptchaToken('')
     setYukleniyor(false)
   }
 
@@ -1704,18 +1774,59 @@ export default function ProfilDuzenle() {
                   <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '26px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>Hesap Güvenliği</div>
                     <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: '12px', lineHeight: 1.7 }}>
-                      Sifre degistirme gibi hesap guvenligi islemleri profil vitrini ayarlerinden ayri tutulur.
+                      Şifre değiştirirken mevcut şifreni doğruluyoruz. E-posta adresi değişimi ise onay bağlantısı tamamlanmadan uygulanmaz.
+                    </div>
+                    {captchaActive && (
+                      <div style={{ padding: '14px', borderRadius: '16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <TurnstileWidget
+                          ref={securityCaptchaRef}
+                          action="profile-security"
+                          onVerify={setSecurityCaptchaToken}
+                          onExpire={() => setSecurityCaptchaToken('')}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label style={L}>Mevcut Şifre</label>
+                      <input type="password" value={sifreForm.mevcut} onChange={e => setSifreForm(f => ({ ...f, mevcut: e.target.value }))} placeholder="Şu an kullandığın şifre" style={I} />
                     </div>
                     <div>
-                      <label style={L}>Yeni Sifre</label>
-                      <input type="password" value={sifreForm.yeni} onChange={e => setSifreForm(f => ({ ...f, yeni: e.target.value }))} placeholder="En az 8 karakter" style={I} />
+                      <label style={L}>Yeni Şifre</label>
+                      <input type="password" value={sifreForm.yeni} onChange={e => setSifreForm(f => ({ ...f, yeni: e.target.value }))} placeholder="En az 10 karakter, büyük/küçük harf ve rakam" style={I} />
                     </div>
                     <div>
-                      <label style={L}>Sifre Tekrar</label>
-                      <input type="password" value={sifreForm.tekrar} onChange={e => setSifreForm(f => ({ ...f, tekrar: e.target.value }))} placeholder="Sifreyi tekrar gir" style={I} />
+                      <label style={L}>Şifre Tekrar</label>
+                      <input type="password" value={sifreForm.tekrar} onChange={e => setSifreForm(f => ({ ...f, tekrar: e.target.value }))} placeholder="Yeni şifreyi tekrar gir" style={I} />
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.42)', lineHeight: 1.7 }}>
+                      Güçlü bir şifre için en az 10 karakter, 1 büyük harf, 1 küçük harf ve 1 rakam kullan.
                     </div>
                     <button type="submit" disabled={yukleniyor} style={{ minHeight: '52px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '14px', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: yukleniyor ? 'not-allowed' : 'pointer', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
                       Şifreyi Güncelle
+                    </button>
+                  </div>
+                </form>
+
+                <form onSubmit={handleEmailDegistir}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '26px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>E-posta Değiştir</div>
+                    <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: '12px', lineHeight: 1.7 }}>
+                      Giriş zorunluluğu için e-posta onayı istemiyoruz; ama e-posta adresini değiştirmek istediğinde güvenli onay bağlantısı şart.
+                    </div>
+                    <div>
+                      <label style={L}>Mevcut E-posta</label>
+                      <input value={sessionUser?.email || ''} readOnly style={{ ...I, color: 'rgba(255,255,255,0.56)' }} />
+                    </div>
+                    <div>
+                      <label style={L}>Yeni E-posta</label>
+                      <input type="email" value={emailForm.yeni} onChange={e => setEmailForm(f => ({ ...f, yeni: e.target.value }))} placeholder="yeniadres@email.com" style={I} />
+                    </div>
+                    <div>
+                      <label style={L}>Mevcut Şifre</label>
+                      <input type="password" value={emailForm.sifre} onChange={e => setEmailForm(f => ({ ...f, sifre: e.target.value }))} placeholder="Kimlik doğrulaması için şifren" style={I} />
+                    </div>
+                    <button type="submit" disabled={yukleniyor} style={{ minHeight: '52px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '14px', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: yukleniyor ? 'not-allowed' : 'pointer', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                      E-posta Değişimini Başlat
                     </button>
                   </div>
                 </form>

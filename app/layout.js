@@ -1,4 +1,4 @@
-import { DM_Sans } from 'next/font/google'
+import { Bebas_Neue, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
@@ -10,9 +10,17 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
 })
 
+const bebasNeue = Bebas_Neue({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-bebas',
+})
+
 function normalizeSiteUrl(value) {
-  if (!value) return 'https://konseycomics.com'
-  return value.startsWith('http') ? value : `https://${value}`
+  if (!value) return 'https://www.konseycomics.com'
+  const normalized = value.startsWith('http') ? value : `https://${value}`
+  return normalized.replace('https://konseycomics.com', 'https://www.konseycomics.com')
 }
 
 const SITE_URL = normalizeSiteUrl(
@@ -58,12 +66,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr" className={dmSans.variable}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="tr" className={`${dmSans.variable} ${bebasNeue.variable}`}>
       <body style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', sans-serif)", margin: 0, padding: 0, background: '#000' }}>
         <ZiyaretTracker />
         {children}

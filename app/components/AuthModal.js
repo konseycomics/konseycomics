@@ -1,41 +1,109 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthRedirectUrl, supabase } from '../lib/supabase'
+import TurnstileWidget from './TurnstileWidget'
+import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthError, validatePassword } from '../lib/authSecurity'
 
 export default function AuthModal({ open, onClose }) {
   const [mod, setMod] = useState('giris')
+  const [identifier, setIdentifier] = useState('')
   const [email, setEmail] = useState('')
   const [sifre, setSifre] = useState('')
+  const [sifreTekrar, setSifreTekrar] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [hata, setHata] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef(null)
+  const captchaActive = isCaptchaEnabled()
+  const passwordChecks = useMemo(() => getPasswordChecks(sifre), [sifre])
+
+  useEffect(() => {
+    setHata('')
+    setMesaj('')
+    setCaptchaToken('')
+    captchaRef.current?.reset?.()
+  }, [mod])
 
   if (!open) return null
 
   async function handleGiris(e) {
     e.preventDefault()
     setYukleniyor(true); setHata(''); setMesaj('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password: sifre })
-    if (error) setHata('E-posta veya şifre hatalı.')
-    else { setMesaj('Giriş başarılı!'); setTimeout(onClose, 800) }
+    if (captchaActive && !captchaToken) {
+      setHata(getCaptchaErrorMessage())
+      setYukleniyor(false)
+      return
+    }
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password: sifre, captchaToken: captchaToken || undefined }),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || !payload?.session) {
+      setHata(mapAuthError(payload?.error || 'Giriş yapılamadı.', 'login'))
+    } else {
+      const { error } = await supabase.auth.setSession(payload.session)
+      if (error) setHata(mapAuthError(error, 'login'))
+      else { setMesaj('Giriş başarılı!'); setTimeout(onClose, 800) }
+    }
+    captchaRef.current?.reset?.()
+    setCaptchaToken('')
     setYukleniyor(false)
   }
 
   async function handleKayit(e) {
     e.preventDefault()
     setYukleniyor(true); setHata(''); setMesaj('')
-    const { error } = await supabase.auth.signUp({ email, password: sifre })
-    if (error) setHata(error.message)
-    else setMesaj('Kayıt başarılı! E-postanı kontrol et.')
+    if (sifre !== sifreTekrar) {
+      setHata('Şifreler eşleşmiyor.')
+      setYukleniyor(false)
+      return
+    }
+    const passwordError = validatePassword(sifre)
+    if (passwordError) {
+      setHata(passwordError)
+      setYukleniyor(false)
+      return
+    }
+    if (captchaActive && !captchaToken) {
+      setHata(getCaptchaErrorMessage())
+      setYukleniyor(false)
+      return
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: sifre,
+      options: {
+        emailRedirectTo: getAuthRedirectUrl('/auth/callback'),
+        ...(captchaToken ? { captchaToken } : {}),
+      },
+    })
+    if (error) setHata(mapAuthError(error, 'signup'))
+    else if (data.session) setMesaj('Kayıt başarılı! Hesabın hazır.')
+    else setMesaj('Kayıt başarılı! Güvenlik ayarına göre e-postanı doğrulaman gerekebilir.')
+    captchaRef.current?.reset?.()
+    setCaptchaToken('')
     setYukleniyor(false)
   }
 
   async function handleSifre(e) {
     e.preventDefault()
     setYukleniyor(true); setHata(''); setMesaj('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: getAuthRedirectUrl('/sifre-sifirla') })
-    if (error) setHata(error.message)
+    if (captchaActive && !captchaToken) {
+      setHata(getCaptchaErrorMessage())
+      setYukleniyor(false)
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: getAuthRedirectUrl('/sifre-sifirla'),
+      ...(captchaToken ? { captchaToken } : {}),
+    })
+    if (error) setHata(mapAuthError(error, 'reset-password'))
     else setMesaj('Şifre sıfırlama bağlantısı gönderildi.')
+    captchaRef.current?.reset?.()
+    setCaptchaToken('')
     setYukleniyor(false)
   }
 
@@ -52,14 +120,40 @@ export default function AuthModal({ open, onClose }) {
           {mod === 'giris' ? 'Devam etmek için giriş yap.' : mod === 'kayit' ? 'Ücretsiz hesap oluştur.' : 'E-postanı gir, link gönderelim.'}
         </div>
         <form onSubmit={mod === 'giris' ? handleGiris : mod === 'kayit' ? handleKayit : handleSifre}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>E-posta</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ornek@email.com" required style={I} />
-          </div>
+          {mod === 'giris' ? (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>E-posta veya Kullanıcı Adı</label>
+              <input type="text" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="ornek@email.com veya kullanici_adi" required style={I} />
+            </div>
+          ) : (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>E-posta</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="ornek@email.com" required style={I} />
+            </div>
+          )}
           {mod !== 'sifre' && (
             <div style={{ marginBottom: '12px' }}>
               <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Şifre</label>
-              <input type="password" value={sifre} onChange={e => setSifre(e.target.value)} placeholder="••••••••" required minLength={6} style={I} />
+              <input type="password" value={sifre} onChange={e => setSifre(e.target.value)} placeholder="••••••••" required minLength={10} style={I} />
+            </div>
+          )}
+          {mod === 'kayit' && (
+            <>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Şifre Tekrar</label>
+                <input type="password" value={sifreTekrar} onChange={e => setSifreTekrar(e.target.value)} placeholder="Şifreyi tekrar gir" required minLength={10} style={I} />
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', display: 'grid', gap: '4px' }}>
+                <span style={{ color: passwordChecks.minLength ? '#166534' : 'var(--text-muted)' }}>• En az 10 karakter</span>
+                <span style={{ color: passwordChecks.uppercase ? '#166534' : 'var(--text-muted)' }}>• En az 1 büyük harf</span>
+                <span style={{ color: passwordChecks.lowercase ? '#166534' : 'var(--text-muted)' }}>• En az 1 küçük harf</span>
+                <span style={{ color: passwordChecks.number ? '#166534' : 'var(--text-muted)' }}>• En az 1 rakam</span>
+              </div>
+            </>
+          )}
+          {captchaActive && (
+            <div style={{ marginBottom: '12px' }}>
+              <TurnstileWidget ref={captchaRef} action={mod} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken('')} theme="light" />
             </div>
           )}
           {hata && <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '10px', padding: '8px 10px', background: '#fff0f0', borderRadius: '6px' }}>{hata}</div>}

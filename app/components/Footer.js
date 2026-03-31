@@ -55,7 +55,7 @@ export default function Footer() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {kesfet.map(item => (
-                  <Link key={item.href} href={item.href} style={{ color: '#ababaa', fontSize: '14px', textDecoration: 'none' }}>
+                  <Link key={item.href} href={item.href} style={{ color: '#d6d6d1', fontSize: '14px', textDecoration: 'none' }}>
                     {item.label}
                   </Link>
                 ))}
@@ -68,7 +68,7 @@ export default function Footer() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {kurumsal.map(item => (
-                  <Link key={item.href} href={item.href} style={{ color: '#ababaa', fontSize: '14px', textDecoration: 'none' }}>
+                  <Link key={item.href} href={item.href} style={{ color: '#d6d6d1', fontSize: '14px', textDecoration: 'none' }}>
                     {item.label}
                   </Link>
                 ))}
@@ -84,13 +84,13 @@ export default function Footer() {
           alignItems: 'center',
           paddingTop: '18px'
         }} className="footer-bottom">
-          <div style={{ color: '#777773', fontSize: '12px', lineHeight: 1.6 }}>
+          <div style={{ color: '#b8b8b2', fontSize: '12px', lineHeight: 1.6 }}>
             © 2026 Konsey Comics. Tüm hakları saklıdır.
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', justifyContent: 'flex-end' }}>
             {sosyal.map(item => (
-              <a key={item.label} href={item.href} target="_blank" rel="noreferrer" style={{ color: '#9b9b97', fontSize: '12px', textDecoration: 'none', letterSpacing: '0.3px' }}>
+              <a key={item.label} href={item.href} target="_blank" rel="noreferrer" style={{ color: '#c6c6c1', fontSize: '12px', textDecoration: 'none', letterSpacing: '0.3px' }}>
                 {item.label}
               </a>
             ))}

@@ -58,7 +58,7 @@ export default function Hero({ seriler = [], slides = [] }) {
             <h1 style={{
               margin: '0 0 14px',
               color: '#fff',
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: 'var(--font-display)',
               fontSize: 'clamp(48px, 7vw, 82px)',
               lineHeight: 0.92,
               letterSpacing: '0.8px'
@@ -232,7 +232,7 @@ export default function Hero({ seriler = [], slides = [] }) {
               </div>
 
               <h1 style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: 'var(--font-display)',
                 fontSize: 'clamp(48px, 6.6vw, 86px)',
                 color: '#fff', margin: '0 0 16px 0',
                 lineHeight: 0.9, letterSpacing: '0.7px',
@@ -279,7 +279,7 @@ export default function Hero({ seriler = [], slides = [] }) {
                 <div style={{ marginTop: '16px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {kategoriEtiket && (
                     <span style={{
-                      fontSize: '11px', color: 'rgba(255,255,255,0.5)',
+                      fontSize: '11px', color: 'rgba(255,255,255,0.86)',
                       background: 'rgba(255,255,255,0.1)', padding: '3px 10px',
                       borderRadius: '100px', letterSpacing: '0.5px', textTransform: 'uppercase'
                     }}>
@@ -288,7 +288,7 @@ export default function Hero({ seriler = [], slides = [] }) {
                   )}
                   {seri.durum && (
                     <span style={{
-                      fontSize: '11px', color: 'rgba(255,255,255,0.5)',
+                      fontSize: '11px', color: 'rgba(255,255,255,0.86)',
                       background: 'rgba(255,255,255,0.1)', padding: '3px 10px',
                       borderRadius: '100px'
                     }}>
@@ -305,6 +305,8 @@ export default function Hero({ seriler = [], slides = [] }) {
                       key={slide.id || index}
                       type="button"
                       onClick={() => setAktifIndex(index)}
+                      aria-label={`${index + 1}. slayta git: ${slide.baslik || slide.title || 'Hero slaytı'}`}
+                      aria-pressed={index === aktifIndex}
                       style={{
                         width: index === aktifIndex ? '30px' : '10px',
                         height: '10px',

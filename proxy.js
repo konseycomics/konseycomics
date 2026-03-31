@@ -3,10 +3,11 @@ import { NextResponse } from 'next/server'
 
 export async function proxy(req) {
   const host = req.headers.get('host') || ''
-  const canonicalHost = 'konseycomics.com'
+  const canonicalHost = 'www.konseycomics.com'
+  const bareHost = 'konseycomics.com'
   const legacyHost = 'konseycomics.vercel.app'
 
-  if (host === legacyHost) {
+  if (host === legacyHost || host === bareHost) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.protocol = 'https:'
     redirectUrl.host = canonicalHost

@@ -61,9 +61,9 @@ export default function Navbar() {
           <ul style={{ display: 'flex', gap: '4px', listStyle: 'none', flex: 1, margin: 0, padding: 0 }} className="desktop-nav">
             {linkler.map(item => (
               <li key={item.href}>
-                <Link href={item.href} style={{ fontSize: '14px', fontWeight: 500, color: '#bcbcbc', textDecoration: 'none', padding: '8px 12px', borderRadius: '10px', display: 'block', letterSpacing: '0.1px' }}
+                <Link href={item.href} style={{ fontSize: '14px', fontWeight: 500, color: '#d7d7d2', textDecoration: 'none', padding: '8px 12px', borderRadius: '10px', display: 'block', letterSpacing: '0.1px' }}
                   onMouseEnter={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#bcbcbc' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#d7d7d2' }}
                 >{item.label}</Link>
               </li>
             ))}
@@ -84,7 +84,7 @@ export default function Navbar() {
                 </div>
                 <span style={{ fontSize: '14px', fontWeight: 500, color: '#f5f5f3' }}>{profil.kullanici_adi}</span>
               </Link>
-              <button onClick={handleCikis} style={{ fontSize: '12px', padding: '7px 12px', background: 'none', border: '1px solid #222', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', color: '#bcbcbc' }}>
+              <button onClick={handleCikis} style={{ fontSize: '12px', padding: '7px 12px', background: 'none', border: '1px solid #222', borderRadius: '10px', cursor: 'pointer', fontFamily: 'inherit', color: '#d7d7d2' }}>
                 Çıkış
               </button>
             </div>
@@ -94,7 +94,15 @@ export default function Navbar() {
             </Link>
           )}
 
-          <button onClick={() => setMenuOpen(!menuOpen)} className="hamburger" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '6px', flexDirection: 'column', gap: '5px' }}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="hamburger"
+            aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: '6px', flexDirection: 'column', gap: '5px' }}
+          >
             <span style={{ display: 'block', width: '24px', height: '2px', background: '#f5f5f3', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
             <span style={{ display: 'block', width: '24px', height: '2px', background: '#f5f5f3', borderRadius: '2px', opacity: menuOpen ? 0 : 1 }} />
             <span style={{ display: 'block', width: '24px', height: '2px', background: '#f5f5f3', borderRadius: '2px', transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
@@ -104,7 +112,7 @@ export default function Navbar() {
       </nav>
 
       {menuOpen && (
-        <div style={{ position: 'fixed', top: '90px', left: 0, right: 0, background: '#000', borderBottom: '1px solid #121212', padding: '12px 0', zIndex: 99, maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
+        <div id="mobile-navigation" style={{ position: 'fixed', top: '90px', left: 0, right: 0, background: '#000', borderBottom: '1px solid #121212', padding: '12px 0', zIndex: 99, maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
           {linkler.map(item => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '12px 24px', fontSize: '15px', fontWeight: 500, color: '#f5f5f3', textDecoration: 'none', borderBottom: '1px solid #121212' }}>
               {item.label}
@@ -116,7 +124,7 @@ export default function Navbar() {
                 <Link href={`/profil/${profil.kullanici_adi}`} onClick={() => setMenuOpen(false)} style={{ padding: '11px', background: '#111', border: '1px solid #222', borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: '#f5f5f3', textDecoration: 'none', textAlign: 'center', display: 'block' }}>
                   Profilim
                 </Link>
-                <button onClick={() => { handleCikis(); setMenuOpen(false) }} style={{ padding: '11px', background: 'none', border: '1px solid #222', borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: '#bcbcbc', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { handleCikis(); setMenuOpen(false) }} style={{ padding: '11px', background: 'none', border: '1px solid #222', borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: '#d7d7d2', cursor: 'pointer', fontFamily: 'inherit' }}>
                   Çıkış Yap
                 </button>
               </div>

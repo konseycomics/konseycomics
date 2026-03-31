@@ -15,14 +15,12 @@ function slugifyUsername(value) {
 }
 
 function getPreferredUsername(user, explicitUsername) {
-  const emailLocalPart = String(user?.email || '').split('@')[0]
   return (
     slugifyUsername(explicitUsername) ||
     slugifyUsername(user?.user_metadata?.kullanici_adi) ||
     slugifyUsername(user?.user_metadata?.username) ||
     slugifyUsername(user?.raw_user_meta_data?.kullanici_adi) ||
     slugifyUsername(user?.raw_user_meta_data?.username) ||
-    slugifyUsername(emailLocalPart) ||
     `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
   )
 }

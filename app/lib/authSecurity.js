@@ -90,6 +90,14 @@ export function mapAuthError(error, context = 'generic') {
       : 'Kullanıcı adı, e-posta veya şifre hatalı.'
   }
 
+  if (message.includes('username_signin_not_configured')) {
+    return 'Kullanıcı adıyla giriş henüz sunucuda aktif değil. Şimdilik e-posta ile giriş yap.'
+  }
+
+  if (message.includes('username_not_found')) {
+    return 'Bu kullanıcı adına ait hesap bulunamadı. Kullanıcı adını kontrol et ya da e-posta ile giriş yap.'
+  }
+
   if (message.includes('email not confirmed')) {
     return 'Bu hesap için e-posta doğrulaması henüz tamamlanmamış.'
   }

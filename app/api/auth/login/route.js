@@ -29,7 +29,7 @@ async function resolveEmailFromIdentifier(adminClient, identifier) {
   }
 
   if (!adminClient) {
-    throw new Error('Username sign-in is not configured on the server.')
+    throw new Error('USERNAME_SIGNIN_NOT_CONFIGURED')
   }
 
   const { data: profile, error: profileError } = await adminClient
@@ -98,11 +98,14 @@ export async function POST(req) {
     }
 
     const { publicClient, adminClient } = getClients()
-    const email = await resolveEmailFromIdentifier(adminClient, identifier)
+  const email = await resolveEmailFromIdentifier(adminClient, identifier)
 
-    if (!email) {
-      return NextResponse.json({ error: 'Invalid login credentials' }, { status: 400 })
-    }
+  if (!email) {
+    return NextResponse.json(
+      { error: isEmail(identifier) ? 'Invalid login credentials' : 'USERNAME_NOT_FOUND' },
+      { status: 400 }
+    )
+  }
 
     const { data, error } = await publicClient.auth.signInWithPassword({
       email,

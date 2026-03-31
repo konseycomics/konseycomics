@@ -152,7 +152,15 @@ export default function AuthModal({ open, onClose }) {
           {mod !== 'sifre' && (
             <div style={{ marginBottom: '12px' }}>
               <label style={{ fontSize: '12px', fontWeight: 500, display: 'block', marginBottom: '6px' }}>Şifre</label>
-              <input type="password" value={sifre} onChange={e => setSifre(e.target.value)} placeholder="••••••••" required minLength={10} style={I} />
+              <input
+                type="password"
+                value={sifre}
+                onChange={e => setSifre(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={mod === 'kayit' ? 10 : undefined}
+                style={I}
+              />
             </div>
           )}
           {mod === 'kayit' && (

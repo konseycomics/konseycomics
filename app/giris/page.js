@@ -419,9 +419,9 @@ export default function GirisKayit() {
                     type="password"
                     value={form.sifre}
                     onChange={e => setForm(f => ({ ...f, sifre: e.target.value }))}
-                    placeholder="En az 10 karakter"
+                    placeholder={mod === 'kayit' ? 'En az 10 karakter' : 'Şifren'}
                     required
-                    minLength={10}
+                    minLength={mod === 'kayit' ? 10 : undefined}
                     style={inputStyle}
                   />
                 </div>

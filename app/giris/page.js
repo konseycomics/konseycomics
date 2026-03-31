@@ -7,7 +7,7 @@ import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthErr
 async function syncProfile(accessToken, username) {
   if (!accessToken) return
   try {
-    await fetch('/api/auth/sync-profile', {
+    const response = await fetch('/api/auth/sync-profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -15,7 +15,14 @@ async function syncProfile(accessToken, username) {
         username: username || undefined,
       }),
     })
-  } catch {}
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return { ok: false, error: payload?.error || 'PROFILE_SYNC_FAILED' }
+    }
+    return { ok: true, profile: payload?.profile || null }
+  } catch (error) {
+    return { ok: false, error: error?.message || 'PROFILE_SYNC_FAILED' }
+  }
 }
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -99,7 +106,12 @@ export default function GirisKayit() {
       if (error) {
         setHata(mapAuthError(error, 'login'))
       } else {
-        await syncProfile(payload.session?.access_token)
+        const syncResult = await syncProfile(payload.session?.access_token)
+        if (!syncResult?.ok) {
+          setHata(`Profil senkronizasyonu basarisiz: ${syncResult?.error || 'PROFILE_SYNC_FAILED'}`)
+          setYukleniyor(false)
+          return
+        }
         router.push('/')
         router.refresh()
       }
@@ -146,7 +158,12 @@ export default function GirisKayit() {
     if (error) {
       setHata(mapAuthError(error, 'signup'))
     } else if (data.session) {
-      await syncProfile(data.session?.access_token, form.kullaniciAdi)
+      const syncResult = await syncProfile(data.session?.access_token, form.kullaniciAdi)
+      if (!syncResult?.ok) {
+        setHata(`Profil senkronizasyonu basarisiz: ${syncResult?.error || 'PROFILE_SYNC_FAILED'}`)
+        setYukleniyor(false)
+        return
+      }
       setMesaj('Kayıt başarılı! Hesabın hazır, yönlendiriliyorsun.')
       router.push('/')
       router.refresh()

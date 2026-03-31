@@ -14,15 +14,18 @@ function slugifyUsername(value) {
   return ''
 }
 
-function getPreferredUsername(user, explicitUsername) {
-  return (
+function getPreferredUsername(user, explicitUsername, { allowFallback = true } = {}) {
+  const explicitOrMetadata =
     slugifyUsername(explicitUsername) ||
     slugifyUsername(user?.user_metadata?.kullanici_adi) ||
     slugifyUsername(user?.user_metadata?.username) ||
     slugifyUsername(user?.raw_user_meta_data?.kullanici_adi) ||
-    slugifyUsername(user?.raw_user_meta_data?.username) ||
-    `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
-  )
+    slugifyUsername(user?.raw_user_meta_data?.username)
+
+  if (explicitOrMetadata) return explicitOrMetadata
+  if (!allowFallback) return ''
+
+  return `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
 }
 
 function isDuplicateUsernameError(error) {

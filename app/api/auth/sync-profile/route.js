@@ -32,15 +32,18 @@ function getClients() {
   }
 }
 
-function getPreferredUsername(user, explicitUsername) {
-  return (
+function getPreferredUsername(user, explicitUsername, { allowFallback = true } = {}) {
+  const explicitOrMetadata =
     slugifyUsername(explicitUsername) ||
     slugifyUsername(user?.user_metadata?.kullanici_adi) ||
     slugifyUsername(user?.user_metadata?.username) ||
     slugifyUsername(user?.raw_user_meta_data?.kullanici_adi) ||
-    slugifyUsername(user?.raw_user_meta_data?.username) ||
-    `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
-  )
+    slugifyUsername(user?.raw_user_meta_data?.username)
+
+  if (explicitOrMetadata) return explicitOrMetadata
+  if (!allowFallback) return ''
+
+  return `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
 }
 
 async function ensureProfile(adminClient, user, explicitUsername) {
@@ -52,7 +55,7 @@ async function ensureProfile(adminClient, user, explicitUsername) {
 
   if (existingError) throw existingError
   if (existingProfile?.id) {
-    const preferredUsername = getPreferredUsername(user, explicitUsername)
+    const preferredUsername = getPreferredUsername(user, explicitUsername, { allowFallback: false })
 
     if (
       preferredUsername &&
@@ -62,7 +65,7 @@ async function ensureProfile(adminClient, user, explicitUsername) {
       const { data: usedProfile } = await adminClient
         .from('profiller')
         .select('id')
-        .ilike('kullanici_adi', preferredUsername)
+        .eq('kullanici_adi', preferredUsername)
         .maybeSingle()
 
       if (!usedProfile?.id || usedProfile.id === user.id) {
@@ -82,7 +85,7 @@ async function ensureProfile(adminClient, user, explicitUsername) {
     return existingProfile
   }
 
-  const preferredUsername = getPreferredUsername(user, explicitUsername)
+  const preferredUsername = getPreferredUsername(user, explicitUsername, { allowFallback: true })
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const suffix = attempt === 0 ? '' : `_${Math.floor(100 + Math.random() * 900)}`
@@ -91,7 +94,7 @@ async function ensureProfile(adminClient, user, explicitUsername) {
     const { data: usedProfile } = await adminClient
       .from('profiller')
       .select('id')
-      .ilike('kullanici_adi', candidate)
+      .eq('kullanici_adi', candidate)
       .maybeSingle()
 
     if (usedProfile?.id && usedProfile.id !== user.id) continue

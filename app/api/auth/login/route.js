@@ -63,8 +63,12 @@ async function resolveEmailFromIdentifier(adminClient, identifier) {
     }
   }
 
-  if (profileError || !profile?.id) {
-    return null
+  if (profileError) {
+    return await resolveEmailFromUserMetadata(adminClient, identifier)
+  }
+
+  if (!profile?.id) {
+    return await resolveEmailFromUserMetadata(adminClient, identifier)
   }
 
   const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(profile.id)

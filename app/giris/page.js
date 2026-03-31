@@ -3,7 +3,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 import { getPublicProfileByUsername } from '../lib/publicProfiles'
 import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthError, validatePassword, validateUsername } from '../lib/authSecurity'
-import { ensureOwnProfile } from '../lib/profileSync'
+
+async function syncProfile(accessToken, username) {
+  if (!accessToken) return
+  try {
+    await fetch('/api/auth/sync-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accessToken,
+        username: username || undefined,
+      }),
+    })
+  } catch {}
+}
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import TurnstileWidget from '../components/TurnstileWidget'
@@ -86,7 +99,7 @@ export default function GirisKayit() {
       if (error) {
         setHata(mapAuthError(error, 'login'))
       } else {
-        await ensureOwnProfile(payload.user)
+        await syncProfile(payload.session?.access_token)
         router.push('/')
         router.refresh()
       }
@@ -133,7 +146,7 @@ export default function GirisKayit() {
     if (error) {
       setHata(mapAuthError(error, 'signup'))
     } else if (data.session) {
-      await ensureOwnProfile(data.user, form.kullaniciAdi)
+      await syncProfile(data.session?.access_token, form.kullaniciAdi)
       setMesaj('Kayıt başarılı! Hesabın hazır, yönlendiriliyorsun.')
       router.push('/')
       router.refresh()

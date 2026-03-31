@@ -2,7 +2,17 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { ensureOwnProfile } from '../../lib/profileSync'
+
+async function syncProfile(accessToken) {
+  if (!accessToken) return
+  try {
+    await fetch('/api/auth/sync-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken }),
+    })
+  } catch {}
+}
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -11,7 +21,7 @@ export default function AuthCallback() {
     // Supabase URL'deki token'ı otomatik işler
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        ensureOwnProfile(session.user).finally(() => {
+        syncProfile(session.access_token).finally(() => {
           router.push('/')
         })
       } else {
@@ -19,7 +29,7 @@ export default function AuthCallback() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           if (event === 'SIGNED_IN' && session) {
             subscription.unsubscribe()
-            ensureOwnProfile(session.user).finally(() => {
+            syncProfile(session.access_token).finally(() => {
               router.push('/')
             })
           }

@@ -3,7 +3,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 import TurnstileWidget from './TurnstileWidget'
 import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthError, validatePassword } from '../lib/authSecurity'
-import { ensureOwnProfile } from '../lib/profileSync'
+
+async function syncProfile(accessToken) {
+  if (!accessToken) return
+  try {
+    await fetch('/api/auth/sync-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken }),
+    })
+  } catch {}
+}
 
 export default function AuthModal({ open, onClose }) {
   const [mod, setMod] = useState('giris')
@@ -48,7 +58,7 @@ export default function AuthModal({ open, onClose }) {
       const { error } = await supabase.auth.setSession(payload.session)
       if (error) setHata(mapAuthError(error, 'login'))
       else {
-        await ensureOwnProfile(payload.user)
+        await syncProfile(payload.session?.access_token)
         setMesaj('Giriş başarılı!')
         setTimeout(onClose, 800)
       }
@@ -87,7 +97,7 @@ export default function AuthModal({ open, onClose }) {
     })
     if (error) setHata(mapAuthError(error, 'signup'))
     else if (data.session) {
-      await ensureOwnProfile(data.user)
+      await syncProfile(data.session?.access_token)
       setMesaj('Kayıt başarılı! Hesabın hazır.')
     }
     else setMesaj('Kayıt başarılı! Güvenlik ayarına göre e-postanı doğrulaman gerekebilir.')

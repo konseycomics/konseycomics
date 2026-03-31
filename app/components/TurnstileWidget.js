@@ -37,6 +37,13 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
 ) {
   const containerRef = useRef(null)
   const widgetIdRef = useRef(null)
+  const onVerifyRef = useRef(onVerify)
+  const onExpireRef = useRef(onExpire)
+
+  useEffect(() => {
+    onVerifyRef.current = onVerify
+    onExpireRef.current = onExpire
+  }, [onExpire, onVerify])
 
   useEffect(() => {
     let active = true
@@ -52,18 +59,18 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
           sitekey: SITE_KEY,
           theme,
           action,
-          callback: (token) => onVerify?.(token),
+          callback: (token) => onVerifyRef.current?.(token),
           'expired-callback': () => {
-            onVerify?.('')
-            onExpire?.()
+            onVerifyRef.current?.('')
+            onExpireRef.current?.()
           },
           'error-callback': () => {
-            onVerify?.('')
+            onVerifyRef.current?.('')
           },
         })
       })
       .catch(() => {
-        onVerify?.('')
+        onVerifyRef.current?.('')
       })
 
     return () => {
@@ -73,16 +80,16 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
         widgetIdRef.current = null
       }
     }
-  }, [action, onExpire, onVerify, theme])
+  }, [action, theme])
 
   useImperativeHandle(ref, () => ({
     reset() {
       if (window.turnstile && widgetIdRef.current !== null) {
         window.turnstile.reset(widgetIdRef.current)
       }
-      onVerify?.('')
+      onVerifyRef.current?.('')
     },
-  }), [onVerify])
+  }), [])
 
   if (!SITE_KEY) return null
 

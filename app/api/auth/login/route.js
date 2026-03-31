@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isEmail, normalizeAuthIdentifier } from '../../../lib/authSecurity'
 
+function normalizeUsername(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
 function getClients() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_KEY
@@ -32,11 +36,32 @@ async function resolveEmailFromIdentifier(adminClient, identifier) {
     throw new Error('USERNAME_SIGNIN_NOT_CONFIGURED')
   }
 
-  const { data: profile, error: profileError } = await adminClient
-    .from('profiller')
-    .select('id')
-    .ilike('kullanici_adi', identifier)
-    .maybeSingle()
+  const usernameCandidates = Array.from(
+    new Set([normalizeAuthIdentifier(identifier), normalizeUsername(identifier)].filter(Boolean))
+  )
+
+  let profile = null
+  let profileError = null
+
+  for (const candidate of usernameCandidates) {
+    const result = await adminClient
+      .from('profiller')
+      .select('id')
+      .eq('kullanici_adi', candidate)
+      .limit(1)
+      .maybeSingle()
+
+    if (result.error) {
+      profileError = result.error
+      continue
+    }
+
+    if (result.data?.id) {
+      profile = result.data
+      profileError = null
+      break
+    }
+  }
 
   if (profileError || !profile?.id) {
     return null
@@ -51,7 +76,7 @@ async function resolveEmailFromIdentifier(adminClient, identifier) {
 }
 
 async function resolveEmailFromUserMetadata(adminClient, identifier) {
-  const normalizedIdentifier = identifier.toLowerCase()
+  const normalizedIdentifier = normalizeUsername(identifier)
   let page = 1
   const perPage = 200
 

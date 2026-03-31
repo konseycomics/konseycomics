@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 import { getPublicProfileByUsername } from '../lib/publicProfiles'
 import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthError, validatePassword, validateUsername } from '../lib/authSecurity'
+import { ensureOwnProfile } from '../lib/profileSync'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import TurnstileWidget from '../components/TurnstileWidget'
@@ -85,6 +86,7 @@ export default function GirisKayit() {
       if (error) {
         setHata(mapAuthError(error, 'login'))
       } else {
+        await ensureOwnProfile(payload.user)
         router.push('/')
         router.refresh()
       }
@@ -131,6 +133,7 @@ export default function GirisKayit() {
     if (error) {
       setHata(mapAuthError(error, 'signup'))
     } else if (data.session) {
+      await ensureOwnProfile(data.user, form.kullaniciAdi)
       setMesaj('Kayıt başarılı! Hesabın hazır, yönlendiriliyorsun.')
       router.push('/')
       router.refresh()

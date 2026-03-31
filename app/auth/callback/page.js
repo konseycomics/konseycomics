@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import { ensureOwnProfile } from '../../lib/profileSync'
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -10,13 +11,17 @@ export default function AuthCallback() {
     // Supabase URL'deki token'ı otomatik işler
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        router.push('/')
+        ensureOwnProfile(session.user).finally(() => {
+          router.push('/')
+        })
       } else {
         // Token işlenmesini bekle
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           if (event === 'SIGNED_IN' && session) {
             subscription.unsubscribe()
-            router.push('/')
+            ensureOwnProfile(session.user).finally(() => {
+              router.push('/')
+            })
           }
           if (event === 'PASSWORD_RECOVERY') {
             subscription.unsubscribe()

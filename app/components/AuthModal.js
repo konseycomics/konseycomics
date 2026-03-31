@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAuthRedirectUrl, supabase } from '../lib/supabase'
 import TurnstileWidget from './TurnstileWidget'
 import { getCaptchaErrorMessage, getPasswordChecks, isCaptchaEnabled, mapAuthError, validatePassword } from '../lib/authSecurity'
+import { ensureOwnProfile } from '../lib/profileSync'
 
 export default function AuthModal({ open, onClose }) {
   const [mod, setMod] = useState('giris')
@@ -46,7 +47,11 @@ export default function AuthModal({ open, onClose }) {
     } else {
       const { error } = await supabase.auth.setSession(payload.session)
       if (error) setHata(mapAuthError(error, 'login'))
-      else { setMesaj('Giriş başarılı!'); setTimeout(onClose, 800) }
+      else {
+        await ensureOwnProfile(payload.user)
+        setMesaj('Giriş başarılı!')
+        setTimeout(onClose, 800)
+      }
     }
     captchaRef.current?.reset?.()
     setCaptchaToken('')
@@ -81,7 +86,10 @@ export default function AuthModal({ open, onClose }) {
       },
     })
     if (error) setHata(mapAuthError(error, 'signup'))
-    else if (data.session) setMesaj('Kayıt başarılı! Hesabın hazır.')
+    else if (data.session) {
+      await ensureOwnProfile(data.user)
+      setMesaj('Kayıt başarılı! Hesabın hazır.')
+    }
     else setMesaj('Kayıt başarılı! Güvenlik ayarına göre e-postanı doğrulaman gerekebilir.')
     captchaRef.current?.reset?.()
     setCaptchaToken('')

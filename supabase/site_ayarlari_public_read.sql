@@ -19,7 +19,9 @@ using (
     'anahtar_kelimeler',
     'og_image',
     'sosyal_medya',
-    'anasayfa_hero_slider'
+    'anasayfa_hero_slider',
+    'seri_detay_vitrin',
+    'bolum_okuma_sayfalari'
   )
   or anahtar like 'sayfa_%'
 );

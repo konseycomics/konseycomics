@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 export async function proxy(req) {
-  const pathname = req.nextUrl.pathname
   const host = req.headers.get('host') || ''
   const canonicalHost = 'www.konseycomics.com'
   const bareHost = 'konseycomics.com'
@@ -40,31 +39,7 @@ export async function proxy(req) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (pathname.startsWith('/admin')) {
-    if (!user) {
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/'
-      redirectUrl.search = ''
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    const { data: profil } = await supabase
-      .from('profiller')
-      .select('rol')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (!profil || !['admin', 'yonetici'].includes(profil.rol)) {
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/'
-      redirectUrl.search = ''
-      return NextResponse.redirect(redirectUrl)
-    }
-  }
+  await supabase.auth.getSession()
 
   return res
 }

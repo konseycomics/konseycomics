@@ -106,6 +106,14 @@ export function mapAuthError(error, context = 'generic') {
     return 'Bu e-posta adresi zaten kayıtlı.'
   }
 
+  if (message.includes('email_exists') || message.includes('email already') || message.includes('email address already')) {
+    return 'Bu e-posta adresi zaten başka bir hesapta kullanılıyor.'
+  }
+
+  if (message.includes('conflict')) {
+    return 'Bu e-posta adresi zaten kullanımda olabilir.'
+  }
+
   if (message.includes('weak_password') || message.includes('password should')) {
     return 'Şifre güvenlik kurallarını karşılamıyor. Daha güçlü bir şifre seç.'
   }
@@ -122,8 +130,16 @@ export function mapAuthError(error, context = 'generic') {
     return 'Geçerli bir e-posta adresi gir.'
   }
 
+  if (message.includes('reauthentication_needed') || message.includes('reauthentication needed')) {
+    return 'Bu işlem için hesabını tekrar doğrulaman gerekiyor. Çıkış yapıp yeniden giriş yaptıktan sonra tekrar dene.'
+  }
+
+  if (message.includes('session_not_found') || message.includes('auth session missing')) {
+    return 'Oturum bilgisi bulunamadı. Sayfayı yenileyip tekrar dene.'
+  }
+
   if (context === 'email-update') {
-    return 'E-posta güncelleme işlemi başlatılamadı. Lütfen tekrar dene.'
+    return `E-posta güncelleme işlemi başlatılamadı: ${rawMessage}`
   }
 
   if (context === 'password-update') {

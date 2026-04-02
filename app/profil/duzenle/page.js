@@ -563,12 +563,12 @@ export default function ProfilDuzenle() {
       return
     }
 
-    const { error } = await supabase.auth.updateUser(
-      { email: emailForm.yeni.trim().toLowerCase() },
-      { emailRedirectTo: getAuthRedirectUrl('/auth/callback') }
-    )
+    const { error } = await supabase.auth.updateUser({
+      email: emailForm.yeni.trim().toLowerCase(),
+    })
 
     if (error) {
+      console.error('Email update init failed:', error)
       setHata(mapAuthError(error, 'email-update'))
     } else {
       setMesaj('E-posta değişikliği başlatıldı. Yeni adresini onayladıktan sonra hesabın güncellenecek.')

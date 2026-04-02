@@ -556,7 +556,10 @@ function SerilerIcerik() {
             <div className="site-shell series-hero-grid">
               <div>
                 <div className="series-kicker">Konsey Arşivi</div>
-                <h1>Tüm Seriler</h1>
+                <h1>Çizgi Roman Oku Arşivi</h1>
+                <p>
+                  Türkçe çizgi roman oku arşivimizde Marvel, DC, bağımsız seriler, manga ve webtoon seçkilerini tek yerde keşfet.
+                </p>
               </div>
             </div>
           </header>
@@ -638,6 +641,24 @@ function SerilerIcerik() {
                 )}
               </>
             )}
+
+            <div style={{
+              marginTop: '36px',
+              padding: '22px',
+              borderRadius: '22px',
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.03)',
+              color: 'rgba(255,255,255,0.68)',
+            }}>
+              <h2 style={{ margin: '0 0 12px', color: '#fff', fontSize: '22px' }}>Türkçe Çizgi Roman Oku Rehberi</h2>
+              <p style={{ margin: '0 0 10px', fontSize: '14px', lineHeight: 1.8 }}>
+                KonseyComics seriler sayfası, çizgi roman oku ve türkçe çizgi roman oku aramalarında tüm arşivi tek merkezde sunmak için hazırlandı.
+                Marvel ve DC evrenlerinden bağımsız serilere kadar farklı içerikleri filtreleyebilir, en çok okunanlara hızlıca ulaşabilirsin.
+              </p>
+              <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.8 }}>
+                Aradığın seriyi bulduktan sonra seri detay sayfasına geçip mevcut bölümleri inceleyebilir, okuma akışına doğrudan başlayabilirsin.
+              </p>
+            </div>
           </section>
         </section>
       </main>

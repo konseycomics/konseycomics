@@ -44,7 +44,14 @@ export async function proxy(req) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (pathname.startsWith('/admin') && user) {
+  if (pathname.startsWith('/admin')) {
+    if (!user) {
+      const redirectUrl = req.nextUrl.clone()
+      redirectUrl.pathname = '/'
+      redirectUrl.search = ''
+      return NextResponse.redirect(redirectUrl)
+    }
+
     const { data: profil } = await supabase
       .from('profiller')
       .select('rol')

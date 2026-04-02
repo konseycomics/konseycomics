@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { ACCENT, ADMIN_BG, BD, BP, BS, CARD, CARD_INNER, CokluResimYukle, I, LB, Msg, PANEL_BG, PANEL_BORDER, PURPLE, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE, AramaSecim, AramaSecimTek, PANEL_BG_STRONG } from './ui'
 import { KonseySayfasi, KullanicilarSayfasi, YorumlarSayfasi } from './sections/community'
@@ -57,24 +58,31 @@ export default function Admin() {
   const [giris, setGiris] = useState(false)
   const [yukleniyor, setYukleniyor] = useState(true)
   const [aktif, setAktif] = useState('istatistik')
-  const [loginErr, setLoginErr] = useState('')
-  const [email, setEmail] = useState('')
-  const [sifre, setSifre] = useState('')
   const [bildirimSayisi, setBildirimSayisi] = useState(0)
   const [bildirimAcik, setBildirimAcik] = useState(false)
   const [bildirimler, setBildirimler] = useState([])
   const [globalSeriler, setGlobalSeriler] = useState([])
   const [globalBolumler, setGlobalBolumler] = useState([])
   const [globalKullanicilar, setGlobalKullanicilar] = useState([])
+  const router = useRouter()
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) { setYukleniyor(false); return }
+      if (!session) {
+        router.replace('/')
+        setYukleniyor(false)
+        return
+      }
       const { data: profil } = await supabase.from('profiller').select('rol').eq('id', session.user.id).single()
-      if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
+      if (profil?.rol === 'admin' || profil?.rol === 'yonetici') {
+        setGiris(true)
+        yukleGlobal()
+      } else {
+        router.replace('/')
+      }
       setYukleniyor(false)
     })
-  }, [])
+  }, [router])
 
   async function yukleGlobal() {
     const [s, b, k, bil] = await Promise.all([
@@ -90,33 +98,9 @@ export default function Admin() {
     setBildirimSayisi(bil.data?.length || 0)
   }
 
-  async function handleLogin(e) {
-    e.preventDefault(); setLoginErr(''); setYukleniyor(true)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: sifre })
-    if (error) { setLoginErr('E-posta veya şifre hatalı.'); setYukleniyor(false); return }
-    const { data: profil } = await supabase.from('profiller').select('rol').eq('id', data.user.id).single()
-    if (profil?.rol === 'admin' || profil?.rol === 'yonetici') { setGiris(true); yukleGlobal() }
-    else { setLoginErr('Admin yetkisi yok.'); await supabase.auth.signOut() }
-    setYukleniyor(false)
-  }
-
   if (yukleniyor) return <div style={{ minHeight: '100vh', background: ADMIN_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}><div style={{ color: TEXT_SOFT }}>Yükleniyor...</div></div>
 
-  if (!giris) return (
-    <div style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, rgba(139,92,246,0.18), transparent 28%), #050505', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif", padding: '24px' }}>
-      <div style={{ ...CARD, width: '380px', padding: '40px' }}>
-        <div style={{ ...LB, marginBottom: '12px' }}>Konsey Yonetim</div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '44px', lineHeight: 0.9, marginBottom: '8px', color: '#fff' }}>Admin Girisi</div>
-        <div style={{ fontSize: '13px', color: TEXT_SOFT, marginBottom: '24px', lineHeight: 1.7 }}>KonseyComics vitrinini, içeriklerini ve topluluğunu buradan yönetebilirsin.</div>
-        <form onSubmit={handleLogin}>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" required style={{ ...I, marginBottom: '10px' }} />
-          <input type="password" value={sifre} onChange={e => setSifre(e.target.value)} placeholder="Şifre" required style={{ ...I, marginBottom: '16px' }} />
-          {loginErr && <div style={{ color: '#dc2626', fontSize: '13px', marginBottom: '12px' }}>{loginErr}</div>}
-          <button type="submit" style={{ ...BP, width: '100%', padding: '12px' }}>Giriş Yap</button>
-        </form>
-      </div>
-    </div>
-  )
+  if (!giris) return null
 
   const menu = [
     { title: 'Genel Bakis', items: [{ key: 'istatistik', label: 'Istatistikler', icon: '◢' }] },

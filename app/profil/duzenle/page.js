@@ -265,6 +265,8 @@ export default function ProfilDuzenle() {
   const [bannerYukleniyor, setBannerYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [hata, setHata] = useState('')
+  const [emailMesaj, setEmailMesaj] = useState('')
+  const [emailHata, setEmailHata] = useState('')
   const [avatarOnizleme, setAvatarOnizleme] = useState(null)
   const [bannerOnizleme, setBannerOnizleme] = useState(null)
   const [bannerPozisyon, setBannerPozisyon] = useState({ x: 50, y: 50 })
@@ -543,20 +545,20 @@ export default function ProfilDuzenle() {
 
   async function handleEmailDegistir(e) {
     e.preventDefault()
-    if (!sessionUser?.email) { setHata('Hesap bilgileri yüklenemedi. Sayfayı yenileyip tekrar dene.'); return }
-    if (!emailForm.yeni) { setHata('Yeni e-posta adresini gir.'); return }
-    if (emailForm.yeni.toLowerCase() === sessionUser.email.toLowerCase()) { setHata('Yeni e-posta mevcut adresle aynı olamaz.'); return }
-    if (!emailForm.sifre) { setHata('E-posta değişimi için mevcut şifreni doğrula.'); return }
-    if (captchaActive && !securityCaptchaToken) { setHata(getCaptchaErrorMessage()); return }
+    if (!sessionUser?.email) { setEmailHata('Hesap bilgileri yüklenemedi. Sayfayı yenileyip tekrar dene.'); return }
+    if (!emailForm.yeni) { setEmailHata('Yeni e-posta adresini gir.'); return }
+    if (emailForm.yeni.toLowerCase() === sessionUser.email.toLowerCase()) { setEmailHata('Yeni e-posta mevcut adresle aynı olamaz.'); return }
+    if (!emailForm.sifre) { setEmailHata('E-posta değişimi için mevcut şifreni doğrula.'); return }
+    if (captchaActive && !securityCaptchaToken) { setEmailHata(getCaptchaErrorMessage()); return }
 
-    setYukleniyor(true); setHata(''); setMesaj('')
+    setYukleniyor(true); setHata(''); setMesaj(''); setEmailHata(''); setEmailMesaj('')
     const { error: mevcutSifreError } = await supabase.auth.signInWithPassword({
       email: sessionUser.email,
       password: emailForm.sifre,
       options: securityCaptchaToken ? { captchaToken: securityCaptchaToken } : undefined,
     })
     if (mevcutSifreError) {
-      setHata(mapAuthError(mevcutSifreError, 'password-check'))
+      setEmailHata(mapAuthError(mevcutSifreError, 'password-check'))
       securityCaptchaRef.current?.reset?.()
       setSecurityCaptchaToken('')
       setYukleniyor(false)
@@ -569,9 +571,9 @@ export default function ProfilDuzenle() {
 
     if (error) {
       console.error('Email update init failed:', error)
-      setHata(mapAuthError(error, 'email-update'))
+      setEmailHata(mapAuthError(error, 'email-update'))
     } else {
-      setMesaj('E-posta değişikliği başlatıldı. Yeni adresini onayladıktan sonra hesabın güncellenecek.')
+      setEmailMesaj('E-posta değişikliği başlatıldı. Yeni adresini onayladıktan sonra hesabın güncellenecek.')
       setEmailForm({ yeni: '', sifre: '' })
     }
     securityCaptchaRef.current?.reset?.()
@@ -1819,15 +1821,17 @@ export default function ProfilDuzenle() {
                     </div>
                     <div>
                       <label style={L}>Yeni E-posta</label>
-                      <input type="email" value={emailForm.yeni} onChange={e => setEmailForm(f => ({ ...f, yeni: e.target.value }))} placeholder="yeniadres@email.com" style={I} />
+                      <input type="email" value={emailForm.yeni} onChange={e => { setEmailForm(f => ({ ...f, yeni: e.target.value })); setEmailHata(''); setEmailMesaj('') }} placeholder="yeniadres@email.com" style={I} />
                     </div>
                     <div>
                       <label style={L}>Mevcut Şifre</label>
-                      <input type="password" value={emailForm.sifre} onChange={e => setEmailForm(f => ({ ...f, sifre: e.target.value }))} placeholder="Kimlik doğrulaması için şifren" style={I} />
+                      <input type="password" value={emailForm.sifre} onChange={e => { setEmailForm(f => ({ ...f, sifre: e.target.value })); setEmailHata(''); setEmailMesaj('') }} placeholder="Kimlik doğrulaması için şifren" style={I} />
                     </div>
                     <button type="submit" disabled={yukleniyor} style={{ minHeight: '52px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '14px', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: yukleniyor ? 'not-allowed' : 'pointer', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
                       E-posta Değişimini Başlat
                     </button>
+                    {emailHata && <div style={{ fontSize: '13px', color: '#fecaca', padding: '12px 16px', background: 'rgba(127,29,29,0.28)', borderRadius: '14px', border: '1px solid rgba(248,113,113,0.28)' }}>{emailHata}</div>}
+                    {emailMesaj && <div style={{ fontSize: '13px', color: '#bbf7d0', padding: '12px 16px', background: 'rgba(20,83,45,0.28)', borderRadius: '14px', border: '1px solid rgba(74,222,128,0.2)' }}>{emailMesaj}</div>}
                   </div>
                 </form>
               </div>

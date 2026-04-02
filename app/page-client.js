@@ -481,6 +481,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
   const [arama, setArama] = useState('')
   const [aramaAcik, setAramaAcik] = useState(false)
   const [oneriIndex, setOneriIndex] = useState(0)
+  const [authBildirimKapali, setAuthBildirimKapali] = useState(false)
+  const [authDurumu, setAuthDurumu] = useState('')
   const aramaRef = useRef(null)
 
   function findSeriById(id) {
@@ -569,6 +571,16 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
     return () => document.removeEventListener('mousedown', handleDisTiklama)
   }, [])
 
+  useEffect(() => {
+    setAuthBildirimKapali(false)
+  }, [authDurumu])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    setAuthDurumu(url.searchParams.get('auth') || '')
+  }, [])
+
   function aramayaGit() {
     const deger = arama.trim()
     setAramaAcik(false)
@@ -638,6 +650,57 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
       `}</style>
 
       <Navbar />
+      {authDurumu === 'email-changed' && !authBildirimKapali && (
+        <section className="site-section" style={{ marginTop: '20px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '14px',
+            padding: '16px 18px',
+            borderRadius: '22px',
+            border: '1px solid rgba(74,222,128,0.2)',
+            background: 'linear-gradient(180deg, rgba(20,83,45,0.36), rgba(20,83,45,0.18))',
+            boxShadow: '0 18px 40px rgba(0,0,0,0.12)',
+          }}>
+            <div>
+              <div style={{ color: '#bbf7d0', fontSize: '11px', fontWeight: 800, letterSpacing: '1.1px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Hesap Güncellendi
+              </div>
+              <div style={{ color: '#fff', fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>
+                E-posta değişimi onaylandı.
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '13px', lineHeight: 1.7 }}>
+                Hesabın artık yeni e-posta adresinle güncel. Sonraki girişlerinde bu adresi kullanabilirsin.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthBildirimKapali(true)
+                router.replace('/')
+              }}
+              style={{
+                flexShrink: 0,
+                minHeight: '40px',
+                padding: '0 14px',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                fontSize: '12px',
+                fontWeight: 800,
+                letterSpacing: '0.6px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Kapat
+            </button>
+          </div>
+        </section>
+      )}
       <Hero seriler={heroSeriler} slides={heroSlides} />
 
       <section className="site-section" style={{ marginTop: '28px' }}>

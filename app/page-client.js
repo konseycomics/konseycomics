@@ -496,6 +496,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
         .filter(slide => slide?.aktif !== false)
         .map((slide, index) => {
           const seri = findSeriById(slide.seri_id)
+          if (slide?.seri_id && !seri) return null
           return {
             id: slide.id || `hero-slide-${index}`,
             baslik: slide.baslik || seri?.baslik || '',
@@ -519,7 +520,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
             one_cikan: seri?.one_cikan || false,
           }
         })
-        .filter(slide => slide.baslik)
+        .filter(slide => slide?.baslik)
     : []
   const populerSeriler = [...seriler]
     .sort((a, b) => {

@@ -1,7 +1,9 @@
 import HomeClient from './page-client'
 import { createSupabaseServerClient } from './lib/seo'
+import { unstable_noStore as noStore } from 'next/cache'
 
 async function getHomePageData() {
+  noStore()
   const supabase = createSupabaseServerClient()
 
   const [{ data: seriler }, { data: bolumler }, { data: ayarData }] = await Promise.all([

@@ -44,6 +44,21 @@ function getYayilimSayfalari(pageNumber, spreadMode, sayfalar, toplamSayfa) {
     .map((number) => ({ number, url: sayfalar[number - 1] }))
 }
 
+function preloadReaderImages(urls) {
+  return Promise.all(
+    urls
+      .filter(Boolean)
+      .map((src) => new Promise((resolve) => {
+        const img = new window.Image()
+        img.decoding = 'async'
+        img.onload = () => resolve(src)
+        img.onerror = () => resolve(src)
+        img.src = src
+        if (img.complete) resolve(src)
+      }))
+  )
+}
+
 export default function Okuyucu() {
   const { slug, bolum } = useParams()
   const router = useRouter()
@@ -246,7 +261,7 @@ export default function Okuyucu() {
     setAktifSayfa(Math.max(1, Math.min(toplamSayfa, yeniSayfa)))
   }
 
-  function flipGecisiBaslat(direction, hedefSayfa) {
+  async function flipGecisiBaslat(direction, hedefSayfa) {
     if (!ozelOkuyucuVar) return
 
     if (flipGecisZamanlayiciRef.current) {
@@ -262,6 +277,8 @@ export default function Okuyucu() {
       flipSayfaGuncelle(hedefSayfa)
       return
     }
+
+    await preloadReaderImages(hedefSayfalar.map((item) => item.url))
 
     setFlipGecisi({
       direction,

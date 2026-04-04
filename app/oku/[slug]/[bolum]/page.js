@@ -795,7 +795,7 @@ export default function Okuyucu() {
             position: relative;
             overflow: hidden;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(246,241,232,0.98), rgba(223,216,204,0.98));
+            background: linear-gradient(180deg, rgba(248,244,236,0.99), rgba(232,224,210,0.99));
             box-shadow:
               0 34px 64px rgba(0,0,0,0.4),
               inset 0 0 0 1px rgba(255,255,255,0.05);
@@ -819,11 +819,29 @@ export default function Okuyucu() {
           .reader-flip-turn-back {
             position: absolute;
             inset: 0;
-            background:
-              linear-gradient(180deg, rgba(236,229,216,0.98), rgba(214,206,191,0.98)),
-              linear-gradient(90deg, rgba(0,0,0,0.16), transparent 22%, transparent 78%, rgba(0,0,0,0.14));
             transform: rotateY(180deg);
             backface-visibility: hidden;
+            overflow: hidden;
+            background:
+              linear-gradient(180deg, rgba(245,239,228,0.99), rgba(225,216,200,0.99)),
+              radial-gradient(circle at top, rgba(255,255,255,0.26), transparent 58%);
+          }
+          .reader-flip-turn-back::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(0,0,0,0.14), transparent 22%, transparent 78%, rgba(0,0,0,0.12));
+            pointer-events: none;
+          }
+          .reader-flip-turn-back img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.12;
+            filter: grayscale(1) sepia(0.35) brightness(1.05);
+            transform: scaleX(-1);
           }
           .reader-flip-page-number {
             position: absolute;
@@ -1260,7 +1278,13 @@ export default function Okuyucu() {
                                   decoding="async"
                                   fetchPriority="high"
                                 />
-                                <div className="reader-flip-turn-back" />
+                                <div className="reader-flip-turn-back">
+                                  <img
+                                    src={flipGecisi.cevrilenSayfa.url}
+                                    alt=""
+                                    aria-hidden="true"
+                                  />
+                                </div>
                                 <span className="reader-flip-page-number">{flipGecisi.cevrilenSayfa.number}</span>
                               </div>
                             </div>

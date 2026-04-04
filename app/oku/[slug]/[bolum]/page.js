@@ -613,6 +613,7 @@ export default function Okuyucu() {
             margin: 0 auto;
             padding: 22px;
             border-radius: 28px;
+            perspective: 2200px;
             background:
               linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
               radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 42%);
@@ -655,18 +656,22 @@ export default function Okuyucu() {
             grid-template-columns: minmax(0, 1fr);
             justify-items: center;
           }
-          .reader-flip-stage.is-next .reader-flip-page img {
-            animation: readerFlipNext 180ms ease;
+          .reader-flip-stage.is-next .reader-flip-page.is-right,
+          .reader-flip-stage.is-next .reader-flip-page.is-cover {
+            animation: readerPaperTurnNext 420ms cubic-bezier(0.22, 0.8, 0.24, 1);
           }
-          .reader-flip-stage.is-prev .reader-flip-page img {
-            animation: readerFlipPrev 180ms ease;
+          .reader-flip-stage.is-prev .reader-flip-page.is-left,
+          .reader-flip-stage.is-prev .reader-flip-page.is-cover {
+            animation: readerPaperTurnPrev 420ms cubic-bezier(0.22, 0.8, 0.24, 1);
           }
           .reader-flip-page {
             position: relative;
             overflow: hidden;
             border-radius: 18px;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
             background:
-              linear-gradient(180deg, rgba(255,255,255,0.96), rgba(228,224,216,0.96)),
+              linear-gradient(180deg, rgba(246,241,232,0.98), rgba(223,216,204,0.98)),
               linear-gradient(180deg, rgba(14,14,14,0.9), rgba(6,6,6,0.98));
             box-shadow:
               0 28px 54px rgba(0,0,0,0.34),
@@ -691,6 +696,10 @@ export default function Okuyucu() {
             background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.1));
             opacity: 0.42;
             pointer-events: none;
+          }
+          .reader-flip-page::after,
+          .reader-flip-page::before {
+            transition: opacity 220ms ease;
           }
           .reader-flip-page.is-left::before,
           .reader-flip-page.is-right::before {
@@ -857,24 +866,44 @@ export default function Okuyucu() {
               0 24px 48px rgba(0,0,0,0.36),
               0 0 0 1px rgba(255,255,255,0.06);
           }
-          @keyframes readerFlipNext {
+          @keyframes readerPaperTurnNext {
             0% {
-              opacity: 0.72;
-              transform: translateX(10px);
+              transform: rotateY(-16deg) translateX(10px) scale(0.985);
+              filter: brightness(0.86);
+              box-shadow:
+                0 36px 64px rgba(0,0,0,0.4),
+                inset 0 0 0 1px rgba(255,255,255,0.05);
+            }
+            55% {
+              transform: rotateY(-7deg) translateX(4px) scale(0.994);
+              filter: brightness(0.94);
             }
             100% {
-              opacity: 1;
-              transform: translateX(0);
+              transform: rotateY(0deg) translateX(0) scale(1);
+              filter: brightness(1);
+              box-shadow:
+                0 28px 54px rgba(0,0,0,0.34),
+                inset 0 0 0 1px rgba(255,255,255,0.04);
             }
           }
-          @keyframes readerFlipPrev {
+          @keyframes readerPaperTurnPrev {
             0% {
-              opacity: 0.72;
-              transform: translateX(-10px);
+              transform: rotateY(16deg) translateX(-10px) scale(0.985);
+              filter: brightness(0.86);
+              box-shadow:
+                0 36px 64px rgba(0,0,0,0.4),
+                inset 0 0 0 1px rgba(255,255,255,0.05);
+            }
+            55% {
+              transform: rotateY(7deg) translateX(-4px) scale(0.994);
+              filter: brightness(0.94);
             }
             100% {
-              opacity: 1;
-              transform: translateX(0);
+              transform: rotateY(0deg) translateX(0) scale(1);
+              filter: brightness(1);
+              box-shadow:
+                0 28px 54px rgba(0,0,0,0.34),
+                inset 0 0 0 1px rgba(255,255,255,0.04);
             }
           }
           .reader-bottom {

@@ -115,6 +115,7 @@ export default function Admin() {
       { key: 'kullanicilar', label: 'Kullanicilar', icon: '◎' },
       { key: 'yorumlar', label: 'Yorumlar', icon: '◍' },
       { key: 'konsey', label: 'Konsey Ekibi', icon: '◆' },
+      { key: 'unvanlar', label: 'Unvanlar', icon: '✪' },
     ] },
     { title: 'Vitrin', items: [
       { key: 'anasayfa', label: 'Ana Sayfa & SEO', icon: '▤' },
@@ -190,10 +191,453 @@ export default function Admin() {
           {aktif === 'turler' && <TurlerSayfasi />}
           {aktif === 'kullanicilar' && <KullanicilarSayfasi />}
           {aktif === 'yorumlar' && <YorumlarSayfasi />}
+          {aktif === 'unvanlar' && <UnvanlarSayfasi />}
           {aktif === 'anasayfa' && <AnaSayfaSayfasi />}
           {aktif === 'sayfalar' && <SayfalarSayfasi />}
           {aktif === 'sosyalmedya' && <SosyalMedyaSayfasi />}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function UnvanlarSayfasi() {
+  const titleBos = {
+    isim: '',
+    kod: '',
+    aciklama: '',
+    seri_id: '',
+    character_group: '',
+    kategori: 'progress',
+    nadirlik: 'common',
+    ikon_url: '',
+    aktif: true,
+    siralama: 0,
+    event_tipi: 'SERIES_PROGRESS_UPDATED',
+    kural_tipi: 'series_progress',
+    min_progress_percent: 100,
+    min_completed_series: 1,
+    min_ratings_count: 1,
+    min_favorites_count: 1,
+    oncelik: 100,
+    rule_aktif: true,
+  }
+  const [mod, setMod] = useState('liste')
+  const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [duzenleId, setDuzenleId] = useState(null)
+  const [kurallarMap, setKurallarMap] = useState({})
+  const [unvanlar, setUnvanlar] = useState([])
+  const [seriler, setSeriler] = useState([])
+  const [aramaMetni, setAramaMetni] = useState('')
+  const [seriFiltre, setSeriFiltre] = useState('tumu')
+  const [form, setForm] = useState(titleBos)
+
+  useEffect(() => { fetchHepsi() }, [])
+
+  function kodOlustur(v) {
+    return String(v || '')
+      .toLowerCase()
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/ı/g, 'i')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '')
+  }
+
+  function titleKuralConfigOlustur(payload) {
+    switch (payload.kural_tipi) {
+      case 'series_progress':
+        return {
+          series_id: payload.seri_id || null,
+          min_progress_percent: Number(payload.min_progress_percent || 100),
+        }
+      case 'series_completed':
+        return {
+          series_id: payload.seri_id || null,
+        }
+      case 'character_series_completed_count':
+        return {
+          character_group: payload.character_group || '',
+          min_completed_series: Number(payload.min_completed_series || 1),
+        }
+      case 'rate_count_in_group':
+        return {
+          character_group: payload.character_group || '',
+          min_ratings_count: Number(payload.min_ratings_count || 1),
+        }
+      case 'favorite_count_in_group':
+        return {
+          character_group: payload.character_group || '',
+          min_favorites_count: Number(payload.min_favorites_count || 1),
+        }
+      default:
+        return {}
+    }
+  }
+
+  function titleKuralOzeti(unvan) {
+    const rule = kurallarMap[unvan.id]
+    if (!rule) return 'Kural baglanmadi'
+    const config = rule.kural_config || {}
+    switch (rule.kural_tipi) {
+      case 'series_progress':
+        return `Seride %${config.min_progress_percent || 100} ilerleme`
+      case 'series_completed':
+        return 'Seriyi tamamen bitir'
+      case 'character_series_completed_count':
+        return `${config.character_group || 'Grup'} evreninde ${config.min_completed_series || 1} seri bitir`
+      case 'rate_count_in_group':
+        return `${config.character_group || 'Grup'} evreninde ${config.min_ratings_count || 1} puan ver`
+      case 'favorite_count_in_group':
+        return `${config.character_group || 'Grup'} evreninde ${config.min_favorites_count || 1} takip ekle`
+      default:
+        return rule.kural_tipi || 'Bilinmeyen kural'
+    }
+  }
+
+  async function fetchHepsi() {
+    const [unvanRes, ruleRes, seriRes] = await Promise.all([
+      supabase.from('unvan_tanimlari').select('*, seriler(id, baslik, character_group)').order('siralama').order('created_at', { ascending: false }),
+      supabase.from('unvan_kurallari').select('*').order('oncelik'),
+      supabase.from('seriler').select('id, baslik, character_group').order('baslik'),
+    ])
+
+    const map = {}
+    for (const rule of ruleRes.data || []) {
+      if (!map[rule.unvan_id]) map[rule.unvan_id] = rule
+    }
+
+    setKurallarMap(map)
+    setUnvanlar(unvanRes.data || [])
+    setSeriler(seriRes.data || [])
+  }
+
+  function yeniUnvan() {
+    setForm(titleBos)
+    setDuzenleId(null)
+    setMsg('')
+    setMod('form')
+  }
+
+  function duzenle(unvan) {
+    const rule = kurallarMap[unvan.id]
+    const config = rule?.kural_config || {}
+    setDuzenleId(unvan.id)
+    setForm({
+      isim: unvan.isim || '',
+      kod: unvan.kod || '',
+      aciklama: unvan.aciklama || '',
+      seri_id: unvan.seri_id || '',
+      character_group: unvan.character_group || unvan.seriler?.character_group || '',
+      kategori: unvan.kategori || 'progress',
+      nadirlik: unvan.nadirlik || 'common',
+      ikon_url: unvan.ikon_url || '',
+      aktif: unvan.aktif !== false,
+      siralama: unvan.siralama ?? 0,
+      event_tipi: rule?.event_tipi || 'SERIES_PROGRESS_UPDATED',
+      kural_tipi: rule?.kural_tipi || 'series_progress',
+      min_progress_percent: config.min_progress_percent ?? 100,
+      min_completed_series: config.min_completed_series ?? 1,
+      min_ratings_count: config.min_ratings_count ?? 1,
+      min_favorites_count: config.min_favorites_count ?? 1,
+      oncelik: rule?.oncelik ?? 100,
+      rule_aktif: rule?.aktif !== false,
+    })
+    setMsg('')
+    setMod('form')
+  }
+
+  async function sil(unvan) {
+    if (!confirm(`"${unvan.isim}" unvanini silmek istedigine emin misin?`)) return
+    await supabase.from('unvan_tanimlari').delete().eq('id', unvan.id)
+    setMsg('✅ Unvan silindi!')
+    fetchHepsi()
+  }
+
+  async function kaydet() {
+    if (!form.isim || !form.kod) {
+      setMsg('❌ Unvan ismi ve kodu zorunlu.')
+      return
+    }
+    if (['series_progress', 'series_completed'].includes(form.kural_tipi) && !form.seri_id) {
+      setMsg('❌ Seri bazli kurallarda seri secmelisin.')
+      return
+    }
+    if (['character_series_completed_count', 'rate_count_in_group', 'favorite_count_in_group'].includes(form.kural_tipi) && !form.character_group) {
+      setMsg('❌ Grup bazli kurallarda character group zorunlu.')
+      return
+    }
+
+    setYukleniyor(true)
+
+    const titlePayload = {
+      kod: kodOlustur(form.kod),
+      isim: form.isim,
+      aciklama: form.aciklama || null,
+      seri_id: form.seri_id || null,
+      character_group: form.character_group || null,
+      kategori: form.kategori,
+      nadirlik: form.nadirlik,
+      ikon_url: form.ikon_url || null,
+      aktif: form.aktif,
+      siralama: Number(form.siralama || 0),
+    }
+
+    let unvanId = duzenleId
+    if (duzenleId) {
+      const { error } = await supabase.from('unvan_tanimlari').update(titlePayload).eq('id', duzenleId)
+      if (error) {
+        setMsg(`❌ ${error.message}`)
+        setYukleniyor(false)
+        return
+      }
+    } else {
+      const { data, error } = await supabase.from('unvan_tanimlari').insert([titlePayload]).select().single()
+      if (error) {
+        setMsg(`❌ ${error.message}`)
+        setYukleniyor(false)
+        return
+      }
+      unvanId = data?.id
+    }
+
+    const mevcutRule = duzenleId ? kurallarMap[duzenleId] : null
+    const rulePayload = {
+      unvan_id: unvanId,
+      event_tipi: form.event_tipi,
+      kural_tipi: form.kural_tipi,
+      kural_config: titleKuralConfigOlustur(form),
+      oncelik: Number(form.oncelik || 100),
+      aktif: form.rule_aktif,
+    }
+
+    if (mevcutRule?.id) {
+      const { error } = await supabase.from('unvan_kurallari').update(rulePayload).eq('id', mevcutRule.id)
+      if (error) {
+        setMsg(`❌ ${error.message}`)
+        setYukleniyor(false)
+        return
+      }
+    } else {
+      const { error } = await supabase.from('unvan_kurallari').insert([rulePayload])
+      if (error) {
+        setMsg(`❌ ${error.message}`)
+        setYukleniyor(false)
+        return
+      }
+    }
+
+    setMsg(duzenleId ? '✅ Unvan guncellendi!' : '✅ Unvan eklendi!')
+    setForm(titleBos)
+    setDuzenleId(null)
+    setMod('liste')
+    setYukleniyor(false)
+    fetchHepsi()
+  }
+
+  const filtreli = unvanlar
+    .filter(item => seriFiltre === 'tumu' || item.seri_id === seriFiltre)
+    .filter(item => !aramaMetni || item.isim.toLowerCase().includes(aramaMetni.toLowerCase()) || item.kod.toLowerCase().includes(aramaMetni.toLowerCase()))
+
+  if (mod === 'form') {
+    const seciliSeri = seriler.find(item => item.id === form.seri_id)
+    const grupPlaceholder = seciliSeri?.character_group || 'spider-man'
+    return (
+      <div style={{ maxWidth: '860px' }}>
+        <SectionTitle
+          eyebrow="Topluluk"
+          title={duzenleId ? 'Unvan Duzenle' : 'Yeni Unvan'}
+          description="Yeni seriler icin acilabilir unvan tanimini ve ilk kuralini tek ekrandan gir."
+          action={<button onClick={() => { setMod('liste'); setForm(titleBos); setDuzenleId(null); setMsg('') }} style={BS}>Listeye Don</button>}
+        />
+        <Msg text={msg} />
+        <Surface style={{ padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <div style={LB}>Unvan Ismi</div>
+              <input value={form.isim} onChange={e => setForm(f => ({ ...f, isim: e.target.value, kod: f.kod || kodOlustur(e.target.value) }))} style={I} placeholder="Mahallenin Karanlik Koruyucusu" />
+            </div>
+            <div>
+              <div style={LB}>Kod</div>
+              <input value={form.kod} onChange={e => setForm(f => ({ ...f, kod: kodOlustur(e.target.value) }))} style={I} placeholder="mahallenin_karanlik_koruyucusu" />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <div style={LB}>Aciklama</div>
+            <textarea value={form.aciklama} onChange={e => setForm(f => ({ ...f, aciklama: e.target.value }))} style={{ ...I, minHeight: '82px', resize: 'vertical' }} placeholder="Bu unvan ne zaman acilir, oyuncuya ne hissettirir?" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <div style={LB}>Seri</div>
+              <AramaSecimTek liste={seriler.map(s => ({ id: s.id, isim: s.baslik }))} secili={form.seri_id} onChange={value => {
+                const seri = seriler.find(item => item.id === value)
+                setForm(f => ({ ...f, seri_id: value, character_group: f.character_group || seri?.character_group || '' }))
+              }} placeholder="Seri sec" />
+            </div>
+            <div>
+              <div style={LB}>Character Group</div>
+              <input value={form.character_group} onChange={e => setForm(f => ({ ...f, character_group: e.target.value }))} style={I} placeholder={grupPlaceholder} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <div style={LB}>Kategori</div>
+              <select value={form.kategori} onChange={e => setForm(f => ({ ...f, kategori: e.target.value }))} style={S}>
+                <option value="progress">Progress</option>
+                <option value="mastery">Mastery</option>
+                <option value="engagement">Engagement</option>
+              </select>
+            </div>
+            <div>
+              <div style={LB}>Nadirlik</div>
+              <select value={form.nadirlik} onChange={e => setForm(f => ({ ...f, nadirlik: e.target.value }))} style={S}>
+                <option value="common">Common</option>
+                <option value="rare">Rare</option>
+                <option value="epic">Epic</option>
+                <option value="legendary">Legendary</option>
+              </select>
+            </div>
+            <div>
+              <div style={LB}>Siralama</div>
+              <input type="number" value={form.siralama} onChange={e => setForm(f => ({ ...f, siralama: e.target.value }))} style={I} />
+            </div>
+            <div>
+              <div style={LB}>Kural Onceligi</div>
+              <input type="number" value={form.oncelik} onChange={e => setForm(f => ({ ...f, oncelik: e.target.value }))} style={I} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <div style={LB}>Event Tipi</div>
+              <select value={form.event_tipi} onChange={e => setForm(f => ({ ...f, event_tipi: e.target.value }))} style={S}>
+                <option value="ISSUE_READ_COMPLETED">Issue Read Completed</option>
+                <option value="SERIES_PROGRESS_UPDATED">Series Progress Updated</option>
+                <option value="SERIES_COMPLETED">Series Completed</option>
+                <option value="SERIES_RATED">Series Rated</option>
+                <option value="SERIES_FAVORITED">Series Favorited</option>
+              </select>
+            </div>
+            <div>
+              <div style={LB}>Kural Tipi</div>
+              <select value={form.kural_tipi} onChange={e => setForm(f => ({ ...f, kural_tipi: e.target.value }))} style={S}>
+                <option value="series_progress">Series Progress</option>
+                <option value="series_completed">Series Completed</option>
+                <option value="character_series_completed_count">Character Series Completed Count</option>
+                <option value="rate_count_in_group">Rate Count In Group</option>
+                <option value="favorite_count_in_group">Favorite Count In Group</option>
+              </select>
+            </div>
+          </div>
+
+          {form.kural_tipi === 'series_progress' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={LB}>Min. Ilerleme Yuzdesi</div>
+              <input type="number" value={form.min_progress_percent} onChange={e => setForm(f => ({ ...f, min_progress_percent: e.target.value }))} style={I} />
+            </div>
+          )}
+          {form.kural_tipi === 'character_series_completed_count' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={LB}>Min. Tamamlanan Seri</div>
+              <input type="number" value={form.min_completed_series} onChange={e => setForm(f => ({ ...f, min_completed_series: e.target.value }))} style={I} />
+            </div>
+          )}
+          {form.kural_tipi === 'rate_count_in_group' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={LB}>Min. Puanlama Sayisi</div>
+              <input type="number" value={form.min_ratings_count} onChange={e => setForm(f => ({ ...f, min_ratings_count: e.target.value }))} style={I} />
+            </div>
+          )}
+          {form.kural_tipi === 'favorite_count_in_group' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={LB}>Min. Takip Sayisi</div>
+              <input type="number" value={form.min_favorites_count} onChange={e => setForm(f => ({ ...f, min_favorites_count: e.target.value }))} style={I} />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginBottom: '18px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#fff' }}>
+              <input type="checkbox" checked={form.aktif} onChange={e => setForm(f => ({ ...f, aktif: e.target.checked }))} />
+              Unvan aktif
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#fff' }}>
+              <input type="checkbox" checked={form.rule_aktif} onChange={e => setForm(f => ({ ...f, rule_aktif: e.target.checked }))} />
+              Kural aktif
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor ? 'Kaydediliyor...' : 'Kaydet'}</button>
+            <button onClick={() => { setMod('liste'); setForm(titleBos); setDuzenleId(null); setMsg('') }} style={BS}>Iptal</button>
+          </div>
+        </Surface>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <SectionTitle
+        eyebrow="Topluluk"
+        title="Unvanlar"
+        description="Yeni seri icin acilabilir unvanlari ve kilit acma kurallarini panelden yonet."
+        action={<button onClick={yeniUnvan} style={BP}>Yeni Unvan</button>}
+      />
+      <Msg text={msg} />
+      <Surface style={{ marginBottom: '18px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Unvan ara..." style={{ ...I, maxWidth: '280px' }} />
+          <div style={{ minWidth: '240px' }}>
+            <AramaSecimTek liste={[{ id: 'tumu', isim: 'Tum Seriler' }, ...seriler.map(s => ({ id: s.id, isim: s.baslik }))]} secili={seriFiltre} onChange={setSeriFiltre} placeholder="Seri filtrele" />
+          </div>
+        </div>
+      </Surface>
+      <div style={{ display: 'grid', gap: '12px' }}>
+        {filtreli.map((unvan) => (
+          <Surface key={unvan.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0, flex: '1 1 420px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.nadirlik}</span>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(139,92,246,0.16)', color: '#e9d5ff', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.kategori}</span>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: unvan.aktif ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.08)', color: unvan.aktif ? '#a7f3d0' : TEXT_SUBTLE, fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.aktif ? 'aktif' : 'pasif'}</span>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>{unvan.isim}</div>
+                <div style={{ fontSize: '12px', color: TEXT_SUBTLE, marginBottom: '10px' }}>{unvan.kod}</div>
+                <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7, marginBottom: '12px' }}>{unvan.aciklama || 'Aciklama girilmedi.'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                  <div style={{ ...CARD_INNER, padding: '12px' }}>
+                    <div style={LB}>Seri</div>
+                    <div style={{ fontSize: '13px' }}>{unvan.seriler?.baslik || 'Bagimsiz / grup bazli'}</div>
+                  </div>
+                  <div style={{ ...CARD_INNER, padding: '12px' }}>
+                    <div style={LB}>Character Group</div>
+                    <div style={{ fontSize: '13px' }}>{unvan.character_group || '—'}</div>
+                  </div>
+                  <div style={{ ...CARD_INNER, padding: '12px' }}>
+                    <div style={LB}>Kural</div>
+                    <div style={{ fontSize: '13px' }}>{titleKuralOzeti(unvan)}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <button onClick={() => duzenle(unvan)} style={BS}>Duzenle</button>
+                <button onClick={() => sil(unvan)} style={BD}>Sil</button>
+              </div>
+            </div>
+          </Surface>
+        ))}
+        {filtreli.length === 0 && (
+          <Surface><div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henuz unvan yok.</div></Surface>
+        )}
       </div>
     </div>
   )

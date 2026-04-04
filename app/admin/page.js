@@ -831,6 +831,7 @@ function UnvanlarSayfasi() {
 // ---- İSTATİSTİK ----
 function IstatistikSayfasi() {
   const [istat, setIstat] = useState(null)
+  const [ziyaretOzet, setZiyaretOzet] = useState({ bugun: 0, dun: 0, hafta: 0, ay: 0 })
   const [zamanFiltre, setZamanFiltre] = useState('hafta')
   const [topSeriler, setTopSeriler] = useState([])
   const [topBolumler, setTopBolumler] = useState([])
@@ -840,9 +841,15 @@ function IstatistikSayfasi() {
 
   useEffect(() => { fetchData() }, [zamanFiltre])
 
+  function ziyaretciAnahtari(kayit) {
+    return kayit?.kullanici_id || kayit?.ziyaretci_id || kayit?.oturum_id || null
+  }
+
   async function fetchData() {
     const simdi = new Date()
     const bugunBaslangic = new Date(simdi); bugunBaslangic.setHours(0,0,0,0)
+    const yarinBaslangic = new Date(bugunBaslangic); yarinBaslangic.setDate(yarinBaslangic.getDate() + 1)
+    const dunBaslangic = new Date(bugunBaslangic); dunBaslangic.setDate(dunBaslangic.getDate() - 1)
     const haftaBaslangic = new Date(simdi); haftaBaslangic.setDate(simdi.getDate() - 7)
     const ayBaslangic = new Date(simdi); ayBaslangic.setDate(simdi.getDate() - 30)
     const filtreTarih = zamanFiltre === 'bugun' ? bugunBaslangic : zamanFiltre === 'hafta' ? haftaBaslangic : ayBaslangic
@@ -857,6 +864,11 @@ function IstatistikSayfasi() {
       supabase.from('profiller').select('created_at').gte('created_at', filtreTarih.toISOString()),
       supabase.from('ziyaretler').select('created_at, oturum_id, ziyaretci_id, kullanici_id').gte('created_at', filtreTarih.toISOString()),
     ])
+
+    const { data: tumZiyaretler } = await supabase
+      .from('ziyaretler')
+      .select('created_at, oturum_id, ziyaretci_id, kullanici_id')
+      .gte('created_at', ayBaslangic.toISOString())
 
     setIstat({ seri: s.count||0, kullanici: u.count||0, yorum: y.count||0 })
     setTopSeriler(topS.data||[])
@@ -882,12 +894,52 @@ function IstatistikSayfasi() {
       const benzersiz = new Set(
         ziyaretler.data
           ?.filter(z => { const zd = new Date(z.created_at); return zd.getDate()===d.getDate()&&zd.getMonth()===d.getMonth() })
-          .map(z => z.kullanici_id || z.ziyaretci_id || z.oturum_id)
+          .map(ziyaretciAnahtari)
           .filter(Boolean)
       )
       zGunler.push({ etiket: label, deger: benzersiz.size })
     }
     setZiyaretGrafik(zGunler)
+
+    const bugunSet = new Set(
+      (tumZiyaretler || [])
+        .filter(z => {
+          const tarih = new Date(z.created_at)
+          return tarih >= bugunBaslangic && tarih < yarinBaslangic
+        })
+        .map(ziyaretciAnahtari)
+        .filter(Boolean)
+    )
+
+    const dunSet = new Set(
+      (tumZiyaretler || [])
+        .filter(z => {
+          const tarih = new Date(z.created_at)
+          return tarih >= dunBaslangic && tarih < bugunBaslangic
+        })
+        .map(ziyaretciAnahtari)
+        .filter(Boolean)
+    )
+
+    const haftaSet = new Set(
+      (tumZiyaretler || [])
+        .filter(z => new Date(z.created_at) >= haftaBaslangic)
+        .map(ziyaretciAnahtari)
+        .filter(Boolean)
+    )
+
+    const aySet = new Set(
+      (tumZiyaretler || [])
+        .map(ziyaretciAnahtari)
+        .filter(Boolean)
+    )
+
+    setZiyaretOzet({
+      bugun: bugunSet.size,
+      dun: dunSet.size,
+      hafta: haftaSet.size,
+      ay: aySet.size,
+    })
   }
 
   return (
@@ -910,6 +962,20 @@ function IstatistikSayfasi() {
           <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>En cok okunan seri ve bolumleri, yeni kayitlari ve ziyaret akislarini tek bakista gorebilirsin.</div>
         </Surface>
       </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {[
+          { label: 'Bugün Tekil Ziyaretçi', deger: ziyaretOzet.bugun, alt: 'Bugün siteye giren tekil kişi' },
+          { label: 'Dün Tekil Ziyaretçi', deger: ziyaretOzet.dun, alt: 'Dün siteye giren tekil kişi' },
+          { label: 'Haftalık Tekil', deger: ziyaretOzet.hafta, alt: 'Son 7 gündeki tekil kişi' },
+          { label: 'Aylık Tekil', deger: ziyaretOzet.ay, alt: 'Son 30 gündeki tekil kişi' },
+        ].map((kart) => (
+          <Surface key={kart.label} style={{ padding: '22px' }}>
+            <div style={{ ...LB, marginBottom: '12px' }}>{kart.label}</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '46px', lineHeight: 0.9 }}>{kart.deger}</div>
+            <div style={{ fontSize: '12px', color: TEXT_SOFT, marginTop: '8px', lineHeight: 1.6 }}>{kart.alt}</div>
+          </Surface>
+        ))}
+      </div>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {[['bugun','Bugun'],['hafta','Bu Hafta'],['ay','Bu Ay']].map(([val,label]) => (
           <button key={val} onClick={() => setZamanFiltre(val)} style={{ ...BS, background: zamanFiltre===val ? ACCENT : PANEL_BG, color: zamanFiltre===val ? '#111' : '#fff', border: zamanFiltre===val ? 'none' : PANEL_BORDER }}>{label}</button>
@@ -921,7 +987,7 @@ function IstatistikSayfasi() {
           <BarChart data={kayitGrafik} renk={ACCENT} />
         </Surface>
         <Surface>
-          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '16px' }}>Ziyaretciler</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '16px' }}>Gunluk Tekil Ziyaretci</div>
           <BarChart data={ziyaretGrafik} renk={PURPLE} />
         </Surface>
       </div>

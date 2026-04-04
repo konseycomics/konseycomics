@@ -1002,7 +1002,7 @@ function IstatistikSayfasi() {
         <Surface style={{ padding: '24px', background: 'linear-gradient(135deg, rgba(139,92,246,0.22), rgba(255,255,255,0.04))' }}>
           <div style={{ ...LB, marginBottom: '12px' }}>Bugun Oncelik</div>
           <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Icerik akisina odaklan</div>
-          <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>En cok okunan seri ve bolumleri, yeni kayitlari ve ziyaret akislarini tek bakista gorebilirsin.</div>
+          <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>Tekil ziyaretci trendlerini ve iceriklerin ham acilis/goruntulenme akisini tek bakista gorebilirsin.</div>
         </Surface>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -1049,18 +1049,20 @@ function IstatistikSayfasi() {
       </Surface>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Surface>
-          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '14px' }}>En Cok Okunan Seriler</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Cok Acilan Seriler</div>
+          <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>Ayni ziyaretcinin tekrar girisleri filtrelenmis ham seri acilis sayisi.</div>
           {topSeriler.map((s,i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 0', borderBottom: i<topSeriler.length-1?'1px solid rgba(255,255,255,0.06)':'none' }}>
               <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '16px' }}>{i+1}</span>
               <span style={{ flex: 1, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</span>
-              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{s.goruntuleme_sayisi||0}</span>
+              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{s.goruntuleme_sayisi||0} acilis</span>
             </div>
           ))}
           {topSeriler.length===0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Veri yok</div>}
         </Surface>
         <Surface>
-          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '14px' }}>En Cok Okunan Bolumler</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Cok Acilan Bolumler</div>
+          <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>Bolum sayfasi yeterli sure goruldugunde artan ham bolum acilis sayisi.</div>
           {topBolumler.map((b,i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 0', borderBottom: i<topBolumler.length-1?'1px solid rgba(255,255,255,0.06)':'none' }}>
               <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '16px' }}>{i+1}</span>
@@ -1068,7 +1070,7 @@ function IstatistikSayfasi() {
                 <div style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{b.seriler?.baslik}</div>
                 <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} {b.baslik}</div>
               </div>
-              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{b.goruntuleme_sayisi||0}</span>
+              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{b.goruntuleme_sayisi||0} acilis</span>
             </div>
           ))}
           {topBolumler.length===0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Veri yok</div>}
@@ -1409,7 +1411,7 @@ function SerilerSayfasi() {
               {s.kapak_url?<img src={s.kapak_url} style={{ width:'40px',height:'53px',objectFit:'cover',borderRadius:'4px',flexShrink:0 }} />:<div style={{ width:'40px',height:'53px',background:'rgba(255,255,255,0.05)',borderRadius:'4px',flexShrink:0 }} />}
               <div style={{ flex:1,minWidth:0 }}>
                 <div style={{ fontSize:'14px',fontWeight:500 }}>{s.baslik} {s.one_cikan&&<span style={{ fontSize:'11px',background:'rgba(245,158,11,0.18)',color:'#fbbf24',padding:'2px 7px',borderRadius:'999px',border:'1px solid rgba(245,158,11,0.28)' }}>One Cikan</span>}</div>
-                <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{s.kategoriler?.isim} · {s.durum} · {s.goruntuleme_sayisi||0} görüntülenme</div>
+                <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{s.kategoriler?.isim} · {s.durum} · {s.goruntuleme_sayisi||0} ham açılış</div>
               </div>
               <button onClick={()=>toggleOneCikan(s.id,s.one_cikan)} style={{...BS,fontSize:'11px'}}>{s.one_cikan?'★ Kaldır':'☆ Öne Çıkar'}</button>
               <button onClick={()=>duzenle(s)} style={BS}>Düzenle</button>
@@ -1613,7 +1615,7 @@ function BolumlerSayfasi() {
               <div style={{ flex:1 }}>
                 <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{b.seriler?.baslik}</div>
                 <div style={{ fontSize:'14px',fontWeight:500 }}>#{b.sayi} {b.baslik}</div>
-                <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{b.goruntuleme_sayisi||0} görüntülenme · {bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
+                <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{b.goruntuleme_sayisi||0} ham açılış · {bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
               </div>
               <button onClick={()=>{setForm({...bos,...b,sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
               <button onClick={()=>sil(b.id)} style={BD}>Sil</button>

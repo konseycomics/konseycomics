@@ -845,30 +845,113 @@ function IstatistikSayfasi() {
     return kayit?.kullanici_id || kayit?.ziyaretci_id || kayit?.oturum_id || null
   }
 
+  async function fetchTumZiyaretler(sinceIso) {
+    const hepsi = []
+    const sayfaBoyutu = 1000
+    let offset = 0
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('ziyaretler')
+        .select('created_at, oturum_id, ziyaretci_id, kullanici_id')
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + sayfaBoyutu - 1)
+
+      if (error) break
+      if (!data?.length) break
+
+      hepsi.push(...data)
+      if (data.length < sayfaBoyutu) break
+      offset += sayfaBoyutu
+    }
+
+    return hepsi
+  }
+
+  function ayniGunMu(tarihA, tarihB) {
+    return tarihA.getDate() === tarihB.getDate() && tarihA.getMonth() === tarihB.getMonth() && tarihA.getFullYear() === tarihB.getFullYear()
+  }
+
+  function uniqueVisitorCount(kayitlar) {
+    return new Set((kayitlar || []).map(ziyaretciAnahtari).filter(Boolean)).size
+  }
+
+  function buildKayitGrafik(kayitlar, mod) {
+    if (mod === 'bugun') {
+      const saatlik = []
+      for (let i = 0; i < 24; i++) {
+        const sayi = (kayitlar || []).filter(k => new Date(k.created_at).getHours() === i).length
+        saatlik.push({ etiket: `${String(i).padStart(2, '0')}:00`, deger: sayi })
+      }
+      return saatlik
+    }
+
+    const gunSayisi = mod === 'ay' ? 30 : 7
+    const veri = []
+    for (let i = gunSayisi - 1; i >= 0; i--) {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - i)
+      const label = `${d.getDate()}/${d.getMonth() + 1}`
+      const sayi = (kayitlar || []).filter(k => ayniGunMu(new Date(k.created_at), d)).length
+      veri.push({ etiket: label, deger: sayi })
+    }
+    return veri
+  }
+
+  function buildZiyaretGrafik(ziyaretler, mod) {
+    if (mod === 'bugun') {
+      const saatlik = []
+      for (let i = 0; i < 24; i++) {
+        const benzersiz = new Set(
+          (ziyaretler || [])
+            .filter(z => new Date(z.created_at).getHours() === i)
+            .map(ziyaretciAnahtari)
+            .filter(Boolean)
+        )
+        saatlik.push({ etiket: `${String(i).padStart(2, '0')}:00`, deger: benzersiz.size })
+      }
+      return saatlik
+    }
+
+    const gunSayisi = mod === 'ay' ? 30 : 7
+    const veri = []
+    for (let i = gunSayisi - 1; i >= 0; i--) {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - i)
+      const label = `${d.getDate()}/${d.getMonth() + 1}`
+      const benzersiz = new Set(
+        (ziyaretler || [])
+          .filter(z => ayniGunMu(new Date(z.created_at), d))
+          .map(ziyaretciAnahtari)
+          .filter(Boolean)
+      )
+      veri.push({ etiket: label, deger: benzersiz.size })
+    }
+    return veri
+  }
+
   async function fetchData() {
     const simdi = new Date()
     const bugunBaslangic = new Date(simdi); bugunBaslangic.setHours(0,0,0,0)
     const yarinBaslangic = new Date(bugunBaslangic); yarinBaslangic.setDate(yarinBaslangic.getDate() + 1)
     const dunBaslangic = new Date(bugunBaslangic); dunBaslangic.setDate(dunBaslangic.getDate() - 1)
-    const haftaBaslangic = new Date(simdi); haftaBaslangic.setDate(simdi.getDate() - 7)
-    const ayBaslangic = new Date(simdi); ayBaslangic.setDate(simdi.getDate() - 30)
-    const filtreTarih = zamanFiltre === 'bugun' ? bugunBaslangic : zamanFiltre === 'hafta' ? haftaBaslangic : ayBaslangic
+    const haftaBaslangic = new Date(bugunBaslangic); haftaBaslangic.setDate(haftaBaslangic.getDate() - 6)
+    const ayBaslangic = new Date(bugunBaslangic); ayBaslangic.setDate(ayBaslangic.getDate() - 29)
+    const grafikBaslangic = zamanFiltre === 'bugun' ? bugunBaslangic : zamanFiltre === 'hafta' ? haftaBaslangic : ayBaslangic
 
-    const [s, u, y, kat, topS, topB, kayitlar, ziyaretler] = await Promise.all([
+    const [s, u, y, kat, topS, topB, kayitlarAy, tumZiyaretler] = await Promise.all([
       supabase.from('seriler').select('id', { count: 'exact', head: true }),
       supabase.from('profiller').select('id', { count: 'exact', head: true }),
       supabase.from('yorumlar').select('id', { count: 'exact', head: true }).eq('silindi', false),
       supabase.from('seriler').select('kategori_id, kategoriler(isim)'),
       supabase.from('seriler').select('baslik, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(5),
       supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik)').order('goruntuleme_sayisi', { ascending: false }).limit(5),
-      supabase.from('profiller').select('created_at').gte('created_at', filtreTarih.toISOString()),
-      supabase.from('ziyaretler').select('created_at, oturum_id, ziyaretci_id, kullanici_id').gte('created_at', filtreTarih.toISOString()),
+      supabase.from('profiller').select('created_at').gte('created_at', ayBaslangic.toISOString()),
+      fetchTumZiyaretler(ayBaslangic.toISOString()),
     ])
-
-    const { data: tumZiyaretler } = await supabase
-      .from('ziyaretler')
-      .select('created_at, oturum_id, ziyaretci_id, kullanici_id')
-      .gte('created_at', ayBaslangic.toISOString())
 
     setIstat({ seri: s.count||0, kullanici: u.count||0, yorum: y.count||0 })
     setTopSeriler(topS.data||[])
@@ -878,67 +961,27 @@ function IstatistikSayfasi() {
     kat.data?.forEach(s => { const isim = s.kategoriler?.isim||'Diğer'; katMap[isim] = (katMap[isim]||0)+1 })
     setKatDagilim(Object.entries(katMap).map(([isim,sayi]) => ({isim,sayi})).sort((a,b)=>b.sayi-a.sayi))
 
-    const gunler = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate()-i)
-      const label = `${d.getDate()}/${d.getMonth()+1}`
-      const sayi = kayitlar.data?.filter(k => { const kd = new Date(k.created_at); return kd.getDate()===d.getDate()&&kd.getMonth()===d.getMonth() }).length||0
-      gunler.push({ etiket: label, deger: sayi })
-    }
-    setKayitGrafik(gunler)
+    const grafikKayitlari = (kayitlarAy.data || []).filter(k => new Date(k.created_at) >= grafikBaslangic)
+    const grafikZiyaretleri = (tumZiyaretler || []).filter(z => new Date(z.created_at) >= grafikBaslangic)
 
-    const zGunler = []
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(); d.setDate(d.getDate()-i)
-      const label = `${d.getDate()}/${d.getMonth()+1}`
-      const benzersiz = new Set(
-        ziyaretler.data
-          ?.filter(z => { const zd = new Date(z.created_at); return zd.getDate()===d.getDate()&&zd.getMonth()===d.getMonth() })
-          .map(ziyaretciAnahtari)
-          .filter(Boolean)
-      )
-      zGunler.push({ etiket: label, deger: benzersiz.size })
-    }
-    setZiyaretGrafik(zGunler)
+    setKayitGrafik(buildKayitGrafik(grafikKayitlari, zamanFiltre))
+    setZiyaretGrafik(buildZiyaretGrafik(grafikZiyaretleri, zamanFiltre))
 
-    const bugunSet = new Set(
-      (tumZiyaretler || [])
-        .filter(z => {
-          const tarih = new Date(z.created_at)
-          return tarih >= bugunBaslangic && tarih < yarinBaslangic
-        })
-        .map(ziyaretciAnahtari)
-        .filter(Boolean)
-    )
+    const bugunZiyaretleri = (tumZiyaretler || []).filter(z => {
+      const tarih = new Date(z.created_at)
+      return tarih >= bugunBaslangic && tarih < yarinBaslangic
+    })
 
-    const dunSet = new Set(
-      (tumZiyaretler || [])
-        .filter(z => {
-          const tarih = new Date(z.created_at)
-          return tarih >= dunBaslangic && tarih < bugunBaslangic
-        })
-        .map(ziyaretciAnahtari)
-        .filter(Boolean)
-    )
-
-    const haftaSet = new Set(
-      (tumZiyaretler || [])
-        .filter(z => new Date(z.created_at) >= haftaBaslangic)
-        .map(ziyaretciAnahtari)
-        .filter(Boolean)
-    )
-
-    const aySet = new Set(
-      (tumZiyaretler || [])
-        .map(ziyaretciAnahtari)
-        .filter(Boolean)
-    )
+    const dunZiyaretleri = (tumZiyaretler || []).filter(z => {
+      const tarih = new Date(z.created_at)
+      return tarih >= dunBaslangic && tarih < bugunBaslangic
+    })
 
     setZiyaretOzet({
-      bugun: bugunSet.size,
-      dun: dunSet.size,
-      hafta: haftaSet.size,
-      ay: aySet.size,
+      bugun: uniqueVisitorCount(bugunZiyaretleri),
+      dun: uniqueVisitorCount(dunZiyaretleri),
+      hafta: uniqueVisitorCount((tumZiyaretler || []).filter(z => new Date(z.created_at) >= haftaBaslangic)),
+      ay: uniqueVisitorCount(tumZiyaretler || []),
     })
   }
 

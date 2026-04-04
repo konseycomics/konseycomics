@@ -35,12 +35,16 @@ export default function Okuyucu() {
   const [iframeHata, setIframeHata] = useState(false)
   const [aktifSayfa, setAktifSayfa] = useState(1)
   const [okumaModu, setOkumaModu] = useState('scroll')
+  const [tamEkranAktif, setTamEkranAktif] = useState(false)
+  const [flipAnimasyonSinifi, setFlipAnimasyonSinifi] = useState('')
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
+  const readerFrameRef = useRef(null)
   const okumaTakipRef = useRef(null)
   const dokunusBaslangicXRef = useRef(null)
   const dokunusBaslangicYRef = useRef(null)
+  const flipAnimasyonZamanlayiciRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
 
@@ -160,6 +164,22 @@ export default function Okuyucu() {
     sayfaRefleri.current = []
   }, [bolumData?.id])
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setTamEkranAktif(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    handleFullscreenChange()
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      if (flipAnimasyonZamanlayiciRef.current) {
+        window.clearTimeout(flipAnimasyonZamanlayiciRef.current)
+      }
+    }
+  }, [])
+
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
   const siradakiBolum = tumBolumler.find(item => item.sayi > mevcutSayi)
@@ -177,6 +197,18 @@ export default function Okuyucu() {
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
 
+  function flipAnimasyonBaslat(direction) {
+    if (flipAnimasyonZamanlayiciRef.current) {
+      window.clearTimeout(flipAnimasyonZamanlayiciRef.current)
+    }
+
+    setFlipAnimasyonSinifi(direction === 'prev' ? 'is-prev' : 'is-next')
+
+    flipAnimasyonZamanlayiciRef.current = window.setTimeout(() => {
+      setFlipAnimasyonSinifi('')
+    }, 280)
+  }
+
   function flipSayfaGuncelle(yeniSayfa) {
     if (!toplamSayfa) return
     setAktifSayfa(Math.max(1, Math.min(toplamSayfa, yeniSayfa)))
@@ -185,6 +217,7 @@ export default function Okuyucu() {
   function sonrakiSayfayaGit() {
     if (!ozelOkuyucuVar) return
     if (aktifSayfa < toplamSayfa) {
+      flipAnimasyonBaslat('next')
       flipSayfaGuncelle(aktifSayfa + 1)
       return
     }
@@ -194,10 +227,26 @@ export default function Okuyucu() {
   function oncekiSayfayaGit() {
     if (!ozelOkuyucuVar) return
     if (aktifSayfa > 1) {
+      flipAnimasyonBaslat('prev')
       flipSayfaGuncelle(aktifSayfa - 1)
       return
     }
     if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
+  }
+
+  async function toggleTamEkran() {
+    const hedef = readerFrameRef.current
+    if (!hedef) return
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      } else {
+        await hedef.requestFullscreen()
+      }
+    } catch (error) {
+      console.warn('Tam ekran modu acilamadi:', error?.message || error)
+    }
   }
 
   function handleFlipTouchStart(e) {
@@ -518,6 +567,12 @@ export default function Okuyucu() {
             border: 1px solid rgba(255,255,255,0.08);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
           }
+          .reader-flip-stage.is-next .reader-flip-page img {
+            animation: readerFlipNext 280ms ease;
+          }
+          .reader-flip-stage.is-prev .reader-flip-page img {
+            animation: readerFlipPrev 280ms ease;
+          }
           .reader-flip-page {
             position: relative;
             overflow: hidden;
@@ -551,6 +606,20 @@ export default function Okuyucu() {
             margin-top: 14px;
             color: rgba(255,255,255,0.62);
             font-size: 12px;
+          }
+          .reader-flip-fullscreen {
+            min-height: 36px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
           }
           .reader-flip-mobile-controls {
             display: none;
@@ -652,6 +721,30 @@ export default function Okuyucu() {
             box-shadow:
               0 24px 48px rgba(0,0,0,0.36),
               0 0 0 1px rgba(255,255,255,0.06);
+          }
+          @keyframes readerFlipNext {
+            0% {
+              opacity: 0.35;
+              transform: translateX(24px) scale(0.985);
+              filter: blur(1.5px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateX(0) scale(1);
+              filter: blur(0);
+            }
+          }
+          @keyframes readerFlipPrev {
+            0% {
+              opacity: 0.35;
+              transform: translateX(-24px) scale(0.985);
+              filter: blur(1.5px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateX(0) scale(1);
+              filter: blur(0);
+            }
           }
           .reader-bottom {
             display: grid;
@@ -833,6 +926,11 @@ export default function Okuyucu() {
                     </button>
                   </div>
                 )}
+                {ozelOkuyucuVar && okumaModu === 'flip' && (
+                  <button type="button" className="reader-flip-fullscreen" onClick={toggleTamEkran}>
+                    {tamEkranAktif ? 'Tam Ekrandan Çık' : 'Tam Ekran'}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -842,7 +940,7 @@ export default function Okuyucu() {
               </div>
             </div>
 
-            <div className="reader-frame">
+            <div className="reader-frame" ref={readerFrameRef}>
               {ozelOkuyucuVar ? (
                 okumaModu === 'flip' ? (
                   <div className="reader-stage">
@@ -856,7 +954,7 @@ export default function Okuyucu() {
                       >
                         ←
                       </button>
-                      <div className="reader-flip-stage">
+                      <div className={`reader-flip-stage ${flipAnimasyonSinifi}`}>
                         <div
                           className="reader-flip-page"
                           onTouchStart={handleFlipTouchStart}

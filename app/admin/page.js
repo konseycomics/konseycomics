@@ -214,18 +214,26 @@ function UnvanlarSayfasi() {
     legendary: 'Efsanevi',
   }
   const eventTipiEtiketleri = {
-    ISSUE_READ_COMPLETED: 'Bölüm okununca',
+    ISSUE_READ_COMPLETED: 'Bölüm bitirilince',
     SERIES_PROGRESS_UPDATED: 'Seri ilerleyince',
     SERIES_COMPLETED: 'Seri bitince',
     SERIES_RATED: 'Puan verilince',
     SERIES_FAVORITED: 'Takibe eklenince',
+    SERIES_COMMENT_POSTED: 'Seriye yorum atılınca',
+    ISSUE_COMMENT_POSTED: 'Bölüme yorum atılınca',
+    ISSUE_DOWNLOADED: 'Bölüm indirilince',
   }
   const kuralTipiEtiketleri = {
     series_progress: 'Seride yüzde ilerleme',
     series_completed: 'Seriyi tamamen bitirme',
+    issue_read_count_in_series: 'Seride okunan bölüm sayısı',
+    series_rated: 'Seriye puan verilmesi',
     character_series_completed_count: 'Aynı evrende seri bitirme sayısı',
     rate_count_in_group: 'Aynı evrende puan verme sayısı',
     favorite_count_in_group: 'Aynı evrende takibe alma sayısı',
+    series_comment_posted: 'Seriye yorum atılması',
+    issue_comment_posted: 'Bölüme yorum atılması',
+    issue_downloaded: 'Bölüm indirilmesi',
   }
   const titleBos = {
     isim: '',
@@ -241,6 +249,7 @@ function UnvanlarSayfasi() {
     event_tipi: 'SERIES_PROGRESS_UPDATED',
     kural_tipi: 'series_progress',
     min_progress_percent: 100,
+    min_issue_count: 1,
     min_completed_series: 1,
     min_ratings_count: 1,
     min_favorites_count: 1,
@@ -285,6 +294,15 @@ function UnvanlarSayfasi() {
         return {
           series_id: payload.seri_id || null,
         }
+      case 'issue_read_count_in_series':
+        return {
+          series_id: payload.seri_id || null,
+          min_issue_count: Number(payload.min_issue_count || 1),
+        }
+      case 'series_rated':
+        return {
+          series_id: payload.seri_id || null,
+        }
       case 'character_series_completed_count':
         return {
           character_group: payload.character_group || '',
@@ -300,6 +318,18 @@ function UnvanlarSayfasi() {
           character_group: payload.character_group || '',
           min_favorites_count: Number(payload.min_favorites_count || 1),
         }
+      case 'series_comment_posted':
+        return {
+          series_id: payload.seri_id || null,
+        }
+      case 'issue_comment_posted':
+        return {
+          series_id: payload.seri_id || null,
+        }
+      case 'issue_downloaded':
+        return {
+          series_id: payload.seri_id || null,
+        }
       default:
         return {}
     }
@@ -314,12 +344,22 @@ function UnvanlarSayfasi() {
         return `Seride %${config.min_progress_percent || 100} ilerleme`
       case 'series_completed':
         return 'Seriyi tamamen bitir'
+      case 'issue_read_count_in_series':
+        return `${config.min_issue_count || 1} bölüm bitir`
+      case 'series_rated':
+        return 'Seriye puan ver'
       case 'character_series_completed_count':
         return `${config.character_group || 'Grup'} evreninde ${config.min_completed_series || 1} seri bitir`
       case 'rate_count_in_group':
         return `${config.character_group || 'Grup'} evreninde ${config.min_ratings_count || 1} puan ver`
       case 'favorite_count_in_group':
         return `${config.character_group || 'Grup'} evreninde ${config.min_favorites_count || 1} takip ekle`
+      case 'series_comment_posted':
+        return 'Seriye yorum at'
+      case 'issue_comment_posted':
+        return 'Bölüme yorum at'
+      case 'issue_downloaded':
+        return 'Bölümü indir'
       default:
         return rule.kural_tipi || 'Bilinmeyen kural'
     }
@@ -335,43 +375,59 @@ function UnvanlarSayfasi() {
       }))
       return
     }
-    if (tip === 'seri_yuzde') {
+    if (tip === 'ilk_bolum') {
       setForm(f => ({
         ...f,
         kategori: 'progress',
-        event_tipi: 'SERIES_PROGRESS_UPDATED',
-        kural_tipi: 'series_progress',
-        min_progress_percent: 100,
+        event_tipi: 'ISSUE_READ_COMPLETED',
+        kural_tipi: 'issue_read_count_in_series',
+        min_issue_count: 1,
       }))
       return
     }
-    if (tip === 'evren_seri') {
+    if (tip === 'coklu_bolum') {
       setForm(f => ({
         ...f,
-        kategori: 'mastery',
-        event_tipi: 'SERIES_COMPLETED',
-        kural_tipi: 'character_series_completed_count',
-        min_completed_series: 3,
+        kategori: 'progress',
+        event_tipi: 'ISSUE_READ_COMPLETED',
+        kural_tipi: 'issue_read_count_in_series',
+        min_issue_count: 3,
       }))
       return
     }
-    if (tip === 'evren_puan') {
+    if (tip === 'seri_puan') {
       setForm(f => ({
         ...f,
         kategori: 'engagement',
         event_tipi: 'SERIES_RATED',
-        kural_tipi: 'rate_count_in_group',
-        min_ratings_count: 3,
+        kural_tipi: 'series_rated',
       }))
       return
     }
-    if (tip === 'evren_takip') {
+    if (tip === 'seri_yorum') {
       setForm(f => ({
         ...f,
         kategori: 'engagement',
-        event_tipi: 'SERIES_FAVORITED',
-        kural_tipi: 'favorite_count_in_group',
-        min_favorites_count: 3,
+        event_tipi: 'SERIES_COMMENT_POSTED',
+        kural_tipi: 'series_comment_posted',
+      }))
+      return
+    }
+    if (tip === 'bolum_yorum') {
+      setForm(f => ({
+        ...f,
+        kategori: 'engagement',
+        event_tipi: 'ISSUE_COMMENT_POSTED',
+        kural_tipi: 'issue_comment_posted',
+      }))
+      return
+    }
+    if (tip === 'bolum_indir') {
+      setForm(f => ({
+        ...f,
+        kategori: 'engagement',
+        event_tipi: 'ISSUE_DOWNLOADED',
+        kural_tipi: 'issue_downloaded',
       }))
     }
   }
@@ -418,6 +474,7 @@ function UnvanlarSayfasi() {
       event_tipi: rule?.event_tipi || 'SERIES_PROGRESS_UPDATED',
       kural_tipi: rule?.kural_tipi || 'series_progress',
       min_progress_percent: config.min_progress_percent ?? 100,
+      min_issue_count: config.min_issue_count ?? 1,
       min_completed_series: config.min_completed_series ?? 1,
       min_ratings_count: config.min_ratings_count ?? 1,
       min_favorites_count: config.min_favorites_count ?? 1,
@@ -440,7 +497,7 @@ function UnvanlarSayfasi() {
       setMsg('❌ Unvan ismi ve kodu zorunlu.')
       return
     }
-    if (['series_progress', 'series_completed'].includes(form.kural_tipi) && !form.seri_id) {
+    if (['series_progress', 'series_completed', 'issue_read_count_in_series', 'series_rated', 'series_comment_posted', 'issue_comment_posted', 'issue_downloaded'].includes(form.kural_tipi) && !form.seri_id) {
       setMsg('❌ Seri bazli kurallarda seri secmelisin.')
       return
     }
@@ -536,10 +593,12 @@ function UnvanlarSayfasi() {
           <div style={{ ...LB, marginBottom: '10px' }}>Hızlı Şablonlar</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
             <button onClick={() => sablonUygula('seri_tamamlama')} style={BS}>Seriyi Bitirince</button>
-            <button onClick={() => sablonUygula('seri_yuzde')} style={BS}>%100 İlerleme</button>
-            <button onClick={() => sablonUygula('evren_seri')} style={BS}>Evrende 3 Seri</button>
-            <button onClick={() => sablonUygula('evren_puan')} style={BS}>Evrende 3 Puan</button>
-            <button onClick={() => sablonUygula('evren_takip')} style={BS}>Evrende 3 Takip</button>
+            <button onClick={() => sablonUygula('ilk_bolum')} style={BS}>İlk Bölüm Bitirince</button>
+            <button onClick={() => sablonUygula('coklu_bolum')} style={BS}>Birden Fazla Bölüm</button>
+            <button onClick={() => sablonUygula('seri_puan')} style={BS}>Seriye Puan Verince</button>
+            <button onClick={() => sablonUygula('seri_yorum')} style={BS}>Seriye Yorum Atınca</button>
+            <button onClick={() => sablonUygula('bolum_yorum')} style={BS}>Bölüme Yorum Atınca</button>
+            <button onClick={() => sablonUygula('bolum_indir')} style={BS}>Bölümü İndirince</button>
           </div>
           <div style={{ fontSize: '12px', color: TEXT_SOFT, lineHeight: 1.7 }}>
             Hızlı başlamak için bir şablona bas. Sonra sadece seri, isim ve açıklamayı düzenlemen yeter.
@@ -608,11 +667,14 @@ function UnvanlarSayfasi() {
             <div>
               <div style={LB}>Event Tipi</div>
               <select value={form.event_tipi} onChange={e => setForm(f => ({ ...f, event_tipi: e.target.value }))} style={S}>
-                <option value="ISSUE_READ_COMPLETED">Bölüm okununca</option>
+                <option value="ISSUE_READ_COMPLETED">Bölüm bitirilince</option>
                 <option value="SERIES_PROGRESS_UPDATED">Seri ilerleyince</option>
                 <option value="SERIES_COMPLETED">Seri bitince</option>
                 <option value="SERIES_RATED">Puan verilince</option>
                 <option value="SERIES_FAVORITED">Takibe eklenince</option>
+                <option value="SERIES_COMMENT_POSTED">Seriye yorum atılınca</option>
+                <option value="ISSUE_COMMENT_POSTED">Bölüme yorum atılınca</option>
+                <option value="ISSUE_DOWNLOADED">Bölüm indirilince</option>
               </select>
             </div>
             <div>
@@ -620,9 +682,14 @@ function UnvanlarSayfasi() {
               <select value={form.kural_tipi} onChange={e => setForm(f => ({ ...f, kural_tipi: e.target.value }))} style={S}>
                 <option value="series_progress">Seride yüzde ilerleme</option>
                 <option value="series_completed">Seriyi tamamen bitirme</option>
+                <option value="issue_read_count_in_series">Seride okunan bölüm sayısı</option>
+                <option value="series_rated">Seriye puan verilmesi</option>
                 <option value="character_series_completed_count">Aynı evrende seri bitirme sayısı</option>
                 <option value="rate_count_in_group">Aynı evrende puan verme sayısı</option>
                 <option value="favorite_count_in_group">Aynı evrende takibe alma sayısı</option>
+                <option value="series_comment_posted">Seriye yorum atılması</option>
+                <option value="issue_comment_posted">Bölüme yorum atılması</option>
+                <option value="issue_downloaded">Bölüm indirilmesi</option>
               </select>
             </div>
           </div>
@@ -630,7 +697,7 @@ function UnvanlarSayfasi() {
           <div style={{ ...CARD_INNER, padding: '14px', marginBottom: '14px' }}>
             <div style={{ ...LB, marginBottom: '8px' }}>Mini Rehber</div>
             <div style={{ fontSize: '12px', color: TEXT_SOFT, lineHeight: 1.7 }}>
-              Seri bazlı ünvan istiyorsan seri seç. Aynı evren için çalışan ünvanlarda ise <b>Character Group</b> alanını doldur. En pratik kurulum: isim yaz, seri seç, hızlı şablon seç, kaydet.
+              Seri bazlı ünvan istiyorsan seri seç. Bölüm bitirme, yorum, puan ve indirme şablonları artık doğrudan çalışır. Aynı evren için çalışan ünvanlarda ise <b>Character Group</b> alanını doldur.
             </div>
           </div>
 
@@ -638,6 +705,12 @@ function UnvanlarSayfasi() {
             <div style={{ marginBottom: '12px' }}>
               <div style={LB}>Min. Ilerleme Yuzdesi</div>
               <input type="number" value={form.min_progress_percent} onChange={e => setForm(f => ({ ...f, min_progress_percent: e.target.value }))} style={I} />
+            </div>
+          )}
+          {form.kural_tipi === 'issue_read_count_in_series' && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={LB}>Min. Bitirilen Bölüm Sayısı</div>
+              <input type="number" value={form.min_issue_count} onChange={e => setForm(f => ({ ...f, min_issue_count: e.target.value }))} style={I} />
             </div>
           )}
           {form.kural_tipi === 'character_series_completed_count' && (

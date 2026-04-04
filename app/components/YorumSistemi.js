@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { getPublicProfilesByIds } from '../lib/publicProfiles'
 import Link from 'next/link'
+import { trackIssueCommentAndUnlock, trackSeriesCommentAndUnlock } from '../lib/unvanClient'
 
 export default function YorumSistemi({ bolumId, seriId }) {
   const [yorumlar, setYorumlar] = useState([])
@@ -13,6 +14,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
   const [yukleniyor, setYukleniyor] = useState(false)
   const [loading, setLoading] = useState(true)
   const [begeniler, setBegeniler] = useState({})
+  const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const seriModu = !bolumId && !!seriId
   const baslik = seriModu ? 'Seri Yorumlari' : 'Yorumlar'
   const placeholder = seriModu ? 'Bu seri hakkında ne düşünüyorsun?' : 'Bu bölüm hakkında ne düşünüyorsun?'
@@ -69,6 +71,13 @@ export default function YorumSistemi({ bolumId, seriId }) {
     if (!error) {
       setYeniYorum('')
       setSpoiler(false)
+      const unlocked = bolumId
+        ? await trackIssueCommentAndUnlock({ userId: kullanici.id, seriId, bolumId })
+        : await trackSeriesCommentAndUnlock({ userId: kullanici.id, seriId })
+      if (unlocked.length > 0) {
+        setAcilanUnvanlar(unlocked)
+        window.setTimeout(() => setAcilanUnvanlar([]), 5200)
+      }
       fetchYorumlar()
     }
     setYukleniyor(false)
@@ -197,6 +206,17 @@ export default function YorumSistemi({ bolumId, seriId }) {
 
   return (
     <div style={{ marginTop: '32px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+      {acilanUnvanlar.length > 0 && (
+        <div style={{ display: 'grid', gap: '10px', marginBottom: '18px' }}>
+          {acilanUnvanlar.map((unvan) => (
+            <div key={`${unvan.unvanId}-${unvan.kod}`} style={{ padding: '14px 16px', borderRadius: '14px', background: 'linear-gradient(135deg, rgba(245,158,11,0.16), rgba(255,255,255,0.06))', border: '1px solid rgba(245,158,11,0.22)', color: '#fff' }}>
+              <div style={{ fontSize: '11px', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 800, color: 'rgba(255,255,255,0.7)', marginBottom: '4px' }}>Yeni Unvan</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '4px' }}>{unvan.isim}</div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.72)' }}>{unvan.aciklama || 'Yorumun yeni bir unvanin kilidini acti.'}</div>
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '20px' }}>
         {baslik} {yorumlar.length > 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({yorumlar.length})</span>}
       </div>

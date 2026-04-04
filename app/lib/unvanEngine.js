@@ -4,14 +4,22 @@ export const UNVAN_EVENT = {
   SERIES_COMPLETED: 'SERIES_COMPLETED',
   SERIES_RATED: 'SERIES_RATED',
   SERIES_FAVORITED: 'SERIES_FAVORITED',
+  SERIES_COMMENT_POSTED: 'SERIES_COMMENT_POSTED',
+  ISSUE_COMMENT_POSTED: 'ISSUE_COMMENT_POSTED',
+  ISSUE_DOWNLOADED: 'ISSUE_DOWNLOADED',
 }
 
 export const UNVAN_RULE = {
   SERIES_PROGRESS: 'series_progress',
   SERIES_COMPLETED: 'series_completed',
+  ISSUE_READ_COUNT_IN_SERIES: 'issue_read_count_in_series',
+  SERIES_RATED: 'series_rated',
   CHARACTER_SERIES_COMPLETED_COUNT: 'character_series_completed_count',
   RATE_COUNT_IN_GROUP: 'rate_count_in_group',
   FAVORITE_COUNT_IN_GROUP: 'favorite_count_in_group',
+  SERIES_COMMENT_POSTED: 'series_comment_posted',
+  ISSUE_COMMENT_POSTED: 'issue_comment_posted',
+  ISSUE_DOWNLOADED: 'issue_downloaded',
 }
 
 function safeNumber(value, fallback = 0) {
@@ -38,6 +46,7 @@ export function buildRuleSnapshot({
   favoritesCountInGroup = null,
   completionRatio = null,
   readingTimeSec = null,
+  readIssueCountInSeries = null,
 } = {}) {
   return {
     eventType,
@@ -52,6 +61,7 @@ export function buildRuleSnapshot({
     favoritesCountInGroup: safeNumber(favoritesCountInGroup, 0),
     completionRatio: safeNumber(completionRatio, 0),
     readingTimeSec: safeNumber(readingTimeSec, 0),
+    readIssueCountInSeries: safeNumber(readIssueCountInSeries, 0),
   }
 }
 
@@ -63,12 +73,22 @@ export function evaluateRule(rule, snapshot) {
       return evaluateSeriesProgressRule(config, snapshot)
     case UNVAN_RULE.SERIES_COMPLETED:
       return evaluateSeriesCompletedRule(config, snapshot)
+    case UNVAN_RULE.ISSUE_READ_COUNT_IN_SERIES:
+      return evaluateIssueReadCountInSeriesRule(config, snapshot)
+    case UNVAN_RULE.SERIES_RATED:
+      return evaluateSeriesRatedRule(config, snapshot)
     case UNVAN_RULE.CHARACTER_SERIES_COMPLETED_COUNT:
       return evaluateCharacterSeriesCompletedCountRule(config, snapshot)
     case UNVAN_RULE.RATE_COUNT_IN_GROUP:
       return evaluateRateCountInGroupRule(config, snapshot)
     case UNVAN_RULE.FAVORITE_COUNT_IN_GROUP:
       return evaluateFavoriteCountInGroupRule(config, snapshot)
+    case UNVAN_RULE.SERIES_COMMENT_POSTED:
+      return evaluateSeriesCommentPostedRule(config, snapshot)
+    case UNVAN_RULE.ISSUE_COMMENT_POSTED:
+      return evaluateIssueCommentPostedRule(config, snapshot)
+    case UNVAN_RULE.ISSUE_DOWNLOADED:
+      return evaluateIssueDownloadedRule(config, snapshot)
     default:
       return false
   }
@@ -82,6 +102,15 @@ export function evaluateSeriesProgressRule(config, snapshot) {
 export function evaluateSeriesCompletedRule(config, snapshot) {
   if (String(snapshot.seriesId) !== String(config.series_id)) return false
   return snapshot.isCompleted === true
+}
+
+export function evaluateIssueReadCountInSeriesRule(config, snapshot) {
+  if (String(snapshot.seriesId) !== String(config.series_id)) return false
+  return safeNumber(snapshot.readIssueCountInSeries, 0) >= safeNumber(config.min_issue_count, 1)
+}
+
+export function evaluateSeriesRatedRule(config, snapshot) {
+  return String(snapshot.seriesId) === String(config.series_id)
 }
 
 export function evaluateCharacterSeriesCompletedCountRule(config, snapshot) {
@@ -99,6 +128,18 @@ export function evaluateFavoriteCountInGroupRule(config, snapshot) {
   return safeNumber(snapshot.favoritesCountInGroup, 0) >= safeNumber(config.min_favorites_count, 1)
 }
 
+export function evaluateSeriesCommentPostedRule(config, snapshot) {
+  return String(snapshot.seriesId) === String(config.series_id)
+}
+
+export function evaluateIssueCommentPostedRule(config, snapshot) {
+  return String(snapshot.seriesId) === String(config.series_id) && Boolean(snapshot.bolumId)
+}
+
+export function evaluateIssueDownloadedRule(config, snapshot) {
+  return String(snapshot.seriesId) === String(config.series_id) && Boolean(snapshot.bolumId)
+}
+
 export function buildUnlockReason(rule, snapshot) {
   return {
     trigger_event: snapshot.eventType,
@@ -112,6 +153,7 @@ export function buildUnlockReason(rule, snapshot) {
     favorites_count_in_group: snapshot.favoritesCountInGroup || 0,
     completion_ratio: snapshot.completionRatio || 0,
     reading_time_sec: snapshot.readingTimeSec || 0,
+    read_issue_count_in_series: snapshot.readIssueCountInSeries || 0,
     unlocked_at: new Date().toISOString(),
   }
 }

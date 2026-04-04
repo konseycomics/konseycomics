@@ -211,6 +211,22 @@ export async function trackIssueReadAndUnlock({
     const completedSeriesCount = await fetchCompletedSeriesCountByCharacterGroup(userId, seriInfo.character_group)
 
     const progressSnapshot = buildRuleSnapshot({
+      eventType: UNVAN_EVENT.ISSUE_READ_COMPLETED,
+      userId,
+      seriesId: seriId,
+      bolumId,
+      characterGroup: seriInfo.character_group,
+      progressPercent: ilerlemeYuzdesi,
+      isCompleted: tamamlandi,
+      completedSeriesCount,
+      completionRatio,
+      readingTimeSec,
+      readIssueCountInSeries: okunanBolumSayisi,
+    })
+
+    const issueReadUnlocked = await unlockTitlesForSnapshot(progressSnapshot)
+
+    const seriesProgressSnapshot = buildRuleSnapshot({
       eventType: UNVAN_EVENT.SERIES_PROGRESS_UPDATED,
       userId,
       seriesId: seriId,
@@ -221,9 +237,10 @@ export async function trackIssueReadAndUnlock({
       completedSeriesCount,
       completionRatio,
       readingTimeSec,
+      readIssueCountInSeries: okunanBolumSayisi,
     })
 
-    const unlocked = await unlockTitlesForSnapshot(progressSnapshot)
+    const unlocked = await unlockTitlesForSnapshot(seriesProgressSnapshot)
 
     if (tamamlandi) {
       const completedSnapshot = buildRuleSnapshot({
@@ -237,12 +254,13 @@ export async function trackIssueReadAndUnlock({
         completedSeriesCount,
         completionRatio,
         readingTimeSec,
+        readIssueCountInSeries: okunanBolumSayisi,
       })
       const completedUnlocked = await unlockTitlesForSnapshot(completedSnapshot)
-      return [...unlocked, ...completedUnlocked]
+      return [...issueReadUnlocked, ...unlocked, ...completedUnlocked]
     }
 
-    return unlocked
+    return [...issueReadUnlocked, ...unlocked]
   } catch (error) {
     console.warn('Unvan issue tracking atlandi:', error?.message || error)
     return []
@@ -268,6 +286,65 @@ export async function trackSeriesRatingAndUnlock({ userId, seriId }) {
     return unlockTitlesForSnapshot(snapshot)
   } catch (error) {
     console.warn('Unvan rating tracking atlandi:', error?.message || error)
+    return []
+  }
+}
+
+export async function trackSeriesCommentAndUnlock({ userId, seriId }) {
+  if (!userId || !seriId) return []
+
+  try {
+    const seriInfo = await fetchSeriesInfo(seriId)
+    const snapshot = buildRuleSnapshot({
+      eventType: UNVAN_EVENT.SERIES_COMMENT_POSTED,
+      userId,
+      seriesId: seriId,
+      characterGroup: seriInfo?.character_group || null,
+    })
+
+    return unlockTitlesForSnapshot(snapshot)
+  } catch (error) {
+    console.warn('Unvan series comment tracking atlandi:', error?.message || error)
+    return []
+  }
+}
+
+export async function trackIssueCommentAndUnlock({ userId, seriId, bolumId }) {
+  if (!userId || !seriId || !bolumId) return []
+
+  try {
+    const seriInfo = await fetchSeriesInfo(seriId)
+    const snapshot = buildRuleSnapshot({
+      eventType: UNVAN_EVENT.ISSUE_COMMENT_POSTED,
+      userId,
+      seriesId: seriId,
+      bolumId,
+      characterGroup: seriInfo?.character_group || null,
+    })
+
+    return unlockTitlesForSnapshot(snapshot)
+  } catch (error) {
+    console.warn('Unvan issue comment tracking atlandi:', error?.message || error)
+    return []
+  }
+}
+
+export async function trackIssueDownloadAndUnlock({ userId, seriId, bolumId }) {
+  if (!userId || !seriId || !bolumId) return []
+
+  try {
+    const seriInfo = await fetchSeriesInfo(seriId)
+    const snapshot = buildRuleSnapshot({
+      eventType: UNVAN_EVENT.ISSUE_DOWNLOADED,
+      userId,
+      seriesId: seriId,
+      bolumId,
+      characterGroup: seriInfo?.character_group || null,
+    })
+
+    return unlockTitlesForSnapshot(snapshot)
+  } catch (error) {
+    console.warn('Unvan issue download tracking atlandi:', error?.message || error)
     return []
   }
 }

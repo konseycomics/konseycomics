@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import YorumSistemi from '../../../components/YorumSistemi'
-import { trackIssueReadAndUnlock } from '../../../lib/unvanClient'
+import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock } from '../../../lib/unvanClient'
 
 const INITIAL_VISIBLE_PAGE_COUNT = 6
 const PAGE_BATCH_SIZE = 4
@@ -84,6 +84,24 @@ export default function Okuyucu() {
   const flipGecisZamanlayiciRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
+
+  async function handleDownloadClick() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user || !seriData?.id || !bolumData?.id) return
+      const unlocked = await trackIssueDownloadAndUnlock({
+        userId: session.user.id,
+        seriId: seriData.id,
+        bolumId: bolumData.id,
+      })
+      if (unlocked.length > 0) {
+        setAcilanUnvanlar(unlocked)
+        window.setTimeout(() => setAcilanUnvanlar([]), 5200)
+      }
+    } catch (error) {
+      console.warn('Indirme unvan takibi atlandi:', error?.message || error)
+    }
+  }
 
   useEffect(() => {
     async function fetchData() {
@@ -1264,7 +1282,7 @@ export default function Okuyucu() {
                   </select>
                 </div>
                 {bolumData.indirme_link && (
-                  <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+                  <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
                     Indir
                   </a>
                 )}
@@ -1463,7 +1481,7 @@ export default function Okuyucu() {
                   </div>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {bolumData.indirme_link && (
-                      <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" style={{ padding: '12px 18px', background: '#fff', color: '#111', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                      <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: '#fff', color: '#111', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
                         Indir
                       </a>
                     )}

@@ -656,10 +656,10 @@ export default function Okuyucu() {
             justify-items: center;
           }
           .reader-flip-stage.is-next .reader-flip-page img {
-            animation: readerFlipNext 280ms ease;
+            animation: readerFlipNext 180ms ease;
           }
           .reader-flip-stage.is-prev .reader-flip-page img {
-            animation: readerFlipPrev 280ms ease;
+            animation: readerFlipPrev 180ms ease;
           }
           .reader-flip-page {
             position: relative;
@@ -859,26 +859,22 @@ export default function Okuyucu() {
           }
           @keyframes readerFlipNext {
             0% {
-              opacity: 0.35;
-              transform: translateX(24px) scale(0.985);
-              filter: blur(1.5px);
+              opacity: 0.72;
+              transform: translateX(10px);
             }
             100% {
               opacity: 1;
-              transform: translateX(0) scale(1);
-              filter: blur(0);
+              transform: translateX(0);
             }
           }
           @keyframes readerFlipPrev {
             0% {
-              opacity: 0.35;
-              transform: translateX(-24px) scale(0.985);
-              filter: blur(1.5px);
+              opacity: 0.72;
+              transform: translateX(-10px);
             }
             100% {
               opacity: 1;
-              transform: translateX(0) scale(1);
-              filter: blur(0);
+              transform: translateX(0);
             }
           }
           .reader-bottom {

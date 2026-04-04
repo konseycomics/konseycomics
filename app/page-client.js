@@ -207,7 +207,7 @@ function PopulerSeriKart({ seri, sira }) {
 
           <div style={{ position: 'absolute', right: '10px', bottom: '10px', left: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
-              {formatCount(seri.goruntuleme_sayisi)} okuma
+              {Number(seri.goruntuleme_sayisi || 0) > 0 ? `${formatCount(seri.goruntuleme_sayisi)} görüntülenme` : 'Yeni seri'}
             </span>
             <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
               {rating > 0 ? `${rating.toFixed(1)}/10` : 'Puansız'}
@@ -958,7 +958,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
                   {bugunOnerisi?.kategoriler?.isim || 'Arşiv'}
                 </span>
                 <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  {formatCount(bugunOnerisi?.goruntuleme_sayisi || 0)} okuma
+                  {Number(bugunOnerisi?.goruntuleme_sayisi || 0) > 0 ? `${formatCount(bugunOnerisi?.goruntuleme_sayisi || 0)} görüntülenme` : 'Yeni seri'}
                 </span>
                 {bugunOnerisi?.durum && (
                   <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>

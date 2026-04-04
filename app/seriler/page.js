@@ -71,7 +71,7 @@ function SeriKarti({ seri }) {
           </div>
 
           <div className="series-card-bottomline">
-            <span className="series-pill">{formatCount(seri.goruntuleme_sayisi)} okuma</span>
+            <span className="series-pill">{Number(seri.goruntuleme_sayisi || 0) > 0 ? `${formatCount(seri.goruntuleme_sayisi)} görüntülenme` : 'Yeni seri'}</span>
             <span className="series-pill">{rating > 0 ? `${rating.toFixed(1)}/10` : 'Puansız'}</span>
           </div>
         </div>

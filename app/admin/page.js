@@ -202,6 +202,31 @@ export default function Admin() {
 }
 
 function UnvanlarSayfasi() {
+  const kategoriEtiketleri = {
+    progress: 'İlerleme',
+    mastery: 'Ustalık',
+    engagement: 'Etkileşim',
+  }
+  const nadirlikEtiketleri = {
+    common: 'Yaygın',
+    rare: 'Nadir',
+    epic: 'Epik',
+    legendary: 'Efsanevi',
+  }
+  const eventTipiEtiketleri = {
+    ISSUE_READ_COMPLETED: 'Bölüm okununca',
+    SERIES_PROGRESS_UPDATED: 'Seri ilerleyince',
+    SERIES_COMPLETED: 'Seri bitince',
+    SERIES_RATED: 'Puan verilince',
+    SERIES_FAVORITED: 'Takibe eklenince',
+  }
+  const kuralTipiEtiketleri = {
+    series_progress: 'Seride yüzde ilerleme',
+    series_completed: 'Seriyi tamamen bitirme',
+    character_series_completed_count: 'Aynı evrende seri bitirme sayısı',
+    rate_count_in_group: 'Aynı evrende puan verme sayısı',
+    favorite_count_in_group: 'Aynı evrende takibe alma sayısı',
+  }
   const titleBos = {
     isim: '',
     kod: '',
@@ -297,6 +322,57 @@ function UnvanlarSayfasi() {
         return `${config.character_group || 'Grup'} evreninde ${config.min_favorites_count || 1} takip ekle`
       default:
         return rule.kural_tipi || 'Bilinmeyen kural'
+    }
+  }
+
+  function sablonUygula(tip) {
+    if (tip === 'seri_tamamlama') {
+      setForm(f => ({
+        ...f,
+        kategori: 'mastery',
+        event_tipi: 'SERIES_COMPLETED',
+        kural_tipi: 'series_completed',
+      }))
+      return
+    }
+    if (tip === 'seri_yuzde') {
+      setForm(f => ({
+        ...f,
+        kategori: 'progress',
+        event_tipi: 'SERIES_PROGRESS_UPDATED',
+        kural_tipi: 'series_progress',
+        min_progress_percent: 100,
+      }))
+      return
+    }
+    if (tip === 'evren_seri') {
+      setForm(f => ({
+        ...f,
+        kategori: 'mastery',
+        event_tipi: 'SERIES_COMPLETED',
+        kural_tipi: 'character_series_completed_count',
+        min_completed_series: 3,
+      }))
+      return
+    }
+    if (tip === 'evren_puan') {
+      setForm(f => ({
+        ...f,
+        kategori: 'engagement',
+        event_tipi: 'SERIES_RATED',
+        kural_tipi: 'rate_count_in_group',
+        min_ratings_count: 3,
+      }))
+      return
+    }
+    if (tip === 'evren_takip') {
+      setForm(f => ({
+        ...f,
+        kategori: 'engagement',
+        event_tipi: 'SERIES_FAVORITED',
+        kural_tipi: 'favorite_count_in_group',
+        min_favorites_count: 3,
+      }))
     }
   }
 
@@ -456,6 +532,19 @@ function UnvanlarSayfasi() {
           action={<button onClick={() => { setMod('liste'); setForm(titleBos); setDuzenleId(null); setMsg('') }} style={BS}>Listeye Don</button>}
         />
         <Msg text={msg} />
+        <Surface style={{ padding: '18px', marginBottom: '14px', background: 'linear-gradient(135deg, rgba(139,92,246,0.14), rgba(255,255,255,0.04))' }}>
+          <div style={{ ...LB, marginBottom: '10px' }}>Hızlı Şablonlar</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            <button onClick={() => sablonUygula('seri_tamamlama')} style={BS}>Seriyi Bitirince</button>
+            <button onClick={() => sablonUygula('seri_yuzde')} style={BS}>%100 İlerleme</button>
+            <button onClick={() => sablonUygula('evren_seri')} style={BS}>Evrende 3 Seri</button>
+            <button onClick={() => sablonUygula('evren_puan')} style={BS}>Evrende 3 Puan</button>
+            <button onClick={() => sablonUygula('evren_takip')} style={BS}>Evrende 3 Takip</button>
+          </div>
+          <div style={{ fontSize: '12px', color: TEXT_SOFT, lineHeight: 1.7 }}>
+            Hızlı başlamak için bir şablona bas. Sonra sadece seri, isim ve açıklamayı düzenlemen yeter.
+          </div>
+        </Surface>
         <Surface style={{ padding: '24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
@@ -491,18 +580,18 @@ function UnvanlarSayfasi() {
             <div>
               <div style={LB}>Kategori</div>
               <select value={form.kategori} onChange={e => setForm(f => ({ ...f, kategori: e.target.value }))} style={S}>
-                <option value="progress">Progress</option>
-                <option value="mastery">Mastery</option>
-                <option value="engagement">Engagement</option>
+                <option value="progress">İlerleme</option>
+                <option value="mastery">Ustalık</option>
+                <option value="engagement">Etkileşim</option>
               </select>
             </div>
             <div>
               <div style={LB}>Nadirlik</div>
               <select value={form.nadirlik} onChange={e => setForm(f => ({ ...f, nadirlik: e.target.value }))} style={S}>
-                <option value="common">Common</option>
-                <option value="rare">Rare</option>
-                <option value="epic">Epic</option>
-                <option value="legendary">Legendary</option>
+                <option value="common">Yaygın</option>
+                <option value="rare">Nadir</option>
+                <option value="epic">Epik</option>
+                <option value="legendary">Efsanevi</option>
               </select>
             </div>
             <div>
@@ -519,22 +608,29 @@ function UnvanlarSayfasi() {
             <div>
               <div style={LB}>Event Tipi</div>
               <select value={form.event_tipi} onChange={e => setForm(f => ({ ...f, event_tipi: e.target.value }))} style={S}>
-                <option value="ISSUE_READ_COMPLETED">Issue Read Completed</option>
-                <option value="SERIES_PROGRESS_UPDATED">Series Progress Updated</option>
-                <option value="SERIES_COMPLETED">Series Completed</option>
-                <option value="SERIES_RATED">Series Rated</option>
-                <option value="SERIES_FAVORITED">Series Favorited</option>
+                <option value="ISSUE_READ_COMPLETED">Bölüm okununca</option>
+                <option value="SERIES_PROGRESS_UPDATED">Seri ilerleyince</option>
+                <option value="SERIES_COMPLETED">Seri bitince</option>
+                <option value="SERIES_RATED">Puan verilince</option>
+                <option value="SERIES_FAVORITED">Takibe eklenince</option>
               </select>
             </div>
             <div>
               <div style={LB}>Kural Tipi</div>
               <select value={form.kural_tipi} onChange={e => setForm(f => ({ ...f, kural_tipi: e.target.value }))} style={S}>
-                <option value="series_progress">Series Progress</option>
-                <option value="series_completed">Series Completed</option>
-                <option value="character_series_completed_count">Character Series Completed Count</option>
-                <option value="rate_count_in_group">Rate Count In Group</option>
-                <option value="favorite_count_in_group">Favorite Count In Group</option>
+                <option value="series_progress">Seride yüzde ilerleme</option>
+                <option value="series_completed">Seriyi tamamen bitirme</option>
+                <option value="character_series_completed_count">Aynı evrende seri bitirme sayısı</option>
+                <option value="rate_count_in_group">Aynı evrende puan verme sayısı</option>
+                <option value="favorite_count_in_group">Aynı evrende takibe alma sayısı</option>
               </select>
+            </div>
+          </div>
+
+          <div style={{ ...CARD_INNER, padding: '14px', marginBottom: '14px' }}>
+            <div style={{ ...LB, marginBottom: '8px' }}>Mini Rehber</div>
+            <div style={{ fontSize: '12px', color: TEXT_SOFT, lineHeight: 1.7 }}>
+              Seri bazlı ünvan istiyorsan seri seç. Aynı evren için çalışan ünvanlarda ise <b>Character Group</b> alanını doldur. En pratik kurulum: isim yaz, seri seç, hızlı şablon seç, kaydet.
             </div>
           </div>
 
@@ -592,6 +688,22 @@ function UnvanlarSayfasi() {
         action={<button onClick={yeniUnvan} style={BP}>Yeni Unvan</button>}
       />
       <Msg text={msg} />
+      <Surface style={{ marginBottom: '18px', background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(255,255,255,0.04))' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+          <div>
+            <div style={LB}>En Kolay Yol</div>
+            <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>Yeni seri için önce <b>Yeni Unvan</b> de, sonra seri seçip hazır şablonlardan birini kullan.</div>
+          </div>
+          <div>
+            <div style={LB}>Seri Bazlı</div>
+            <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>Tek bir seri için açılacak ünvanlarda <b>Seri</b> alanını doldur.</div>
+          </div>
+          <div>
+            <div style={LB}>Evren Bazlı</div>
+            <div style={{ fontSize: '13px', color: TEXT_SOFT, lineHeight: 1.7 }}>Bir karakter evreni için çalışacaksa <b>Character Group</b> kullan. Örnek: <b>spider-man</b>.</div>
+          </div>
+        </div>
+      </Surface>
       <Surface style={{ marginBottom: '18px' }}>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input value={aramaMetni} onChange={e => setAramaMetni(e.target.value)} placeholder="Unvan ara..." style={{ ...I, maxWidth: '280px' }} />
@@ -606,8 +718,8 @@ function UnvanlarSayfasi() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0, flex: '1 1 420px' }}>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.nadirlik}</span>
-                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(139,92,246,0.16)', color: '#e9d5ff', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.kategori}</span>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{nadirlikEtiketleri[unvan.nadirlik] || unvan.nadirlik}</span>
+                  <span style={{ padding: '4px 10px', borderRadius: '999px', background: 'rgba(139,92,246,0.16)', color: '#e9d5ff', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{kategoriEtiketleri[unvan.kategori] || unvan.kategori}</span>
                   <span style={{ padding: '4px 10px', borderRadius: '999px', background: unvan.aktif ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.08)', color: unvan.aktif ? '#a7f3d0' : TEXT_SUBTLE, fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{unvan.aktif ? 'aktif' : 'pasif'}</span>
                 </div>
                 <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>{unvan.isim}</div>

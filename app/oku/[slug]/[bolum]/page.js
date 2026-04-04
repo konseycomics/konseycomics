@@ -8,6 +8,9 @@ import Footer from '../../../components/Footer'
 import YorumSistemi from '../../../components/YorumSistemi'
 import { trackIssueReadAndUnlock } from '../../../lib/unvanClient'
 
+const INITIAL_VISIBLE_PAGE_COUNT = 6
+const PAGE_BATCH_SIZE = 4
+
 function driveEmbedUrl(link) {
   if (!link) return null
   const match = link.match(/\/d\/([a-zA-Z0-9_-]+)/)
@@ -31,6 +34,7 @@ export default function Okuyucu() {
   const [loading, setLoading] = useState(true)
   const [iframeHata, setIframeHata] = useState(false)
   const [aktifSayfa, setAktifSayfa] = useState(1)
+  const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
   const okumaTakipRef = useRef(null)
@@ -146,6 +150,12 @@ export default function Okuyucu() {
     fetchOkumaSayfalari()
   }, [bolumData?.id])
 
+  useEffect(() => {
+    setAktifSayfa(1)
+    setGorunenSayfaSayisi(INITIAL_VISIBLE_PAGE_COUNT)
+    sayfaRefleri.current = []
+  }, [bolumData?.id])
+
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
   const siradakiBolum = tumBolumler.find(item => item.sayi > mevcutSayi)
@@ -157,6 +167,7 @@ export default function Okuyucu() {
   const heroBackgroundPosition = `${detayAyar?.arka_plan_x ?? 50}% ${detayAyar?.arka_plan_y ?? 50}%`
   const ozelOkuyucuVar = okumaSayfalari.length > 0
   const toplamSayfa = ozelOkuyucuVar ? okumaSayfalari.length : 0
+  const gorunenSayfalar = ozelOkuyucuVar ? okumaSayfalari.slice(0, gorunenSayfaSayisi) : []
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
 
@@ -209,6 +220,14 @@ export default function Okuyucu() {
       window.removeEventListener('resize', hesaplaAktifSayfa)
     }
   }, [ozelOkuyucuVar, okumaSayfalari])
+
+  useEffect(() => {
+    if (!ozelOkuyucuVar) return
+    if (gorunenSayfaSayisi >= okumaSayfalari.length) return
+    if (aktifSayfa < Math.max(1, gorunenSayfaSayisi - 2)) return
+
+    setGorunenSayfaSayisi(prev => Math.min(prev + PAGE_BATCH_SIZE, okumaSayfalari.length))
+  }, [aktifSayfa, gorunenSayfaSayisi, okumaSayfalari.length, ozelOkuyucuVar])
 
   if (loading) {
     return (
@@ -357,6 +376,17 @@ export default function Okuyucu() {
             display: grid;
             gap: 24px;
             padding: 22px 0 10px;
+          }
+          .reader-load-note {
+            width: min(100%, 980px);
+            margin: 0 auto;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.62);
+            font-size: 12px;
+            text-align: center;
           }
           .reader-page {
             width: min(100%, 980px);
@@ -584,7 +614,7 @@ export default function Okuyucu() {
               {ozelOkuyucuVar ? (
                 <div className="reader-stage" ref={stageRef}>
                   <div className="reader-pages">
-                    {okumaSayfalari.map((sayfaUrl, index) => (
+                    {gorunenSayfalar.map((sayfaUrl, index) => (
                       <div
                         key={`${sayfaUrl}-${index}`}
                         className="reader-page"
@@ -592,10 +622,21 @@ export default function Okuyucu() {
                         data-page-index={index}
                       >
                         <div className="reader-page-inner">
-                          <img src={sayfaUrl} alt={`${bolumData.baslik} sayfa ${index + 1}`} />
+                          <img
+                            src={sayfaUrl}
+                            alt={`${bolumData.baslik} sayfa ${index + 1}`}
+                            loading={index < 2 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            fetchPriority={index === 0 ? 'high' : 'auto'}
+                          />
                         </div>
                       </div>
                     ))}
+                    {gorunenSayfaSayisi < okumaSayfalari.length && (
+                      <div className="reader-load-note">
+                        Sonraki sayfalar ilerledikçe otomatik yüklenir. Şu an {gorunenSayfaSayisi} / {okumaSayfalari.length} sayfa hazır.
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : embedUrl && !iframeHata ? (

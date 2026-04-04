@@ -39,6 +39,8 @@ export default function Okuyucu() {
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
   const okumaTakipRef = useRef(null)
+  const dokunusBaslangicXRef = useRef(null)
+  const dokunusBaslangicYRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
 
@@ -196,6 +198,32 @@ export default function Okuyucu() {
       return
     }
     if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
+  }
+
+  function handleFlipTouchStart(e) {
+    const touch = e.touches?.[0]
+    if (!touch) return
+    dokunusBaslangicXRef.current = touch.clientX
+    dokunusBaslangicYRef.current = touch.clientY
+  }
+
+  function handleFlipTouchEnd(e) {
+    const startX = dokunusBaslangicXRef.current
+    const startY = dokunusBaslangicYRef.current
+    const touch = e.changedTouches?.[0]
+
+    dokunusBaslangicXRef.current = null
+    dokunusBaslangicYRef.current = null
+
+    if (startX == null || startY == null || !touch) return
+
+    const deltaX = touch.clientX - startX
+    const deltaY = touch.clientY - startY
+
+    if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+
+    if (deltaX < 0) sonrakiSayfayaGit()
+    else oncekiSayfayaGit()
   }
 
   const handleKeyDown = useCallback((e) => {
@@ -524,6 +552,29 @@ export default function Okuyucu() {
             color: rgba(255,255,255,0.62);
             font-size: 12px;
           }
+          .reader-flip-mobile-controls {
+            display: none;
+            gap: 10px;
+            margin-top: 14px;
+          }
+          .reader-flip-mobile-controls button {
+            flex: 1;
+            min-height: 44px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            font-family: inherit;
+            cursor: pointer;
+          }
+          .reader-flip-mobile-controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+          }
           .reader-load-note {
             width: min(100%, 980px);
             margin: 0 auto;
@@ -683,6 +734,9 @@ export default function Okuyucu() {
               flex-direction: column;
               align-items: flex-start;
             }
+            .reader-flip-mobile-controls {
+              display: flex;
+            }
             .reader-floating-progress {
               left: 12px;
               right: 12px;
@@ -803,7 +857,11 @@ export default function Okuyucu() {
                         ←
                       </button>
                       <div className="reader-flip-stage">
-                        <div className="reader-flip-page">
+                        <div
+                          className="reader-flip-page"
+                          onTouchStart={handleFlipTouchStart}
+                          onTouchEnd={handleFlipTouchEnd}
+                        >
                           {aktifSayfaUrl && (
                             <img
                               src={aktifSayfaUrl}
@@ -816,7 +874,23 @@ export default function Okuyucu() {
                         </div>
                         <div className="reader-flip-caption">
                           <span>Sayfa {aktifSayfa} / {toplamSayfa}</span>
-                          <span>Oklarla gezebilir, bölüm sonunda sonraki bölüme geçebilirsin.</span>
+                          <span>Oklarla, kaydırarak veya butonlarla gezebilirsin.</span>
+                        </div>
+                        <div className="reader-flip-mobile-controls">
+                          <button
+                            type="button"
+                            onClick={oncekiSayfayaGit}
+                            disabled={aktifSayfa === 1 && !oncekiBolum}
+                          >
+                            Önceki
+                          </button>
+                          <button
+                            type="button"
+                            onClick={sonrakiSayfayaGit}
+                            disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
+                          >
+                            Sonraki
+                          </button>
                         </div>
                       </div>
                       <button

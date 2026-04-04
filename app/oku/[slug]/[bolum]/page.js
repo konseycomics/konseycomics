@@ -23,6 +23,27 @@ function tarih(dateStr) {
   return new Date(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function getYayilimSayfalari(pageNumber, spreadMode, sayfalar, toplamSayfa) {
+  if (!sayfalar.length || !toplamSayfa) return []
+
+  const guvenliSayfa = Math.max(1, Math.min(toplamSayfa, pageNumber))
+
+  if (!spreadMode) {
+    const url = sayfalar[guvenliSayfa - 1]
+    return url ? [{ number: guvenliSayfa, url }] : []
+  }
+
+  const baslangic = guvenliSayfa <= 1 ? 1 : (guvenliSayfa % 2 === 0 ? guvenliSayfa : guvenliSayfa - 1)
+
+  if (baslangic === 1) {
+    return sayfalar[0] ? [{ number: 1, url: sayfalar[0] }] : []
+  }
+
+  return [baslangic, baslangic + 1]
+    .filter((number) => number <= toplamSayfa)
+    .map((number) => ({ number, url: sayfalar[number - 1] }))
+}
+
 export default function Okuyucu() {
   const { slug, bolum } = useParams()
   const router = useRouter()
@@ -37,7 +58,7 @@ export default function Okuyucu() {
   const [okumaModu, setOkumaModu] = useState('scroll')
   const [ciftSayfaAktif, setCiftSayfaAktif] = useState(false)
   const [tamEkranAktif, setTamEkranAktif] = useState(false)
-  const [flipAnimasyonSinifi, setFlipAnimasyonSinifi] = useState('')
+  const [flipGecisi, setFlipGecisi] = useState(null)
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
@@ -45,7 +66,7 @@ export default function Okuyucu() {
   const okumaTakipRef = useRef(null)
   const dokunusBaslangicXRef = useRef(null)
   const dokunusBaslangicYRef = useRef(null)
-  const flipAnimasyonZamanlayiciRef = useRef(null)
+  const flipGecisZamanlayiciRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
 
@@ -161,6 +182,7 @@ export default function Okuyucu() {
   useEffect(() => {
     setAktifSayfa(1)
     setOkumaModu('scroll')
+    setFlipGecisi(null)
     setGorunenSayfaSayisi(INITIAL_VISIBLE_PAGE_COUNT)
     sayfaRefleri.current = []
   }, [bolumData?.id])
@@ -175,8 +197,8 @@ export default function Okuyucu() {
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      if (flipAnimasyonZamanlayiciRef.current) {
-        window.clearTimeout(flipAnimasyonZamanlayiciRef.current)
+      if (flipGecisZamanlayiciRef.current) {
+        window.clearTimeout(flipGecisZamanlayiciRef.current)
       }
     }
   }, [])
@@ -208,69 +230,76 @@ export default function Okuyucu() {
   const aktifSayfaIndex = Math.max(0, Math.min(Math.max(toplamSayfa, 1) - 1, aktifSayfa - 1))
   const aktifSayfaUrl = ozelOkuyucuVar ? okumaSayfalari[aktifSayfaIndex] : null
   const masaustuCizgiRomanModu = okumaModu === 'flip' && ciftSayfaAktif
-  const aktifYayilimBaslangici = masaustuCizgiRomanModu
-    ? (aktifSayfa <= 1 ? 1 : (aktifSayfa % 2 === 0 ? aktifSayfa : aktifSayfa - 1))
-    : aktifSayfa
-  const aktifYayilimSayfalari = masaustuCizgiRomanModu
-    ? (aktifYayilimBaslangici === 1
-      ? [{ number: 1, url: okumaSayfalari[0] }]
-      : [aktifYayilimBaslangici, aktifYayilimBaslangici + 1]
-          .filter(pageNumber => pageNumber <= toplamSayfa)
-          .map(pageNumber => ({ number: pageNumber, url: okumaSayfalari[pageNumber - 1] })))
-    : (aktifSayfaUrl ? [{ number: aktifSayfa, url: aktifSayfaUrl }] : [])
+  const aktifYayilimSayfalari = getYayilimSayfalari(aktifSayfa, masaustuCizgiRomanModu, okumaSayfalari, toplamSayfa)
+  const aktifYayilimBaslangici = aktifYayilimSayfalari[0]?.number || 1
+  const gosterilenFlipSayfalari = flipGecisi?.hedefSayfalar || aktifYayilimSayfalari
   const aktifYayilimEtiketi = masaustuCizgiRomanModu
-    ? (aktifYayilimSayfalari.length > 1
-      ? `${aktifYayilimSayfalari[0].number}-${aktifYayilimSayfalari[aktifYayilimSayfalari.length - 1].number}`
-      : `${aktifYayilimSayfalari[0]?.number || 1}`)
+    ? (gosterilenFlipSayfalari.length > 1
+      ? `${gosterilenFlipSayfalari[0].number}-${gosterilenFlipSayfalari[gosterilenFlipSayfalari.length - 1].number}`
+      : `${gosterilenFlipSayfalari[0]?.number || 1}`)
     : `${aktifSayfa}`
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
-
-  function flipAnimasyonBaslat(direction) {
-    if (flipAnimasyonZamanlayiciRef.current) {
-      window.clearTimeout(flipAnimasyonZamanlayiciRef.current)
-    }
-
-    setFlipAnimasyonSinifi(direction === 'prev' ? 'is-prev' : 'is-next')
-
-    flipAnimasyonZamanlayiciRef.current = window.setTimeout(() => {
-      setFlipAnimasyonSinifi('')
-    }, 280)
-  }
 
   function flipSayfaGuncelle(yeniSayfa) {
     if (!toplamSayfa) return
     setAktifSayfa(Math.max(1, Math.min(toplamSayfa, yeniSayfa)))
   }
 
-  function sonrakiSayfayaGit() {
+  function flipGecisiBaslat(direction, hedefSayfa) {
     if (!ozelOkuyucuVar) return
+
+    if (flipGecisZamanlayiciRef.current) {
+      window.clearTimeout(flipGecisZamanlayiciRef.current)
+    }
+
+    const hedefSayfalar = getYayilimSayfalari(hedefSayfa, masaustuCizgiRomanModu, okumaSayfalari, toplamSayfa)
+    const cevrilenSayfa = direction === 'next'
+      ? aktifYayilimSayfalari[aktifYayilimSayfalari.length - 1]
+      : aktifYayilimSayfalari[0]
+
+    if (!cevrilenSayfa) {
+      flipSayfaGuncelle(hedefSayfa)
+      return
+    }
+
+    setFlipGecisi({
+      direction,
+      cevrilenSayfa,
+      hedefSayfalar,
+      ciftSayfa: masaustuCizgiRomanModu && aktifYayilimSayfalari.length > 1,
+    })
+
+    flipGecisZamanlayiciRef.current = window.setTimeout(() => {
+      setFlipGecisi(null)
+      flipSayfaGuncelle(hedefSayfa)
+    }, 420)
+  }
+
+  function sonrakiSayfayaGit() {
+    if (!ozelOkuyucuVar || flipGecisi) return
     if (masaustuCizgiRomanModu) {
       const sonrakiYayilim = aktifYayilimBaslangici === 1 ? 2 : aktifYayilimBaslangici + 2
       if (sonrakiYayilim <= toplamSayfa) {
-        flipAnimasyonBaslat('next')
-        flipSayfaGuncelle(sonrakiYayilim)
+        flipGecisiBaslat('next', sonrakiYayilim)
         return
       }
     } else if (aktifSayfa < toplamSayfa) {
-      flipAnimasyonBaslat('next')
-      flipSayfaGuncelle(aktifSayfa + 1)
+      flipGecisiBaslat('next', aktifSayfa + 1)
       return
     }
     if (siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
   }
 
   function oncekiSayfayaGit() {
-    if (!ozelOkuyucuVar) return
+    if (!ozelOkuyucuVar || flipGecisi) return
     if (masaustuCizgiRomanModu) {
       if (aktifYayilimBaslangici > 1) {
-        flipAnimasyonBaslat('prev')
-        flipSayfaGuncelle(aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2)
+        flipGecisiBaslat('prev', aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2)
         return
       }
     } else if (aktifSayfa > 1) {
-      flipAnimasyonBaslat('prev')
-      flipSayfaGuncelle(aktifSayfa - 1)
+      flipGecisiBaslat('prev', aktifSayfa - 1)
       return
     }
     if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
@@ -326,7 +355,7 @@ export default function Okuyucu() {
       if (okumaModu === 'flip' && ozelOkuyucuVar) oncekiSayfayaGit()
       else if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
     }
-  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfa, aktifYayilimBaslangici, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
+  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, flipGecisi, aktifSayfa, aktifYayilimBaslangici, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
@@ -387,10 +416,8 @@ export default function Okuyucu() {
     const preloadKaynaklari = masaustuCizgiRomanModu
       ? [
           ...aktifYayilimSayfalari.map(item => item.url),
-          okumaSayfalari[aktifYayilimBaslangici + 1],
-          okumaSayfalari[aktifYayilimBaslangici + 2],
-          okumaSayfalari[Math.max(0, aktifYayilimBaslangici - 3)],
-          okumaSayfalari[Math.max(0, aktifYayilimBaslangici - 2)],
+          ...getYayilimSayfalari(aktifYayilimBaslangici === 1 ? 2 : aktifYayilimBaslangici + 2, true, okumaSayfalari, toplamSayfa).map(item => item.url),
+          ...getYayilimSayfalari(aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2, true, okumaSayfalari, toplamSayfa).map(item => item.url),
         ]
       : [aktifSayfaUrl, okumaSayfalari[aktifSayfaIndex + 1], okumaSayfalari[aktifSayfaIndex - 1]]
 
@@ -401,7 +428,7 @@ export default function Okuyucu() {
         img.decoding = 'async'
         img.src = src
       })
-  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfaIndex, aktifSayfaUrl, aktifYayilimBaslangici, aktifYayilimSayfalari, okumaSayfalari])
+  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfaIndex, aktifSayfaUrl, aktifYayilimBaslangici, aktifYayilimSayfalari, okumaSayfalari, toplamSayfa])
 
   if (loading) {
     return (
@@ -656,13 +683,36 @@ export default function Okuyucu() {
             grid-template-columns: minmax(0, 1fr);
             justify-items: center;
           }
-          .reader-flip-stage.is-next .reader-flip-page.is-right,
-          .reader-flip-stage.is-next .reader-flip-page.is-cover {
-            animation: readerPaperTurnNext 420ms cubic-bezier(0.22, 0.8, 0.24, 1);
+          .reader-flip-turn-layer {
+            position: absolute;
+            inset: 18px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            pointer-events: none;
+            z-index: 4;
           }
-          .reader-flip-stage.is-prev .reader-flip-page.is-left,
-          .reader-flip-stage.is-prev .reader-flip-page.is-cover {
-            animation: readerPaperTurnPrev 420ms cubic-bezier(0.22, 0.8, 0.24, 1);
+          .reader-flip-turn-layer.is-single {
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .reader-flip-turn-layer.is-next .reader-flip-turn-sheet {
+            grid-column: 2 / 3;
+            transform-origin: left center;
+            animation: readerPaperTurnNext 420ms cubic-bezier(0.22, 0.8, 0.24, 1) forwards;
+          }
+          .reader-flip-turn-layer.is-prev .reader-flip-turn-sheet {
+            grid-column: 1 / 2;
+            transform-origin: right center;
+            animation: readerPaperTurnPrev 420ms cubic-bezier(0.22, 0.8, 0.24, 1) forwards;
+          }
+          .reader-flip-turn-layer.is-single .reader-flip-turn-sheet {
+            grid-column: 1 / -1;
+          }
+          .reader-flip-turn-layer.is-single.is-next .reader-flip-turn-sheet {
+            transform-origin: right center;
+          }
+          .reader-flip-turn-layer.is-single.is-prev .reader-flip-turn-sheet {
+            transform-origin: left center;
           }
           .reader-flip-page {
             position: relative;
@@ -723,6 +773,40 @@ export default function Okuyucu() {
             display: block;
             width: 100%;
             height: auto;
+          }
+          .reader-flip-turn-sheet {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(246,241,232,0.98), rgba(223,216,204,0.98));
+            box-shadow:
+              0 34px 64px rgba(0,0,0,0.4),
+              inset 0 0 0 1px rgba(255,255,255,0.05);
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+          }
+          .reader-flip-turn-sheet::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(0,0,0,0.18), transparent 28%, transparent 72%, rgba(0,0,0,0.16));
+            opacity: 0.7;
+            z-index: 2;
+            pointer-events: none;
+          }
+          .reader-flip-turn-sheet img {
+            display: block;
+            width: 100%;
+            height: auto;
+          }
+          .reader-flip-turn-back {
+            position: absolute;
+            inset: 0;
+            background:
+              linear-gradient(180deg, rgba(236,229,216,0.98), rgba(214,206,191,0.98)),
+              linear-gradient(90deg, rgba(0,0,0,0.16), transparent 22%, transparent 78%, rgba(0,0,0,0.14));
+            transform: rotateY(180deg);
+            backface-visibility: hidden;
           }
           .reader-flip-page-number {
             position: absolute;
@@ -868,41 +952,35 @@ export default function Okuyucu() {
           }
           @keyframes readerPaperTurnNext {
             0% {
-              transform: rotateY(-16deg) translateX(10px) scale(0.985);
-              filter: brightness(0.86);
+              transform: rotateY(0deg);
               box-shadow:
                 0 36px 64px rgba(0,0,0,0.4),
                 inset 0 0 0 1px rgba(255,255,255,0.05);
             }
             55% {
-              transform: rotateY(-7deg) translateX(4px) scale(0.994);
-              filter: brightness(0.94);
+              transform: rotateY(-92deg);
             }
             100% {
-              transform: rotateY(0deg) translateX(0) scale(1);
-              filter: brightness(1);
+              transform: rotateY(-176deg);
               box-shadow:
-                0 28px 54px rgba(0,0,0,0.34),
+                0 14px 26px rgba(0,0,0,0.16),
                 inset 0 0 0 1px rgba(255,255,255,0.04);
             }
           }
           @keyframes readerPaperTurnPrev {
             0% {
-              transform: rotateY(16deg) translateX(-10px) scale(0.985);
-              filter: brightness(0.86);
+              transform: rotateY(0deg);
               box-shadow:
                 0 36px 64px rgba(0,0,0,0.4),
                 inset 0 0 0 1px rgba(255,255,255,0.05);
             }
             55% {
-              transform: rotateY(7deg) translateX(-4px) scale(0.994);
-              filter: brightness(0.94);
+              transform: rotateY(92deg);
             }
             100% {
-              transform: rotateY(0deg) translateX(0) scale(1);
-              filter: brightness(1);
+              transform: rotateY(176deg);
               box-shadow:
-                0 28px 54px rgba(0,0,0,0.34),
+                0 14px 26px rgba(0,0,0,0.16),
                 inset 0 0 0 1px rgba(255,255,255,0.04);
             }
           }
@@ -992,6 +1070,9 @@ export default function Okuyucu() {
             .reader-flip-spread {
               grid-template-columns: 1fr;
               gap: 10px;
+            }
+            .reader-flip-turn-layer {
+              display: none;
             }
             .reader-flip-page.is-cover {
               width: 100%;
@@ -1127,17 +1208,17 @@ export default function Okuyucu() {
                       >
                         ←
                       </button>
-                      <div className={`reader-flip-stage ${flipAnimasyonSinifi}`}>
+                      <div className="reader-flip-stage">
                         <div
-                          className={`reader-flip-book ${masaustuCizgiRomanModu && aktifYayilimSayfalari.length > 1 ? 'is-spread' : ''}`}
+                          className={`reader-flip-book ${masaustuCizgiRomanModu && gosterilenFlipSayfalari.length > 1 ? 'is-spread' : ''}`}
                           onTouchStart={handleFlipTouchStart}
                           onTouchEnd={handleFlipTouchEnd}
                         >
-                          <div className={`reader-flip-spread ${aktifYayilimSayfalari.length === 1 ? 'is-single' : ''}`}>
-                            {aktifYayilimSayfalari.map((sayfa, index) => (
+                          <div className={`reader-flip-spread ${gosterilenFlipSayfalari.length === 1 ? 'is-single' : ''}`}>
+                            {gosterilenFlipSayfalari.map((sayfa, index) => (
                               <div
                                 key={`${sayfa.url}-${sayfa.number}`}
-                                className={`reader-flip-page ${aktifYayilimSayfalari.length === 1 ? 'is-cover' : index === 0 ? 'is-left' : 'is-right'}`}
+                                className={`reader-flip-page ${gosterilenFlipSayfalari.length === 1 ? 'is-cover' : index === 0 ? 'is-left' : 'is-right'}`}
                               >
                                 <img
                                   src={sayfa.url}
@@ -1150,6 +1231,23 @@ export default function Okuyucu() {
                               </div>
                             ))}
                           </div>
+                          {flipGecisi && (
+                            <div
+                              className={`reader-flip-turn-layer is-${flipGecisi.direction} ${flipGecisi.cevrilenSayfa && flipGecisi.ciftSayfa ? '' : 'is-single'}`}
+                            >
+                              <div className="reader-flip-turn-sheet">
+                                <img
+                                  src={flipGecisi.cevrilenSayfa.url}
+                                  alt={`${bolumData.baslik} sayfa ${flipGecisi.cevrilenSayfa.number}`}
+                                  loading="eager"
+                                  decoding="async"
+                                  fetchPriority="high"
+                                />
+                                <div className="reader-flip-turn-back" />
+                                <span className="reader-flip-page-number">{flipGecisi.cevrilenSayfa.number}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="reader-flip-caption">
                           <span>Sayfa {aktifYayilimEtiketi} / {toplamSayfa}</span>

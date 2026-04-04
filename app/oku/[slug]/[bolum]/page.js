@@ -887,6 +887,54 @@ export default function Okuyucu() {
             cursor: pointer;
             font-family: inherit;
           }
+          .reader-frame.is-fullscreen,
+          .reader-frame:fullscreen {
+            border-radius: 0;
+            border: none;
+            background: #050505;
+            box-shadow: none;
+          }
+          .reader-frame.is-fullscreen .reader-stage,
+          .reader-frame:fullscreen .reader-stage {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 18px;
+          }
+          .reader-fullscreen-controls {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 12;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 14px;
+            background: rgba(8,8,8,0.74);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+          }
+          .reader-fullscreen-controls button {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+          }
+          .reader-fullscreen-controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+          }
           .reader-flip-mobile-controls {
             display: none;
             gap: 10px;
@@ -1119,6 +1167,17 @@ export default function Okuyucu() {
               flex-direction: column;
               align-items: flex-start;
             }
+            .reader-fullscreen-controls {
+              width: calc(100% - 24px);
+              justify-content: space-between;
+              gap: 8px;
+            }
+            .reader-fullscreen-controls button {
+              flex: 1;
+              min-width: 0;
+              padding: 0 10px;
+              font-size: 10px;
+            }
             .reader-flip-mobile-controls {
               display: flex;
             }
@@ -1171,7 +1230,8 @@ export default function Okuyucu() {
             />
           )}
 
-          <div className="site-shell" style={{ position: 'relative', zIndex: 1, paddingTop: '28px', paddingBottom: '56px' }}>
+          <div className="site-shell" style={{ position: 'relative', zIndex: 1, paddingTop: tamEkranAktif ? '0' : '28px', paddingBottom: tamEkranAktif ? '0' : '56px' }}>
+            {!tamEkranAktif && (
             <div className="reader-topbar">
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -1225,17 +1285,41 @@ export default function Okuyucu() {
                 )}
               </div>
             </div>
+            )}
 
+            {!tamEkranAktif && (
             <div style={{ marginBottom: '8px' }}>
               <div style={{ width: '100%', height: '4px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                 <div style={{ width: `${okumaYuzdesi}%`, height: '100%', background: 'linear-gradient(90deg, #ffffff 0%, #8dd6ff 100%)' }} />
               </div>
             </div>
+            )}
 
-            <div className="reader-frame" ref={readerFrameRef}>
+            <div className={`reader-frame ${tamEkranAktif ? 'is-fullscreen' : ''}`} ref={readerFrameRef}>
               {ozelOkuyucuVar ? (
                 okumaModu === 'flip' ? (
                   <div className="reader-stage">
+                    {tamEkranAktif && (
+                      <div className="reader-fullscreen-controls">
+                        <button
+                          type="button"
+                          onClick={oncekiSayfayaGit}
+                          disabled={aktifSayfa === 1 && !oncekiBolum}
+                        >
+                          Önceki
+                        </button>
+                        <button type="button" onClick={toggleTamEkran}>
+                          Tam Ekrandan Çık
+                        </button>
+                        <button
+                          type="button"
+                          onClick={sonrakiSayfayaGit}
+                          disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
+                        >
+                          Sonraki
+                        </button>
+                      </div>
+                    )}
                     <div className="reader-flip-shell">
                       <button
                         type="button"
@@ -1293,10 +1377,13 @@ export default function Okuyucu() {
                             </div>
                           )}
                         </div>
+                        {!tamEkranAktif && (
                         <div className="reader-flip-caption">
                           <span>Sayfa {aktifYayilimEtiketi} / {toplamSayfa}</span>
                           <span>{masaustuCizgiRomanModu ? 'Çift sayfa spread görünümü aktif.' : 'Oklarla, kaydırarak veya butonlarla gezebilirsin.'}</span>
                         </div>
+                        )}
+                        {!tamEkranAktif && (
                         <div className="reader-flip-mobile-controls">
                           <button
                             type="button"
@@ -1313,6 +1400,7 @@ export default function Okuyucu() {
                             Sonraki
                           </button>
                         </div>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -1388,6 +1476,7 @@ export default function Okuyucu() {
                 </div>
               )}
 
+              {!tamEkranAktif && (
               <div className="reader-bottom">
                 {oncekiBolum ? (
                   <Link href={`/oku/${slug}/${oncekiBolum.sayi}`} className="reader-nav-card">
@@ -1428,6 +1517,7 @@ export default function Okuyucu() {
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {ozelOkuyucuVar && okumaModu === 'scroll' && (
@@ -1442,6 +1532,7 @@ export default function Okuyucu() {
               </div>
             )}
 
+            {!tamEkranAktif && (
             <section className="reader-after">
               <div className="reader-panel">
                 <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '44px', color: '#fff', marginBottom: '12px', lineHeight: 0.95 }}>
@@ -1493,6 +1584,7 @@ export default function Okuyucu() {
                 </div>
               </aside>
             </section>
+            )}
           </div>
         </section>
       </main>

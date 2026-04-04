@@ -102,7 +102,7 @@ export default function YorumSistemi({ bolumId, seriId }) {
     }
   }
 
-  const YorumKarti = ({ yorum, girintili = false }) => {
+  const YorumKarti = ({ yorum, girintili = false, onSilindi = null, onGuncellendi = null }) => {
     const [cevaplar, setCevaplar] = useState([])
     const [cevapAcik, setCevapAcik] = useState(false)
     const [cevapMetni, setCevapMetni] = useState('')
@@ -148,8 +148,13 @@ export default function YorumSistemi({ bolumId, seriId }) {
 
       setIslemYapiliyor(false)
       if (!error) {
+        onGuncellendi?.(yorum.id, {
+          icerik: duzenlemeMetni.trim(),
+          spoiler: duzenlemeSpoiler,
+          updated_at: new Date().toISOString(),
+        })
         setDuzenlemeModu(false)
-        fetchYorumlar()
+        if (!onGuncellendi) fetchYorumlar()
       }
     }
 
@@ -168,7 +173,8 @@ export default function YorumSistemi({ bolumId, seriId }) {
 
       setIslemYapiliyor(false)
       if (!error) {
-        fetchYorumlar()
+        onSilindi?.(yorum.id)
+        if (!onSilindi) fetchYorumlar()
       }
     }
 
@@ -273,7 +279,15 @@ export default function YorumSistemi({ bolumId, seriId }) {
             {/* Cevaplar */}
             {cevapAcik && (
               <div style={{ marginTop: '12px' }}>
-                {cevaplar.map(c => <YorumKarti key={c.id} yorum={c} girintili={true} />)}
+                {cevaplar.map(c => (
+                  <YorumKarti
+                    key={c.id}
+                    yorum={c}
+                    girintili={true}
+                    onSilindi={(silinenId) => setCevaplar(current => current.filter(item => item.id !== silinenId))}
+                    onGuncellendi={(guncellenenId, patch) => setCevaplar(current => current.map(item => item.id === guncellenenId ? { ...item, ...patch } : item))}
+                  />
+                ))}
                 {kullanici && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <input value={cevapMetni} onChange={e => setCevapMetni(e.target.value)} placeholder="Yanıt yaz..." onKeyDown={e => e.key === 'Enter' && cevapGonder()} style={{ flex: 1, padding: '8px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }} />
@@ -339,7 +353,14 @@ export default function YorumSistemi({ bolumId, seriId }) {
         </div>
       ) : (
         <div>
-          {yorumlar.map(y => <YorumKarti key={y.id} yorum={y} />)}
+          {yorumlar.map(y => (
+            <YorumKarti
+              key={y.id}
+              yorum={y}
+              onSilindi={(silinenId) => setYorumlar(current => current.filter(item => item.id !== silinenId))}
+              onGuncellendi={(guncellenenId, patch) => setYorumlar(current => current.map(item => item.id === guncellenenId ? { ...item, ...patch } : item))}
+            />
+          ))}
         </div>
       )}
     </div>

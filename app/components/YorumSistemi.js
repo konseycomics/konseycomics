@@ -19,6 +19,11 @@ export default function YorumSistemi({ bolumId, seriId }) {
   const baslik = seriModu ? 'Seri Yorumlari' : 'Yorumlar'
   const placeholder = seriModu ? 'Bu seri hakkında ne düşünüyorsun?' : 'Bu bölüm hakkında ne düşünüyorsun?'
 
+  function formatTarihSaat(dateStr) {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+  }
+
   const fetchYorumlar = useCallback(async () => {
     const query = supabase
       .from('yorumlar')
@@ -102,6 +107,11 @@ export default function YorumSistemi({ bolumId, seriId }) {
     const [cevapAcik, setCevapAcik] = useState(false)
     const [cevapMetni, setCevapMetni] = useState('')
     const [spoilerAcik, setSpoilerAcik] = useState(false)
+    const [duzenlemeModu, setDuzenlemeModu] = useState(false)
+    const [duzenlemeMetni, setDuzenlemeMetni] = useState(yorum.icerik || '')
+    const [duzenlemeSpoiler, setDuzenlemeSpoiler] = useState(Boolean(yorum.spoiler))
+    const [islemYapiliyor, setIslemYapiliyor] = useState(false)
+    const yorumSahibi = kullanici?.id && yorum.kullanici_id === kullanici.id
 
     async function cevaplariGetir() {
       if (cevapAcik) { setCevapAcik(false); return }
@@ -123,7 +133,47 @@ export default function YorumSistemi({ bolumId, seriId }) {
       cevaplariGetir()
     }
 
-    const tarih = new Date(yorum.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+    async function yorumDuzenle() {
+      if (!yorumSahibi || !duzenlemeMetni.trim()) return
+      setIslemYapiliyor(true)
+      const { error } = await supabase
+        .from('yorumlar')
+        .update({
+          icerik: duzenlemeMetni.trim(),
+          spoiler: duzenlemeSpoiler,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', yorum.id)
+        .eq('kullanici_id', kullanici.id)
+
+      setIslemYapiliyor(false)
+      if (!error) {
+        setDuzenlemeModu(false)
+        fetchYorumlar()
+      }
+    }
+
+    async function yorumSil() {
+      if (!yorumSahibi) return
+      if (!window.confirm('Yorumunu silmek istediğine emin misin?')) return
+      setIslemYapiliyor(true)
+      const { error } = await supabase
+        .from('yorumlar')
+        .update({
+          silindi: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', yorum.id)
+        .eq('kullanici_id', kullanici.id)
+
+      setIslemYapiliyor(false)
+      if (!error) {
+        fetchYorumlar()
+      }
+    }
+
+    const tarih = formatTarihSaat(yorum.created_at)
+    const guncellemeVar = yorum.updated_at && yorum.created_at && new Date(yorum.updated_at).getTime() - new Date(yorum.created_at).getTime() > 1000
 
     return (
       <div style={{ marginLeft: girintili ? '40px' : 0, borderLeft: girintili ? '2px solid var(--border)' : 'none', paddingLeft: girintili ? '16px' : 0 }}>
@@ -145,6 +195,9 @@ export default function YorumSistemi({ bolumId, seriId }) {
               </Link>
               <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Sv.{yorum.profiller?.seviye || 1}</span>
               <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{tarih}</span>
+              {guncellemeVar && (
+                <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>• düzenlendi</span>
+              )}
               {yorum.spoiler && (
                 <span style={{ fontSize: '10px', padding: '2px 6px', background: '#fef3c7', color: '#92400e', borderRadius: '4px', fontWeight: 600 }}>SPOILER</span>
               )}
@@ -166,7 +219,28 @@ export default function YorumSistemi({ bolumId, seriId }) {
             )}
 
             {/* İçerik */}
-            {yorum.spoiler && !spoilerAcik ? (
+            {duzenlemeModu ? (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                <textarea
+                  value={duzenlemeMetni}
+                  onChange={(e) => setDuzenlemeMetni(e.target.value)}
+                  rows={3}
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <input type="checkbox" checked={duzenlemeSpoiler} onChange={(e) => setDuzenlemeSpoiler(e.target.checked)} />
+                  Spoiler içerik
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button onClick={yorumDuzenle} disabled={islemYapiliyor || !duzenlemeMetni.trim()} style={{ padding: '8px 14px', background: '#111', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {islemYapiliyor ? 'Kaydediliyor...' : 'Kaydet'}
+                  </button>
+                  <button onClick={() => { setDuzenlemeModu(false); setDuzenlemeMetni(yorum.icerik || ''); setDuzenlemeSpoiler(Boolean(yorum.spoiler)) }} style={{ padding: '8px 14px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Vazgeç
+                  </button>
+                </div>
+              </div>
+            ) : yorum.spoiler && !spoilerAcik ? (
               <div onClick={() => setSpoilerAcik(true)} style={{ cursor: 'pointer', padding: '8px 12px', background: '#111', borderRadius: '8px', fontSize: '13px', color: '#888', userSelect: 'none' }}>
                 👁 Spoiler içerik — görmek için tıkla
               </div>
@@ -183,6 +257,16 @@ export default function YorumSistemi({ bolumId, seriId }) {
                 <button onClick={cevaplariGetir} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'inherit', padding: 0 }}>
                   💬 Yanıtla
                 </button>
+              )}
+              {yorumSahibi && !duzenlemeModu && (
+                <>
+                  <button onClick={() => setDuzenlemeModu(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'inherit', padding: 0 }}>
+                    ✏️ Düzenle
+                  </button>
+                  <button onClick={yorumSil} disabled={islemYapiliyor} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#fca5a5', fontFamily: 'inherit', padding: 0 }}>
+                    🗑 Sil
+                  </button>
+                </>
               )}
             </div>
 

@@ -855,7 +855,7 @@ function IstatistikSayfasi() {
       supabase.from('seriler').select('baslik, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(5),
       supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik)').order('goruntuleme_sayisi', { ascending: false }).limit(5),
       supabase.from('profiller').select('created_at').gte('created_at', filtreTarih.toISOString()),
-      supabase.from('ziyaretler').select('created_at, oturum_id').gte('created_at', filtreTarih.toISOString()),
+      supabase.from('ziyaretler').select('created_at, oturum_id, ziyaretci_id, kullanici_id').gte('created_at', filtreTarih.toISOString()),
     ])
 
     setIstat({ seri: s.count||0, kullanici: u.count||0, yorum: y.count||0 })
@@ -879,7 +879,12 @@ function IstatistikSayfasi() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate()-i)
       const label = `${d.getDate()}/${d.getMonth()+1}`
-      const benzersiz = new Set(ziyaretler.data?.filter(z => { const zd = new Date(z.created_at); return zd.getDate()===d.getDate()&&zd.getMonth()===d.getMonth() }).map(z=>z.oturum_id))
+      const benzersiz = new Set(
+        ziyaretler.data
+          ?.filter(z => { const zd = new Date(z.created_at); return zd.getDate()===d.getDate()&&zd.getMonth()===d.getMonth() })
+          .map(z => z.kullanici_id || z.ziyaretci_id || z.oturum_id)
+          .filter(Boolean)
+      )
       zGunler.push({ etiket: label, deger: benzersiz.size })
     }
     setZiyaretGrafik(zGunler)

@@ -162,19 +162,23 @@ export default function YorumSistemi({ bolumId, seriId }) {
       if (!yorumSahibi) return
       if (!window.confirm('Yorumunu silmek istediğine emin misin?')) return
       setIslemYapiliyor(true)
-      const { error } = await supabase
-        .from('yorumlar')
-        .update({
-          silindi: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', yorum.id)
-        .eq('kullanici_id', kullanici.id)
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/comments/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ yorumId: yorum.id }),
+      })
+      const result = await response.json().catch(() => ({}))
 
       setIslemYapiliyor(false)
-      if (!error) {
+      if (response.ok) {
         onSilindi?.(yorum.id)
         if (!onSilindi) fetchYorumlar()
+      } else {
+        window.alert(result?.error || 'Yorum silinemedi.')
       }
     }
 

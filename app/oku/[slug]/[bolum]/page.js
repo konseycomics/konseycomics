@@ -795,7 +795,7 @@ export default function Okuyucu() {
             position: relative;
             overflow: hidden;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(248,244,236,0.99), rgba(232,224,210,0.99));
+            background: transparent;
             box-shadow:
               0 34px 64px rgba(0,0,0,0.4),
               inset 0 0 0 1px rgba(255,255,255,0.05);
@@ -823,14 +823,17 @@ export default function Okuyucu() {
             backface-visibility: hidden;
             overflow: hidden;
             background:
-              linear-gradient(180deg, rgba(245,239,228,0.99), rgba(225,216,200,0.99)),
+              linear-gradient(180deg, rgba(245,239,228,0.72), rgba(225,216,200,0.66)),
               radial-gradient(circle at top, rgba(255,255,255,0.26), transparent 58%);
+            opacity: 0.82;
           }
           .reader-flip-turn-back::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, rgba(0,0,0,0.14), transparent 22%, transparent 78%, rgba(0,0,0,0.12));
+            background:
+              linear-gradient(90deg, rgba(0,0,0,0.22), transparent 20%, transparent 80%, rgba(0,0,0,0.16)),
+              linear-gradient(180deg, rgba(255,255,255,0.18), transparent 28%, transparent 72%, rgba(0,0,0,0.08));
             pointer-events: none;
           }
           .reader-flip-turn-back img {
@@ -839,8 +842,8 @@ export default function Okuyucu() {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0.12;
-            filter: grayscale(1) sepia(0.35) brightness(1.05);
+            opacity: 0.08;
+            filter: grayscale(1) sepia(0.25) brightness(1.08);
             transform: scaleX(-1);
           }
           .reader-flip-page-number {

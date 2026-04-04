@@ -35,6 +35,7 @@ export default function Okuyucu() {
   const [iframeHata, setIframeHata] = useState(false)
   const [aktifSayfa, setAktifSayfa] = useState(1)
   const [okumaModu, setOkumaModu] = useState('scroll')
+  const [ciftSayfaAktif, setCiftSayfaAktif] = useState(false)
   const [tamEkranAktif, setTamEkranAktif] = useState(false)
   const [flipAnimasyonSinifi, setFlipAnimasyonSinifi] = useState('')
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
@@ -180,6 +181,18 @@ export default function Okuyucu() {
     }
   }, [])
 
+  useEffect(() => {
+    const medya = window.matchMedia('(min-width: 980px)')
+    const guncelle = () => setCiftSayfaAktif(medya.matches)
+
+    guncelle()
+    medya.addEventListener('change', guncelle)
+
+    return () => {
+      medya.removeEventListener('change', guncelle)
+    }
+  }, [])
+
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
   const siradakiBolum = tumBolumler.find(item => item.sayi > mevcutSayi)
@@ -194,6 +207,22 @@ export default function Okuyucu() {
   const gorunenSayfalar = ozelOkuyucuVar ? okumaSayfalari.slice(0, gorunenSayfaSayisi) : []
   const aktifSayfaIndex = Math.max(0, Math.min(Math.max(toplamSayfa, 1) - 1, aktifSayfa - 1))
   const aktifSayfaUrl = ozelOkuyucuVar ? okumaSayfalari[aktifSayfaIndex] : null
+  const masaustuCizgiRomanModu = okumaModu === 'flip' && ciftSayfaAktif
+  const aktifYayilimBaslangici = masaustuCizgiRomanModu
+    ? (aktifSayfa <= 1 ? 1 : (aktifSayfa % 2 === 0 ? aktifSayfa : aktifSayfa - 1))
+    : aktifSayfa
+  const aktifYayilimSayfalari = masaustuCizgiRomanModu
+    ? (aktifYayilimBaslangici === 1
+      ? [{ number: 1, url: okumaSayfalari[0] }]
+      : [aktifYayilimBaslangici, aktifYayilimBaslangici + 1]
+          .filter(pageNumber => pageNumber <= toplamSayfa)
+          .map(pageNumber => ({ number: pageNumber, url: okumaSayfalari[pageNumber - 1] })))
+    : (aktifSayfaUrl ? [{ number: aktifSayfa, url: aktifSayfaUrl }] : [])
+  const aktifYayilimEtiketi = masaustuCizgiRomanModu
+    ? (aktifYayilimSayfalari.length > 1
+      ? `${aktifYayilimSayfalari[0].number}-${aktifYayilimSayfalari[aktifYayilimSayfalari.length - 1].number}`
+      : `${aktifYayilimSayfalari[0]?.number || 1}`)
+    : `${aktifSayfa}`
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
 
@@ -216,7 +245,14 @@ export default function Okuyucu() {
 
   function sonrakiSayfayaGit() {
     if (!ozelOkuyucuVar) return
-    if (aktifSayfa < toplamSayfa) {
+    if (masaustuCizgiRomanModu) {
+      const sonrakiYayilim = aktifYayilimBaslangici === 1 ? 2 : aktifYayilimBaslangici + 2
+      if (sonrakiYayilim <= toplamSayfa) {
+        flipAnimasyonBaslat('next')
+        flipSayfaGuncelle(sonrakiYayilim)
+        return
+      }
+    } else if (aktifSayfa < toplamSayfa) {
       flipAnimasyonBaslat('next')
       flipSayfaGuncelle(aktifSayfa + 1)
       return
@@ -226,7 +262,13 @@ export default function Okuyucu() {
 
   function oncekiSayfayaGit() {
     if (!ozelOkuyucuVar) return
-    if (aktifSayfa > 1) {
+    if (masaustuCizgiRomanModu) {
+      if (aktifYayilimBaslangici > 1) {
+        flipAnimasyonBaslat('prev')
+        flipSayfaGuncelle(aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2)
+        return
+      }
+    } else if (aktifSayfa > 1) {
       flipAnimasyonBaslat('prev')
       flipSayfaGuncelle(aktifSayfa - 1)
       return
@@ -284,7 +326,7 @@ export default function Okuyucu() {
       if (okumaModu === 'flip' && ozelOkuyucuVar) oncekiSayfayaGit()
       else if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
     }
-  }, [okumaModu, ozelOkuyucuVar, aktifSayfa, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
+  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfa, aktifYayilimBaslangici, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
@@ -342,14 +384,24 @@ export default function Okuyucu() {
   useEffect(() => {
     if (!ozelOkuyucuVar || okumaModu !== 'flip') return
 
-    ;[aktifSayfaUrl, okumaSayfalari[aktifSayfaIndex + 1], okumaSayfalari[aktifSayfaIndex - 1]]
+    const preloadKaynaklari = masaustuCizgiRomanModu
+      ? [
+          ...aktifYayilimSayfalari.map(item => item.url),
+          okumaSayfalari[aktifYayilimBaslangici + 1],
+          okumaSayfalari[aktifYayilimBaslangici + 2],
+          okumaSayfalari[Math.max(0, aktifYayilimBaslangici - 3)],
+          okumaSayfalari[Math.max(0, aktifYayilimBaslangici - 2)],
+        ]
+      : [aktifSayfaUrl, okumaSayfalari[aktifSayfaIndex + 1], okumaSayfalari[aktifSayfaIndex - 1]]
+
+    ;preloadKaynaklari
       .filter(Boolean)
       .forEach((src) => {
         const img = new window.Image()
         img.decoding = 'async'
         img.src = src
       })
-  }, [okumaModu, ozelOkuyucuVar, aktifSayfaIndex, aktifSayfaUrl, okumaSayfalari])
+  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfaIndex, aktifSayfaUrl, aktifYayilimBaslangici, aktifYayilimSayfalari, okumaSayfalari])
 
   if (loading) {
     return (
@@ -557,15 +609,51 @@ export default function Okuyucu() {
             cursor: not-allowed;
           }
           .reader-flip-stage {
-            width: min(100%, 980px);
+            width: min(100%, 1180px);
             margin: 0 auto;
-            padding: 18px;
-            border-radius: 24px;
+            padding: 22px;
+            border-radius: 28px;
             background:
               linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
               radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 42%);
             border: 1px solid rgba(255,255,255,0.08);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+          }
+          .reader-flip-book {
+            position: relative;
+            padding: 18px;
+            border-radius: 22px;
+            background:
+              linear-gradient(180deg, rgba(18,18,18,0.96), rgba(8,8,8,0.98)),
+              radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 48%);
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.04),
+              0 28px 60px rgba(0,0,0,0.32);
+          }
+          .reader-flip-book.is-spread::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            bottom: 20px;
+            left: 50%;
+            width: 22px;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            background:
+              linear-gradient(90deg, rgba(0,0,0,0.65), rgba(255,255,255,0.08), rgba(0,0,0,0.65));
+            opacity: 0.65;
+            pointer-events: none;
+            z-index: 2;
+          }
+          .reader-flip-spread {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            align-items: stretch;
+          }
+          .reader-flip-spread.is-single {
+            grid-template-columns: minmax(0, 1fr);
+            justify-items: center;
           }
           .reader-flip-stage.is-next .reader-flip-page img {
             animation: readerFlipNext 280ms ease;
@@ -577,10 +665,21 @@ export default function Okuyucu() {
             position: relative;
             overflow: hidden;
             border-radius: 18px;
-            background: linear-gradient(180deg, rgba(14,14,14,0.9), rgba(6,6,6,0.98));
+            background:
+              linear-gradient(180deg, rgba(255,255,255,0.96), rgba(228,224,216,0.96)),
+              linear-gradient(180deg, rgba(14,14,14,0.9), rgba(6,6,6,0.98));
             box-shadow:
               0 28px 54px rgba(0,0,0,0.34),
               inset 0 0 0 1px rgba(255,255,255,0.04);
+          }
+          .reader-flip-page.is-left {
+            transform-origin: right center;
+          }
+          .reader-flip-page.is-right {
+            transform-origin: left center;
+          }
+          .reader-flip-page.is-cover {
+            width: min(100%, 560px);
           }
           .reader-flip-page::after {
             content: '';
@@ -593,10 +692,46 @@ export default function Okuyucu() {
             opacity: 0.42;
             pointer-events: none;
           }
+          .reader-flip-page.is-left::before,
+          .reader-flip-page.is-right::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 28px;
+            pointer-events: none;
+            z-index: 1;
+          }
+          .reader-flip-page.is-left::before {
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.18));
+          }
+          .reader-flip-page.is-right::before {
+            left: 0;
+            background: linear-gradient(90deg, rgba(0,0,0,0.18), transparent);
+          }
           .reader-flip-page img {
             display: block;
             width: 100%;
             height: auto;
+          }
+          .reader-flip-page-number {
+            position: absolute;
+            bottom: 12px;
+            right: 14px;
+            z-index: 2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 26px;
+            padding: 0 10px;
+            border-radius: 999px;
+            background: rgba(8,8,8,0.66);
+            color: rgba(255,255,255,0.88);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
           }
           .reader-flip-caption {
             display: flex;
@@ -823,6 +958,19 @@ export default function Okuyucu() {
               padding: 10px;
               border-radius: 16px;
             }
+            .reader-flip-book {
+              padding: 10px;
+            }
+            .reader-flip-book.is-spread::before {
+              display: none;
+            }
+            .reader-flip-spread {
+              grid-template-columns: 1fr;
+              gap: 10px;
+            }
+            .reader-flip-page.is-cover {
+              width: 100%;
+            }
             .reader-flip-caption {
               flex-direction: column;
               align-items: flex-start;
@@ -956,23 +1104,31 @@ export default function Okuyucu() {
                       </button>
                       <div className={`reader-flip-stage ${flipAnimasyonSinifi}`}>
                         <div
-                          className="reader-flip-page"
+                          className={`reader-flip-book ${masaustuCizgiRomanModu && aktifYayilimSayfalari.length > 1 ? 'is-spread' : ''}`}
                           onTouchStart={handleFlipTouchStart}
                           onTouchEnd={handleFlipTouchEnd}
                         >
-                          {aktifSayfaUrl && (
-                            <img
-                              src={aktifSayfaUrl}
-                              alt={`${bolumData.baslik} sayfa ${aktifSayfa}`}
-                              loading="eager"
-                              decoding="async"
-                              fetchPriority="high"
-                            />
-                          )}
+                          <div className={`reader-flip-spread ${aktifYayilimSayfalari.length === 1 ? 'is-single' : ''}`}>
+                            {aktifYayilimSayfalari.map((sayfa, index) => (
+                              <div
+                                key={`${sayfa.url}-${sayfa.number}`}
+                                className={`reader-flip-page ${aktifYayilimSayfalari.length === 1 ? 'is-cover' : index === 0 ? 'is-left' : 'is-right'}`}
+                              >
+                                <img
+                                  src={sayfa.url}
+                                  alt={`${bolumData.baslik} sayfa ${sayfa.number}`}
+                                  loading="eager"
+                                  decoding="async"
+                                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                                />
+                                <span className="reader-flip-page-number">{sayfa.number}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <div className="reader-flip-caption">
-                          <span>Sayfa {aktifSayfa} / {toplamSayfa}</span>
-                          <span>Oklarla, kaydırarak veya butonlarla gezebilirsin.</span>
+                          <span>Sayfa {aktifYayilimEtiketi} / {toplamSayfa}</span>
+                          <span>{masaustuCizgiRomanModu ? 'Çift sayfa spread görünümü aktif.' : 'Oklarla, kaydırarak veya butonlarla gezebilirsin.'}</span>
                         </div>
                         <div className="reader-flip-mobile-controls">
                           <button

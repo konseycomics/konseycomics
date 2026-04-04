@@ -34,6 +34,7 @@ export default function Okuyucu() {
   const [loading, setLoading] = useState(true)
   const [iframeHata, setIframeHata] = useState(false)
   const [aktifSayfa, setAktifSayfa] = useState(1)
+  const [okumaModu, setOkumaModu] = useState('scroll')
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
@@ -152,6 +153,7 @@ export default function Okuyucu() {
 
   useEffect(() => {
     setAktifSayfa(1)
+    setOkumaModu('scroll')
     setGorunenSayfaSayisi(INITIAL_VISIBLE_PAGE_COUNT)
     sayfaRefleri.current = []
   }, [bolumData?.id])
@@ -168,13 +170,44 @@ export default function Okuyucu() {
   const ozelOkuyucuVar = okumaSayfalari.length > 0
   const toplamSayfa = ozelOkuyucuVar ? okumaSayfalari.length : 0
   const gorunenSayfalar = ozelOkuyucuVar ? okumaSayfalari.slice(0, gorunenSayfaSayisi) : []
+  const aktifSayfaIndex = Math.max(0, Math.min(Math.max(toplamSayfa, 1) - 1, aktifSayfa - 1))
+  const aktifSayfaUrl = ozelOkuyucuVar ? okumaSayfalari[aktifSayfaIndex] : null
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
 
+  function flipSayfaGuncelle(yeniSayfa) {
+    if (!toplamSayfa) return
+    setAktifSayfa(Math.max(1, Math.min(toplamSayfa, yeniSayfa)))
+  }
+
+  function sonrakiSayfayaGit() {
+    if (!ozelOkuyucuVar) return
+    if (aktifSayfa < toplamSayfa) {
+      flipSayfaGuncelle(aktifSayfa + 1)
+      return
+    }
+    if (siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
+  }
+
+  function oncekiSayfayaGit() {
+    if (!ozelOkuyucuVar) return
+    if (aktifSayfa > 1) {
+      flipSayfaGuncelle(aktifSayfa - 1)
+      return
+    }
+    if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
+  }
+
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'ArrowRight' && siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
-    if (e.key === 'ArrowLeft' && oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
-  }, [siradakiBolum, oncekiBolum, slug, router])
+    if (e.key === 'ArrowRight') {
+      if (okumaModu === 'flip' && ozelOkuyucuVar) sonrakiSayfayaGit()
+      else if (siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
+    }
+    if (e.key === 'ArrowLeft') {
+      if (okumaModu === 'flip' && ozelOkuyucuVar) oncekiSayfayaGit()
+      else if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
+    }
+  }, [okumaModu, ozelOkuyucuVar, aktifSayfa, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown)
@@ -228,6 +261,18 @@ export default function Okuyucu() {
 
     setGorunenSayfaSayisi(prev => Math.min(prev + PAGE_BATCH_SIZE, okumaSayfalari.length))
   }, [aktifSayfa, gorunenSayfaSayisi, okumaSayfalari.length, ozelOkuyucuVar])
+
+  useEffect(() => {
+    if (!ozelOkuyucuVar || okumaModu !== 'flip') return
+
+    ;[aktifSayfaUrl, okumaSayfalari[aktifSayfaIndex + 1], okumaSayfalari[aktifSayfaIndex - 1]]
+      .filter(Boolean)
+      .forEach((src) => {
+        const img = new window.Image()
+        img.decoding = 'async'
+        img.src = src
+      })
+  }, [okumaModu, ozelOkuyucuVar, aktifSayfaIndex, aktifSayfaUrl, okumaSayfalari])
 
   if (loading) {
     return (
@@ -377,6 +422,108 @@ export default function Okuyucu() {
             gap: 24px;
             padding: 22px 0 10px;
           }
+          .reader-mode-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+          }
+          .reader-mode-toggle button {
+            min-height: 36px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.58);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+          }
+          .reader-mode-toggle button.is-active {
+            background: #fff;
+            color: #111;
+          }
+          .reader-flip-shell {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 0 6px;
+          }
+          .reader-flip-nav {
+            width: 54px;
+            height: 54px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+          }
+          .reader-flip-nav:hover:not(:disabled) {
+            transform: translateY(-1px);
+            background: rgba(255,255,255,0.1);
+          }
+          .reader-flip-nav:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+          }
+          .reader-flip-stage {
+            width: min(100%, 980px);
+            margin: 0 auto;
+            padding: 18px;
+            border-radius: 24px;
+            background:
+              linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+              radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 42%);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+          }
+          .reader-flip-page {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(14,14,14,0.9), rgba(6,6,6,0.98));
+            box-shadow:
+              0 28px 54px rgba(0,0,0,0.34),
+              inset 0 0 0 1px rgba(255,255,255,0.04);
+          }
+          .reader-flip-page::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 18px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.1));
+            opacity: 0.42;
+            pointer-events: none;
+          }
+          .reader-flip-page img {
+            display: block;
+            width: 100%;
+            height: auto;
+          }
+          .reader-flip-caption {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 14px;
+            color: rgba(255,255,255,0.62);
+            font-size: 12px;
+          }
           .reader-load-note {
             width: min(100%, 980px);
             margin: 0 auto;
@@ -512,8 +659,29 @@ export default function Okuyucu() {
               width: 100%;
               justify-content: center;
             }
+            .reader-mode-toggle {
+              width: 100%;
+              justify-content: space-between;
+            }
+            .reader-mode-toggle button {
+              flex: 1;
+            }
             .reader-stage {
               padding: 10px 8px 18px;
+            }
+            .reader-flip-shell {
+              grid-template-columns: 1fr;
+            }
+            .reader-flip-nav {
+              display: none;
+            }
+            .reader-flip-stage {
+              padding: 10px;
+              border-radius: 16px;
+            }
+            .reader-flip-caption {
+              flex-direction: column;
+              align-items: flex-start;
             }
             .reader-floating-progress {
               left: 12px;
@@ -601,6 +769,16 @@ export default function Okuyucu() {
                     Indir
                   </a>
                 )}
+                {ozelOkuyucuVar && (
+                  <div className="reader-mode-toggle">
+                    <button type="button" className={okumaModu === 'scroll' ? 'is-active' : ''} onClick={() => setOkumaModu('scroll')}>
+                      Dikey Oku
+                    </button>
+                    <button type="button" className={okumaModu === 'flip' ? 'is-active' : ''} onClick={() => setOkumaModu('flip')}>
+                      Sayfa Çevir
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -612,33 +790,75 @@ export default function Okuyucu() {
 
             <div className="reader-frame">
               {ozelOkuyucuVar ? (
-                <div className="reader-stage" ref={stageRef}>
-                  <div className="reader-pages">
-                    {gorunenSayfalar.map((sayfaUrl, index) => (
-                      <div
-                        key={`${sayfaUrl}-${index}`}
-                        className="reader-page"
-                        ref={(node) => { sayfaRefleri.current[index] = node }}
-                        data-page-index={index}
+                okumaModu === 'flip' ? (
+                  <div className="reader-stage">
+                    <div className="reader-flip-shell">
+                      <button
+                        type="button"
+                        className="reader-flip-nav"
+                        onClick={oncekiSayfayaGit}
+                        disabled={aktifSayfa === 1 && !oncekiBolum}
+                        aria-label="Önceki sayfa"
                       >
-                        <div className="reader-page-inner">
-                          <img
-                            src={sayfaUrl}
-                            alt={`${bolumData.baslik} sayfa ${index + 1}`}
-                            loading={index < 2 ? 'eager' : 'lazy'}
-                            decoding="async"
-                            fetchPriority={index === 0 ? 'high' : 'auto'}
-                          />
+                        ←
+                      </button>
+                      <div className="reader-flip-stage">
+                        <div className="reader-flip-page">
+                          {aktifSayfaUrl && (
+                            <img
+                              src={aktifSayfaUrl}
+                              alt={`${bolumData.baslik} sayfa ${aktifSayfa}`}
+                              loading="eager"
+                              decoding="async"
+                              fetchPriority="high"
+                            />
+                          )}
+                        </div>
+                        <div className="reader-flip-caption">
+                          <span>Sayfa {aktifSayfa} / {toplamSayfa}</span>
+                          <span>Oklarla gezebilir, bölüm sonunda sonraki bölüme geçebilirsin.</span>
                         </div>
                       </div>
-                    ))}
-                    {gorunenSayfaSayisi < okumaSayfalari.length && (
-                      <div className="reader-load-note">
-                        Sonraki sayfalar ilerledikçe otomatik yüklenir. Şu an {gorunenSayfaSayisi} / {okumaSayfalari.length} sayfa hazır.
-                      </div>
-                    )}
+                      <button
+                        type="button"
+                        className="reader-flip-nav"
+                        onClick={sonrakiSayfayaGit}
+                        disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
+                        aria-label="Sonraki sayfa"
+                      >
+                        →
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="reader-stage" ref={stageRef}>
+                    <div className="reader-pages">
+                      {gorunenSayfalar.map((sayfaUrl, index) => (
+                        <div
+                          key={`${sayfaUrl}-${index}`}
+                          className="reader-page"
+                          ref={(node) => { sayfaRefleri.current[index] = node }}
+                          data-page-index={index}
+                        >
+                          <div className="reader-page-inner">
+                            <img
+                              src={sayfaUrl}
+                              alt={`${bolumData.baslik} sayfa ${index + 1}`}
+                              loading={index < 2 ? 'eager' : 'lazy'}
+                              decoding="async"
+                              fetchPriority={index === 0 ? 'high' : 'auto'}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {gorunenSayfaSayisi < okumaSayfalari.length && (
+                        <div className="reader-load-note">
+                          Sonraki sayfalar ilerledikçe otomatik yüklenir. Şu an {gorunenSayfaSayisi} / {okumaSayfalari.length} sayfa hazır.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
               ) : embedUrl && !iframeHata ? (
                 <div className="reader-stage">
                   <iframe
@@ -715,7 +935,7 @@ export default function Okuyucu() {
               </div>
             </div>
 
-            {ozelOkuyucuVar && (
+            {ozelOkuyucuVar && okumaModu === 'scroll' && (
               <div className={`reader-floating-progress ${progressGorunsun ? 'is-visible' : ''}`} aria-hidden="true">
                 <div className="reader-floating-progress-pill">
                   <span>Sayfa {gosterilenAktifSayfa} / {toplamSayfa}</span>

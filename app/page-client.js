@@ -140,7 +140,7 @@ function SeriKart({ seri }) {
           overflow: 'hidden', marginBottom: '10px', background: '#111',
         }}>
           {seri.kapak_url
-            ? <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="(max-width: 640px) 50vw, (max-width: 960px) 33vw, 25vw" style={{ objectFit: 'cover', transition: 'transform 0.3s', transform: hover ? 'scale(1.04)' : 'scale(1)' }} />
+            ? <img src={seri.kapak_url} alt={seri.baslik} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', transform: hover ? 'scale(1.04)' : 'scale(1)' }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '16px', color: '#fff', padding: '12px', textAlign: 'center', lineHeight: 1.2 }}>{seri.baslik}</div>
           }
           {seri.one_cikan && (
@@ -193,7 +193,7 @@ function PopulerSeriKart({ seri, sira }) {
           boxShadow: hover ? '0 18px 34px rgba(0,0,0,0.14)' : '0 10px 24px rgba(0,0,0,0.08)'
         }}>
           {seri.kapak_url
-            ? <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="(max-width: 640px) 50vw, (max-width: 960px) 33vw, 20vw" style={{ objectFit: 'cover', transform: hover ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.3s ease' }} />
+            ? <img src={seri.kapak_url} alt={seri.baslik} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hover ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.3s ease' }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '22px', color: '#fff', textAlign: 'center', padding: '16px' }}>{seri.baslik}</div>
           }
 
@@ -271,7 +271,7 @@ function BolumKart({ bolum }) {
           overflow: 'hidden', marginBottom: '8px', background: '#111'
         }}>
           {cover
-            ? <Image src={cover} alt={seri.baslik} fill sizes="(max-width: 640px) 50vw, (max-width: 960px) 33vw, 20vw" style={{ objectFit: 'cover', transition: 'transform 0.3s', transform: hover ? 'scale(1.05)' : 'scale(1)' }} />
+            ? <img src={cover} alt={seri.baslik} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s', transform: hover ? 'scale(1.05)' : 'scale(1)' }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: '11px', color: '#666', textAlign: 'center', padding: '8px' }}>{seri.baslik}</span>
               </div>
@@ -845,7 +845,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
                               background: '#161616',
                             }}>
                               {seri.kapak_url ? (
-                                <Image src={seri.kapak_url} alt={seri.baslik} fill sizes="56px" style={{ objectFit: 'cover' }} />
+                                <img src={seri.kapak_url} alt={seri.baslik} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '10px', textAlign: 'center', padding: '6px' }}>
                                   {seri.baslik}
@@ -905,12 +905,11 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
             minHeight: '100%',
           }}>
             {bugunOnerisi?.kapak_url && (
-              <Image
+              <img
                 src={bugunOnerisi.kapak_url}
                 alt={bugunOnerisi.baslik}
-                fill
-                sizes="(max-width: 960px) 100vw, 360px"
-                style={{ objectFit: 'cover', opacity: 0.24 }}
+                loading="lazy"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.24 }}
               />
             )}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.88) 100%)' }} />

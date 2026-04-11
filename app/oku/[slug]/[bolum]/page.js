@@ -1304,12 +1304,14 @@ export default function Okuyucu() {
                   </select>
                 </div>
                 {pdfIndirmeLink && (
-                  <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: '#fff', border: '1px solid rgba(255,255,255,0.18)', color: '#111', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                  <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px 18px', borderRadius: '14px', background: 'linear-gradient(180deg, #ff5a1f 0%, #ff3d00 100%)', border: '1px solid rgba(255,122,69,0.55)', boxShadow: '0 10px 24px rgba(255,61,0,0.24)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                    <span aria-hidden="true">⬇</span>
                     PDF İndir
                   </a>
                 )}
                 {cbrIndirmeLink && (
-                  <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+                  <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px 18px', borderRadius: '14px', background: 'linear-gradient(180deg, #2b7cff 0%, #1d4ed8 100%)', border: '1px solid rgba(96,165,250,0.45)', boxShadow: '0 10px 24px rgba(37,99,235,0.24)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                    <span aria-hidden="true">⬇</span>
                     CBR İndir
                   </a>
                 )}
@@ -1508,12 +1510,14 @@ export default function Okuyucu() {
                   </div>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {pdfIndirmeLink && (
-                      <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: '#fff', color: '#111', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                      <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 18px', background: 'linear-gradient(180deg, #ff5a1f 0%, #ff3d00 100%)', border: '1px solid rgba(255,122,69,0.55)', boxShadow: '0 10px 24px rgba(255,61,0,0.24)', color: '#fff', borderRadius: '14px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                        <span aria-hidden="true">⬇</span>
                         PDF İndir
                       </a>
                     )}
                     {cbrIndirmeLink && (
-                      <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                      <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 18px', background: 'linear-gradient(180deg, #2b7cff 0%, #1d4ed8 100%)', border: '1px solid rgba(96,165,250,0.45)', boxShadow: '0 10px 24px rgba(37,99,235,0.24)', color: '#fff', borderRadius: '14px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                        <span aria-hidden="true">⬇</span>
                         CBR İndir
                       </a>
                     )}

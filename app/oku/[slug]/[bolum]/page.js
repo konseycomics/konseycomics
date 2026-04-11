@@ -270,6 +270,8 @@ export default function Okuyucu() {
 
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
+  const pdfIndirmeLink = bolumData?.pdf_indirme_link || bolumData?.indirme_link || ''
+  const cbrIndirmeLink = bolumData?.cbr_indirme_link || ''
   const siradakiBolum = tumBolumler.find(item => item.sayi > mevcutSayi)
   const oncekiBolum = [...tumBolumler].reverse().find(item => item.sayi < mevcutSayi)
   const mevcutIndex = tumBolumler.findIndex(item => item.sayi === mevcutSayi)
@@ -1301,9 +1303,14 @@ export default function Okuyucu() {
                     ))}
                   </select>
                 </div>
-                {bolumData.indirme_link && (
-                  <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
-                    Indir
+                {pdfIndirmeLink && (
+                  <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: '#fff', border: '1px solid rgba(255,255,255,0.18)', color: '#111', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                    PDF İndir
+                  </a>
+                )}
+                {cbrIndirmeLink && (
+                  <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '11px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '13px', fontWeight: 700 }}>
+                    CBR İndir
                   </a>
                 )}
                 {ozelOkuyucuVar && (
@@ -1500,9 +1507,14 @@ export default function Okuyucu() {
                       : 'Bu bolum icin henuz sayfa gorselleri ya da okuyucu icerigi eklenmemis.'}
                   </div>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {bolumData.indirme_link && (
-                      <a href={bolumData.indirme_link} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: '#fff', color: '#111', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
-                        Indir
+                    {pdfIndirmeLink && (
+                      <a href={pdfIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: '#fff', color: '#111', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                        PDF İndir
+                      </a>
+                    )}
+                    {cbrIndirmeLink && (
+                      <a href={cbrIndirmeLink} target="_blank" rel="noreferrer" onClick={handleDownloadClick} style={{ padding: '12px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '12px', textDecoration: 'none', fontSize: '13px', fontWeight: 800 }}>
+                        CBR İndir
                       </a>
                     )}
                     {bolumData.drive_link && (

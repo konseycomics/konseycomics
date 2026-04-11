@@ -1441,7 +1441,7 @@ function BolumlerSayfasi() {
   const [seriFiltre, setSeriFiltre] = useState('tumu')
   const [aramaMetni, setAramaMetni] = useState('')
   const [sayfaFiltre, setSayfaFiltre] = useState('tumu')
-  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'', sayfa_gorselleri:[] }
+  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',pdf_indirme_link:'',cbr_indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'', sayfa_gorselleri:[] }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
@@ -1475,7 +1475,20 @@ function BolumlerSayfasi() {
   async function kaydet() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     setYukleniyor(true)
-    const payload = { seri_id:form.seri_id, sayi:parseInt(form.sayi), baslik:form.baslik, kapak_url:form.kapak_url, drive_link:form.drive_link, indirme_link:form.indirme_link, cevirmen_id:form.cevirmen_id||null, balonlama_id:form.balonlama_id||null, grafik_id:form.grafik_id||null }
+    const pdfLink = form.pdf_indirme_link || form.indirme_link || null
+    const payload = {
+      seri_id:form.seri_id,
+      sayi:parseInt(form.sayi),
+      baslik:form.baslik,
+      kapak_url:form.kapak_url,
+      drive_link:form.drive_link,
+      indirme_link:pdfLink,
+      pdf_indirme_link:pdfLink,
+      cbr_indirme_link:form.cbr_indirme_link || null,
+      cevirmen_id:form.cevirmen_id||null,
+      balonlama_id:form.balonlama_id||null,
+      grafik_id:form.grafik_id||null
+    }
     let bolumId = duzenleId
     if (duzenleId) await supabase.from('bolumler').update(payload).eq('id',duzenleId)
     else {
@@ -1522,7 +1535,16 @@ function BolumlerSayfasi() {
         </div>
       </div>
       <div style={{ marginBottom:'12px' }}><div style={LB}>Drive Linki</div><input value={form.drive_link} onChange={e=>setForm(f=>({...f,drive_link:e.target.value}))} style={I} placeholder="https://drive.google.com/..." /></div>
-      <div style={{ marginBottom:'12px' }}><div style={LB}>İndirme Linki</div><input value={form.indirme_link} onChange={e=>setForm(f=>({...f,indirme_link:e.target.value}))} style={I} /></div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'12px' }}>
+        <div>
+          <div style={LB}>PDF İndirme Linki</div>
+          <input value={form.pdf_indirme_link || form.indirme_link || ''} onChange={e=>setForm(f=>({...f,pdf_indirme_link:e.target.value,indirme_link:e.target.value}))} style={I} placeholder="https://..." />
+        </div>
+        <div>
+          <div style={LB}>CBR İndirme Linki</div>
+          <input value={form.cbr_indirme_link || ''} onChange={e=>setForm(f=>({...f,cbr_indirme_link:e.target.value}))} style={I} placeholder="https://..." />
+        </div>
+      </div>
       <div style={{ ...CARD_INNER, padding:'16px', marginBottom:'16px' }}>
         <div style={{ fontSize:'13px', fontWeight:600, marginBottom:'14px' }}>Okuyucu Sayfalari</div>
         <CokluResimYukle gorseller={form.sayfa_gorselleri || []} onChange={(liste) => setForm(f => ({ ...f, sayfa_gorselleri: liste }))} />

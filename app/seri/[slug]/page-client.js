@@ -423,7 +423,7 @@ export default function SeriDetay() {
                   </div>
                   <div className="seri-stat-item">
                     <span style={{ opacity: 0.8 }}>◉</span>
-                    <span>{Number(seri.goruntuleme_sayisi || 0) > 0 ? `${formatCount(seri.goruntuleme_sayisi)} görüntülenme` : 'Yeni seri'}</span>
+                    <span>{formatCount(seri.goruntuleme_sayisi || 0)} görüntülenme</span>
                   </div>
                   <div className="seri-stat-item">
                     <span style={{ opacity: 0.8 }}>↻</span>

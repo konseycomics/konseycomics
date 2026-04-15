@@ -159,17 +159,30 @@ export default function Okuyucu() {
   }, [slug, bolum])
 
   useEffect(() => {
-    if (!bolumData?.id) return
+    if (!bolumData?.id || !seriData?.id) return
 
     let cancelled = false
     const timer = window.setTimeout(async () => {
       if (cancelled) return
-      if (!shouldTrackContentView('bolum', bolumData.id)) return
-
       try {
-        await supabase.rpc('increment_bolum_goruntuleme', { bolum_id: bolumData.id })
+        const isNewBolumView = shouldTrackContentView('bolum', bolumData.id)
+        const isNewSeriView = shouldTrackContentView('seri', seriData.id)
+
+        if (!isNewBolumView && !isNewSeriView) return
+
+        const tasks = []
+
+        if (isNewBolumView) {
+          tasks.push(supabase.rpc('increment_bolum_goruntuleme', { bolum_id: bolumData.id }))
+        }
+
+        if (isNewSeriView) {
+          tasks.push(supabase.rpc('increment_seri_goruntuleme', { seri_id: seriData.id }))
+        }
+
+        await Promise.all(tasks)
       } catch (error) {
-        console.warn('Bolum goruntuleme sayisi guncellenemedi:', error?.message || error)
+        console.warn('Bolum/seri goruntuleme sayisi guncellenemedi:', error?.message || error)
       }
     }, 8000)
 
@@ -177,7 +190,7 @@ export default function Okuyucu() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [bolumData?.id])
+  }, [bolumData?.id, seriData?.id])
 
   useEffect(() => {
     if (!bolumData?.id || !seriData?.id) return

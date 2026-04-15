@@ -6,6 +6,7 @@ import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import Footer from './components/Footer'
 import Link from 'next/link'
+import { isRecentlyAddedSeries } from './lib/seriesBadges'
 
 const SERI_TURLERI = [
   {
@@ -169,6 +170,7 @@ function SeriKart({ seri }) {
 function PopulerSeriKart({ seri, sira }) {
   const [hover, setHover] = useState(false)
   const rating = Number(seri.ortalama_puan || 0)
+  const yeniSeri = isRecentlyAddedSeries(seri.created_at)
   const statusColor = seri.durum === 'Devam Eden'
     ? '#16a34a'
     : seri.durum === 'Tamamlandı'
@@ -206,9 +208,11 @@ function PopulerSeriKart({ seri, sira }) {
           </div>
 
           <div style={{ position: 'absolute', right: '10px', bottom: '10px', left: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
-              {Number(seri.goruntuleme_sayisi || 0) > 0 ? `${formatCount(seri.goruntuleme_sayisi)} görüntülenme` : 'Yeni seri'}
-            </span>
+            {yeniSeri && (
+              <span style={{ background: 'rgba(255,92,32,0.92)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                Yeni Seri
+              </span>
+            )}
             <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
               {rating > 0 ? `${rating.toFixed(1)}/10` : 'Puansız'}
             </span>
@@ -956,9 +960,11 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {} })
                 <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   {bugunOnerisi?.kategoriler?.isim || 'Arşiv'}
                 </span>
-                <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  {Number(bugunOnerisi?.goruntuleme_sayisi || 0) > 0 ? `${formatCount(bugunOnerisi?.goruntuleme_sayisi || 0)} görüntülenme` : 'Yeni seri'}
-                </span>
+                {isRecentlyAddedSeries(bugunOnerisi?.created_at) && (
+                  <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,92,32,0.92)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                    Yeni Seri
+                  </span>
+                )}
                 {bugunOnerisi?.durum && (
                   <span style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '10px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                     {bugunOnerisi.durum}

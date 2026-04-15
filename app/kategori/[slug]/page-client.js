@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
+import { isRecentlyAddedSeries } from '../../lib/seriesBadges'
 
 const KATEGORI_AYARLARI = {
   'cizgi-roman': {
@@ -61,6 +62,7 @@ function seriEvreni(seri) {
 function SeriKarti({ seri }) {
   const rating = Number(seri.ortalama_puan || 0)
   const fullStars = Math.round(rating / 2)
+  const yeniSeri = isRecentlyAddedSeries(seri.created_at)
 
   return (
     <Link href={`/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
@@ -79,7 +81,7 @@ function SeriKarti({ seri }) {
           </div>
 
           <div className="series-card-bottomline">
-            <span className="series-pill">{Number(seri.goruntuleme_sayisi || 0) > 0 ? `${formatCount(seri.goruntuleme_sayisi)} görüntülenme` : 'Yeni seri'}</span>
+            {yeniSeri && <span className="series-pill">Yeni seri</span>}
             <span className="series-pill">{rating > 0 ? `${rating.toFixed(1)}/10` : 'Puansız'}</span>
           </div>
         </div>

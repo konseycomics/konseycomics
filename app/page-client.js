@@ -490,8 +490,6 @@ function LiderlikTablosu({ liderlik = {} }) {
     1: 'linear-gradient(135deg, #d9dee6, #8e97a5)',
     2: 'linear-gradient(135deg, #d8a57a, #8c5a35)',
   }
-  const genelListe = liderlik?.tum || []
-
   return (
     <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
       <div style={{
@@ -506,7 +504,7 @@ function LiderlikTablosu({ liderlik = {} }) {
             En İyi Okuyucular
           </h2>
           <p className="home-section-kicker" style={{ margin: '10px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.4px' }}>
-            Günlük, haftalık ve aylık en iyi okuyucular
+            Günlük, haftalık ve tüm zamanların en iyi okuyucuları
           </p>
         </div>
 
@@ -521,14 +519,12 @@ function LiderlikTablosu({ liderlik = {} }) {
           lineHeight: 1.7,
           textAlign: 'center',
         }}>
-          Günlük en iyi okuyucu, haftalık en iyi okuyucu ve aylık en iyi okuyucu rozetleri ve süpriz ödüller verilecek.
+          Günlük en iyi okuyucu, haftalık en iyi okuyucu ve tüm zamanların en iyi okuyucusu rozetleri ve süpriz ödüller verilecek.
         </div>
 
         <div className="leaderboard-period-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
           {kartlar.map((kart) => {
             const liste = liderlik?.[kart.key] || []
-            const tamamlayici = genelListe.filter((genelUye) => !liste.some((uye) => uye.id === genelUye.id))
-            const tamamlanmisListe = [...liste, ...tamamlayici].slice(0, 5)
 
             return (
               <article key={kart.key} style={{
@@ -547,7 +543,7 @@ function LiderlikTablosu({ liderlik = {} }) {
                   </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
-                  {Array.from({ length: 5 }, (_, index) => tamamlanmisListe[index] || null).map((uye, index) => {
+                  {Array.from({ length: 5 }, (_, index) => liste[index] || null).map((uye, index) => {
                     const cerceve = cerceveMap[index]
                     const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
                     const satir = (

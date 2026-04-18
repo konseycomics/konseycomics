@@ -42,6 +42,18 @@ function getDateKey(date) {
   return `${yil}-${ay}-${gun}`
 }
 
+function mapProfileToLeaderboardRow(profil, okumaSayisi = 0) {
+  if (!profil?.kullanici_adi) return null
+
+  return {
+    id: profil.id,
+    kullanici_adi: profil.kullanici_adi,
+    avatar_url: profil.avatar_url || '',
+    unvan: profil.secili_unvan || '',
+    okumaSayisi,
+  }
+}
+
 function buildLeaderboardRows(reads, profiles, startDate = null) {
   const counts = new Map()
 
@@ -53,20 +65,18 @@ function buildLeaderboardRows(reads, profiles, startDate = null) {
     counts.set(kullaniciId, (counts.get(kullaniciId) || 0) + 1)
   })
 
-  return [...counts.entries()]
-    .map(([kullaniciId, okumaSayisi]) => {
-      const profil = profiles.get(kullaniciId)
-      if (!profil?.kullanici_adi) return null
-      return {
-        id: kullaniciId,
-        kullanici_adi: profil.kullanici_adi,
-        avatar_url: profil.avatar_url || '',
-        unvan: profil.secili_unvan || '',
-        okumaSayisi,
-      }
-    })
+  const siraliOkuyanlar = [...counts.entries()]
+    .map(([kullaniciId, okumaSayisi]) => mapProfileToLeaderboardRow(profiles.get(kullaniciId), okumaSayisi))
     .filter(Boolean)
     .sort((a, b) => b.okumaSayisi - a.okumaSayisi || a.kullanici_adi.localeCompare(b.kullanici_adi, 'tr'))
+
+  const sifirOkuyanlar = [...profiles.values()]
+    .filter((profil) => profil?.kullanici_adi && !counts.has(profil.id))
+    .map((profil) => mapProfileToLeaderboardRow(profil, 0))
+    .filter(Boolean)
+    .sort((a, b) => a.kullanici_adi.localeCompare(b.kullanici_adi, 'tr'))
+
+  return [...siraliOkuyanlar, ...sifirOkuyanlar]
     .slice(0, 5)
 }
 

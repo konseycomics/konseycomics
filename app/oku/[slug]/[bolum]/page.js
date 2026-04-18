@@ -7,7 +7,6 @@ import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import YorumSistemi from '../../../components/YorumSistemi'
 import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock } from '../../../lib/unvanClient'
-import { shouldTrackContentView } from '../../../lib/visitorTracking'
 
 const INITIAL_VISIBLE_PAGE_COUNT = 6
 const PAGE_BATCH_SIZE = 4
@@ -159,22 +158,18 @@ export default function Okuyucu() {
   }, [slug, bolum])
 
   useEffect(() => {
-    if (!bolumData?.id || !seriData?.id) return
+    if (!bolumData?.id) return
 
     let cancelled = false
     const timer = window.setTimeout(async () => {
       if (cancelled) return
+
       try {
-        const isNewBolumView = shouldTrackContentView('bolum', bolumData.id)
-        if (!isNewBolumView) return
-
-        const tasks = []
-
-        if (isNewBolumView) {
-          tasks.push(supabase.rpc('increment_bolum_goruntuleme', { bolum_id: bolumData.id }))
-        }
-
-        await Promise.all(tasks)
+        await fetch('/api/chapter-views', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bolumId: bolumData.id }),
+        })
       } catch (error) {
         console.warn('Bolum goruntuleme sayisi guncellenemedi:', error?.message || error)
       }
@@ -184,7 +179,7 @@ export default function Okuyucu() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [bolumData?.id, seriData?.id])
+  }, [bolumData?.id])
 
   useEffect(() => {
     if (!bolumData?.id || !seriData?.id) return

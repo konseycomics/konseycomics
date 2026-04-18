@@ -1,12 +1,119 @@
 import HomeClient from './page-client'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
 import { unstable_noStore as noStore } from 'next/cache'
+import { createClient } from '@supabase/supabase-js'
+
+function createSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+async function fetchAllRows(queryBuilderFactory) {
+  const rows = []
+  const pageSize = 1000
+  let offset = 0
+
+  while (true) {
+    const query = queryBuilderFactory().range(offset, offset + pageSize - 1)
+    const { data, error } = await query
+
+    if (error || !data?.length) break
+    rows.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return rows
+}
+
+function getDateKey(date) {
+  const d = new Date(date)
+  const yil = d.getFullYear()
+  const ay = String(d.getMonth() + 1).padStart(2, '0')
+  const gun = String(d.getDate()).padStart(2, '0')
+  return `${yil}-${ay}-${gun}`
+}
+
+function buildLeaderboardRows(reads, profiles, startDate) {
+  const counts = new Map()
+
+  ;(reads || []).forEach((item) => {
+    const kullaniciId = item?.kullanici_id
+    const okunduAt = item?.okundu_at
+    if (!kullaniciId || !okunduAt) return
+    if (new Date(okunduAt) < startDate) return
+    counts.set(kullaniciId, (counts.get(kullaniciId) || 0) + 1)
+  })
+
+  return [...counts.entries()]
+    .map(([kullaniciId, okumaSayisi]) => {
+      const profil = profiles.get(kullaniciId)
+      if (!profil?.kullanici_adi) return null
+      return {
+        id: kullaniciId,
+        kullanici_adi: profil.kullanici_adi,
+        avatar_url: profil.avatar_url || '',
+        rol: profil.rol || '',
+        okumaSayisi,
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.okumaSayisi - a.okumaSayisi || a.kullanici_adi.localeCompare(b.kullanici_adi, 'tr'))
+    .slice(0, 5)
+}
+
+async function getLeaderboards() {
+  const admin = createSupabaseAdminClient()
+  if (!admin) {
+    return { gunluk: [], haftalik: [], aylik: [] }
+  }
+
+  const bugun = new Date()
+  bugun.setHours(0, 0, 0, 0)
+  const hafta = new Date(bugun)
+  hafta.setDate(hafta.getDate() - 6)
+  const ay = new Date(bugun)
+  ay.setDate(ay.getDate() - 29)
+
+  const [reads, profiles] = await Promise.all([
+    fetchAllRows(() =>
+      admin
+        .from('kullanici_bolum_okumalari')
+        .select('kullanici_id, okundu_at')
+        .gte('completion_ratio', 0.7)
+        .gte('okundu_at', ay.toISOString())
+        .order('okundu_at', { ascending: false })
+    ),
+    fetchAllRows(() =>
+      admin
+        .from('public_profiller')
+        .select('id, kullanici_adi, avatar_url, rol')
+    ),
+  ])
+
+  const profileMap = new Map((profiles || []).map((profil) => [profil.id, profil]))
+
+  return {
+    gunluk: buildLeaderboardRows(reads, profileMap, bugun),
+    haftalik: buildLeaderboardRows(reads, profileMap, hafta),
+    aylik: buildLeaderboardRows(reads, profileMap, ay),
+    trendEtiket: getDateKey(new Date()),
+  }
+}
 
 async function getHomePageData() {
   noStore()
   const supabase = createSupabaseServerClient()
 
-  const [{ data: seriler }, { data: bolumler }, { data: ayarData }] = await Promise.all([
+  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik] = await Promise.all([
     supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
     supabase
       .from('bolumler')
@@ -14,6 +121,7 @@ async function getHomePageData() {
       .order('created_at', { ascending: false })
       .limit(10),
     supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']),
+    getLeaderboards(),
   ])
 
   const siteAyarlari = {}
@@ -25,6 +133,7 @@ async function getHomePageData() {
     seriler: seriler || [],
     bolumler: bolumler || [],
     siteAyarlari,
+    liderlik,
   }
 }
 

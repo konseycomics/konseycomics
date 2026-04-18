@@ -1152,6 +1152,10 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         </div>
       </section>
 
+      {!loading && (
+        <LiderlikTablosu liderlik={liderlik} />
+      )}
+
       {!loading && populerSeriler.length > 0 && (
         <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
           <div className="home-section-heading" style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -1165,10 +1169,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
             ))}
           </div>
         </section>
-      )}
-
-      {!loading && (
-        <LiderlikTablosu liderlik={liderlik} />
       )}
 
       <section style={{ background: '#111', marginTop: 'var(--section-gap)' }}>

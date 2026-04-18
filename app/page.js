@@ -83,7 +83,7 @@ async function getLeaderboards() {
   const ay = new Date(bugun)
   ay.setDate(ay.getDate() - 29)
 
-  const [reads, profiles] = await Promise.all([
+  const [reads, profiles, activeTitles] = await Promise.all([
     fetchAllRows(() =>
       admin
         .from('kullanici_bolum_okumalari')
@@ -95,11 +95,31 @@ async function getLeaderboards() {
     fetchAllRows(() =>
       admin
         .from('public_profiller')
-        .select('id, kullanici_adi, avatar_url, secili_unvan')
+        .select('id, kullanici_adi, avatar_url')
+    ),
+    fetchAllRows(() =>
+      admin
+        .from('kullanici_unvanlari')
+        .select('kullanici_id, one_cikarildi, unvan_tanimlari(isim)')
+        .eq('one_cikarildi', true)
     ),
   ])
 
-  const profileMap = new Map((profiles || []).map((profil) => [profil.id, profil]))
+  const activeTitleMap = new Map(
+    (activeTitles || []).map((item) => {
+      const title = Array.isArray(item.unvan_tanimlari) ? item.unvan_tanimlari[0]?.isim : item.unvan_tanimlari?.isim
+      return [item.kullanici_id, title || '']
+    })
+  )
+  const profileMap = new Map(
+    (profiles || []).map((profil) => [
+      profil.id,
+      {
+        ...profil,
+        secili_unvan: activeTitleMap.get(profil.id) || '',
+      },
+    ])
+  )
 
   return {
     gunluk: buildLeaderboardRows(reads, profileMap, bugun),

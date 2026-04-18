@@ -1142,6 +1142,7 @@ function OkumaSayilariSayfasi() {
   const [kategoriSecenekleri, setKategoriSecenekleri] = useState([])
   const [seriTrend, setSeriTrend] = useState([])
   const [bolumTrend, setBolumTrend] = useState([])
+  const [gecmisKazananlar, setGecmisKazananlar] = useState([])
 
   useEffect(() => {
     fetchData()
@@ -1280,11 +1281,15 @@ function OkumaSayilariSayfasi() {
     const ayBaslangic = new Date(bugunBaslangic)
     ayBaslangic.setDate(ayBaslangic.getDate() - 29)
 
-    const [tumSeriler, tumBolumler, seriAyKayitlari, bolumAyKayitlari] = await Promise.all([
+    const [tumSeriler, tumBolumler, seriAyKayitlari, bolumAyKayitlari, odulGecmisi, odulProfilleri, odulRozetleri, odulUnvanlari] = await Promise.all([
       fetchTumKayitlar('seriler', 'id, baslik, goruntuleme_sayisi, kategoriler(isim)'),
       fetchTumKayitlar('bolumler', 'id, seri_id, baslik, sayi, goruntuleme_sayisi'),
       fetchTrackingKayitlari('seri_goruntuleme_kayitlari', 'seri_id, goruntulenme_gunu', tarihAnahtari(ayBaslangic)),
       fetchTrackingKayitlari('bolum_goruntuleme_kayitlari', 'bolum_id, goruntulenme_gunu', tarihAnahtari(ayBaslangic)),
+      fetchTumKayitlar('okuyucu_liderlik_odulleri', 'id, donem_tipi, donem_anahtari, kullanici_id, okuma_sayisi, rozet_id, unvan_id, created_at'),
+      fetchTumKayitlar('profiller', 'id, kullanici_adi, avatar_url'),
+      fetchTumKayitlar('rozet_tanimlari', 'id, isim, ikon'),
+      fetchTumKayitlar('unvan_tanimlari', 'id, isim'),
     ])
 
     const bugunKey = tarihAnahtari(bugunBaslangic)
@@ -1327,10 +1332,25 @@ function OkumaSayilariSayfasi() {
     const bolumRows = buildBolumRows(tumBolumler, seriMap, bolumSayimMap || new Map(), donemFiltre === 'tum')
     setKategoriSecenekleri([...new Set((tumSeriler || []).map((seri) => seri.kategoriler?.isim || 'Diğer'))].sort((a, b) => a.localeCompare(b, 'tr')))
 
+    const profilMap = new Map((odulProfilleri || []).map((profil) => [profil.id, profil]))
+    const rozetMap = new Map((odulRozetleri || []).map((rozet) => [rozet.id, rozet]))
+    const unvanMap = new Map((odulUnvanlari || []).map((unvan) => [unvan.id, unvan]))
+
     setTopSeriler(seriRows.slice(0, 12))
     setTopBolumler(bolumRows.slice(0, 12))
     setTumSeriSatirlari(seriRows)
     setTumBolumSatirlari(bolumRows)
+    setGecmisKazananlar(
+      (odulGecmisi || [])
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 12)
+        .map((kayit) => ({
+          ...kayit,
+          profil: profilMap.get(kayit.kullanici_id) || null,
+          rozet: rozetMap.get(kayit.rozet_id) || null,
+          unvan: unvanMap.get(kayit.unvan_id) || null,
+        }))
+    )
     setYukleniyor(false)
   }
 
@@ -1403,6 +1423,58 @@ function OkumaSayilariSayfasi() {
           <LineChart data={bolumTrend} renk={ACCENT} />
         </Surface>
       </div>
+
+      <Surface style={{ marginBottom: '16px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Geçmiş Kazananlar</div>
+        <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>Günlük, haftalık ve tüm zamanlar liderlik ödüllerinin son kazananları.</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+          {gecmisKazananlar.map((kayit) => {
+            const profil = kayit.profil
+            const rozet = kayit.rozet
+            const unvan = kayit.unvan
+            const donemEtiketi =
+              kayit.donem_tipi === 'gunluk'
+                ? 'Günlük'
+                : kayit.donem_tipi === 'haftalik'
+                  ? 'Haftalık'
+                  : 'Tüm Zamanlar'
+
+            return (
+              <div key={kayit.id} style={{ padding: '14px', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                  <span style={{ padding: '5px 10px', borderRadius: '999px', background: 'rgba(139,92,246,0.16)', color: '#e9d5ff', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>{donemEtiketi}</span>
+                  <span style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{kayit.donem_anahtari}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '46px', height: '46px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+                    {profil?.avatar_url ? (
+                      <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Kazanan'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', fontWeight: 800 }}>{profil?.kullanici_adi?.[0]?.toUpperCase() || '•'}</div>
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profil?.kullanici_adi || 'Bilinmeyen Kullanıcı'}</div>
+                    <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginTop: '3px' }}>
+                      {rozet?.ikon ? `${rozet.ikon} ` : ''}{rozet?.isim || 'Liderlik ödülü'}
+                    </div>
+                    {unvan?.isim ? (
+                      <div style={{ fontSize: '11px', color: '#d8b4fe', marginTop: '3px' }}>{unvan.isim}</div>
+                    ) : null}
+                  </div>
+                  <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', lineHeight: 0.9 }}>{kayit.okuma_sayisi || 0}</div>
+                    <div style={{ fontSize: '10px', color: TEXT_SUBTLE, letterSpacing: '0.8px', textTransform: 'uppercase' }}>Okuma</div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {!yukleniyor && gecmisKazananlar.length === 0 ? (
+            <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz kaydedilmiş bir liderlik ödülü yok.</div>
+          ) : null}
+        </div>
+      </Surface>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Surface>

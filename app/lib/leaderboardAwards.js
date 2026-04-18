@@ -119,6 +119,23 @@ async function ensureUserTitle(adminClient, { userId, titleId, reason }) {
   return !error
 }
 
+async function createNotification(adminClient, { userId, title, message }) {
+  if (!userId || !title) return false
+
+  const { error } = await adminClient
+    .from('bildirimler')
+    .insert({
+      alici_id: userId,
+      gonderen_id: null,
+      tip: 'rozet_kazanildi',
+      baslik: title,
+      mesaj: message || '',
+      okundu: false,
+    })
+
+  return !error
+}
+
 export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
   if (!adminClient || !leaderboards) return
 
@@ -163,6 +180,11 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
           badgeId: badgeMap.get('gunun_en_iyi_okuyucusu'),
           reason,
         })
+        await createNotification(adminClient, {
+          userId: gunlukKazanan.id,
+          title: 'Günün En İyi Okuyucusu',
+          message: `Bugünkü liderlik tablosunda ${gunlukKazanan.okumaSayisi} okuma ile zirveye çıktın.`,
+        })
       }
     }
 
@@ -197,6 +219,11 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
             reason,
           })
         }
+        await createNotification(adminClient, {
+          userId: haftalikKazanan.id,
+          title: 'Haftanın En İyi Okuyucusu',
+          message: `Son 7 günde ${haftalikKazanan.okumaSayisi} okuma ile haftanın lideri oldun. Konsey Maratoncusu unvanı hesabına işlendi.`,
+        })
       }
     }
 
@@ -209,11 +236,18 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
       }
 
       if (badgeMap.get('tum_zamanlarin_en_iyi_okuyucusu')) {
-        await ensureUserBadge(adminClient, {
+        const badgeCreated = await ensureUserBadge(adminClient, {
           userId: tumZamanlarKazanan.id,
           badgeId: badgeMap.get('tum_zamanlarin_en_iyi_okuyucusu'),
           reason,
         })
+        if (badgeCreated) {
+          await createNotification(adminClient, {
+            userId: tumZamanlarKazanan.id,
+            title: 'Tüm Zamanların En İyi Okuyucusu',
+            message: `Toplam ${tumZamanlarKazanan.okumaSayisi} okuma ile tüm zamanlar liderliğinde zirveye çıktın.`,
+          })
+        }
       }
 
       if (titleMap.get('konsey_efsanesi')) {

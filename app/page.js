@@ -1,5 +1,6 @@
 import HomeClient from './page-client'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
+import { syncLeaderboardAwards } from './lib/leaderboardAwards'
 import { unstable_noStore as noStore } from 'next/cache'
 import { createClient } from '@supabase/supabase-js'
 
@@ -83,15 +84,13 @@ function buildLeaderboardRows(reads, profiles, startDate = null) {
 async function getLeaderboards() {
   const admin = createSupabaseAdminClient()
   if (!admin) {
-    return { gunluk: [], haftalik: [], aylik: [] }
+    return { gunluk: [], haftalik: [], tum: [] }
   }
 
   const bugun = new Date()
   bugun.setHours(0, 0, 0, 0)
   const hafta = new Date(bugun)
   hafta.setDate(hafta.getDate() - 6)
-  const ay = new Date(bugun)
-  ay.setDate(ay.getDate() - 29)
 
   const [reads, profiles, activeTitles] = await Promise.all([
     fetchAllRows(() =>
@@ -99,7 +98,6 @@ async function getLeaderboards() {
         .from('kullanici_bolum_okumalari')
         .select('kullanici_id, okundu_at')
         .gte('completion_ratio', 0.7)
-        .gte('okundu_at', ay.toISOString())
         .order('okundu_at', { ascending: false })
     ),
     fetchAllRows(() =>
@@ -131,12 +129,16 @@ async function getLeaderboards() {
     ])
   )
 
-  return {
+  const leaderboards = {
     gunluk: buildLeaderboardRows(reads, profileMap, bugun),
     haftalik: buildLeaderboardRows(reads, profileMap, hafta),
     tum: buildLeaderboardRows(reads, profileMap, null),
     trendEtiket: getDateKey(new Date()),
   }
+
+  await syncLeaderboardAwards({ adminClient: admin, leaderboards })
+
+  return leaderboards
 }
 
 async function getHomePageData() {

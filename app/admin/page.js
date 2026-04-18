@@ -23,6 +23,49 @@ function BarChart({ data, renk = '#111', yukseklik = 160 }) {
   )
 }
 
+function LineChart({ data, renk = '#8b5cf6', yukseklik = 160 }) {
+  if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
+  const width = 100
+  const height = yukseklik
+  const max = Math.max(...data.map((d) => d.deger), 1)
+  const stepX = data.length > 1 ? width / (data.length - 1) : width
+  const points = data.map((d, i) => {
+    const x = i * stepX
+    const y = height - (d.deger / max) * (height - 20) - 10
+    return `${x},${y}`
+  }).join(' ')
+
+  return (
+    <div>
+      <div style={{ position: 'relative', height: `${height}px`, marginBottom: '10px' }}>
+        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id={`line-fill-${renk.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={renk} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={renk} stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <polyline fill="none" stroke={renk} strokeWidth="2.6" strokeLinejoin="round" strokeLinecap="round" points={points} />
+          <polyline fill={`url(#line-fill-${renk.replace('#', '')})`} stroke="none" points={`0,${height} ${points} ${width},${height}`} />
+          {data.map((d, i) => {
+            const x = i * stepX
+            const y = height - (d.deger / max) * (height - 20) - 10
+            return <circle key={`${d.etiket}-${i}`} cx={x} cy={y} r="2.4" fill={renk} />
+          })}
+        </svg>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))`, gap: '6px' }}>
+        {data.map((d, i) => (
+          <div key={`${d.etiket}-${i}`} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#8d8d8d' }}>{d.deger}</div>
+            <div style={{ fontSize: '9px', color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.etiket}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function GlobalArama({ seriler, bolumler, kullanicilar, onSec }) {
   const [ara, setAra] = useState('')
   const [acik, setAcik] = useState(false)
@@ -1084,6 +1127,8 @@ function IstatistikSayfasi() {
 function OkumaSayilariSayfasi() {
   const [donemFiltre, setDonemFiltre] = useState('tum')
   const [yukleniyor, setYukleniyor] = useState(true)
+  const [aramaMetni, setAramaMetni] = useState('')
+  const [kategoriFiltre, setKategoriFiltre] = useState('tumu')
   const [donemOzet, setDonemOzet] = useState({
     tum: { seri: 0, bolum: 0 },
     bugun: { seri: 0, bolum: 0 },
@@ -1094,6 +1139,9 @@ function OkumaSayilariSayfasi() {
   const [topBolumler, setTopBolumler] = useState([])
   const [tumSeriSatirlari, setTumSeriSatirlari] = useState([])
   const [tumBolumSatirlari, setTumBolumSatirlari] = useState([])
+  const [kategoriSecenekleri, setKategoriSecenekleri] = useState([])
+  const [seriTrend, setSeriTrend] = useState([])
+  const [bolumTrend, setBolumTrend] = useState([])
 
   useEffect(() => {
     fetchData()
@@ -1166,21 +1214,60 @@ function OkumaSayilariSayfasi() {
       .map((seri) => ({
         id: seri.id,
         baslik: seri.baslik,
+        kategoriIsim: seri.kategoriler?.isim || 'Diğer',
         sayi: tumZaman ? Number(seri.goruntuleme_sayisi || 0) : Number(sayimMap.get(seri.id) || 0),
       }))
       .sort((a, b) => b.sayi - a.sayi || a.baslik.localeCompare(b.baslik, 'tr'))
   }
 
-  function buildBolumRows(bolumler, sayimMap, tumZaman = false) {
+  function buildBolumRows(bolumler, seriMap, sayimMap, tumZaman = false) {
     return (bolumler || [])
       .map((bolum) => ({
         id: bolum.id,
         baslik: bolum.baslik,
-        seriBaslik: bolum.seriler?.baslik || 'Seri yok',
+        seriBaslik: seriMap.get(bolum.seri_id)?.baslik || 'Seri yok',
+        kategoriIsim: seriMap.get(bolum.seri_id)?.kategoriIsim || 'Diğer',
         sayiNo: bolum.sayi,
         sayi: tumZaman ? Number(bolum.goruntuleme_sayisi || 0) : Number(sayimMap.get(bolum.id) || 0),
       }))
       .sort((a, b) => b.sayi - a.sayi || a.seriBaslik.localeCompare(b.seriBaslik, 'tr'))
+  }
+
+  function sonYediGunEtiketleri() {
+    const gunler = []
+    for (let i = 6; i >= 0; i--) {
+      const tarih = new Date()
+      tarih.setHours(0, 0, 0, 0)
+      tarih.setDate(tarih.getDate() - i)
+      gunler.push({ key: tarihAnahtari(tarih), etiket: `${tarih.getDate()}/${tarih.getMonth() + 1}` })
+    }
+    return gunler
+  }
+
+  function buildTrendData(kayitlar, alan) {
+    const sayimMap = sayimMapOlustur(kayitlar, alan)
+    return sonYediGunEtiketleri().map((gun) => ({
+      etiket: gun.etiket,
+      deger: Number(sayimMap.get(gun.key) || 0),
+    }))
+  }
+
+  function exportCsv(filename, columns, rows) {
+    const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+    const content = [
+      columns.map((column) => escapeCsv(column.label)).join(','),
+      ...rows.map((row) => columns.map((column) => escapeCsv(row[column.key])).join(',')),
+    ].join('\n')
+
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   async function fetchData() {
@@ -1194,8 +1281,8 @@ function OkumaSayilariSayfasi() {
     ayBaslangic.setDate(ayBaslangic.getDate() - 29)
 
     const [tumSeriler, tumBolumler, seriAyKayitlari, bolumAyKayitlari] = await Promise.all([
-      fetchTumKayitlar('seriler', 'id, baslik, goruntuleme_sayisi'),
-      fetchTumKayitlar('bolumler', 'id, baslik, sayi, goruntuleme_sayisi, seriler(baslik)'),
+      fetchTumKayitlar('seriler', 'id, baslik, goruntuleme_sayisi, kategoriler(isim)'),
+      fetchTumKayitlar('bolumler', 'id, seri_id, baslik, sayi, goruntuleme_sayisi'),
       fetchTrackingKayitlari('seri_goruntuleme_kayitlari', 'seri_id, goruntulenme_gunu', tarihAnahtari(ayBaslangic)),
       fetchTrackingKayitlari('bolum_goruntuleme_kayitlari', 'bolum_id, goruntulenme_gunu', tarihAnahtari(ayBaslangic)),
     ])
@@ -1217,6 +1304,8 @@ function OkumaSayilariSayfasi() {
       ay: { seri: (seriAyKayitlari || []).length, bolum: (bolumAyKayitlari || []).length },
     }
     setDonemOzet(ozet)
+    setSeriTrend(buildTrendData((seriAyKayitlari || []).map((kayit) => ({ ...kayit, goruntulenme_gunu: kayit.goruntulenme_gunu })), 'goruntulenme_gunu'))
+    setBolumTrend(buildTrendData((bolumAyKayitlari || []).map((kayit) => ({ ...kayit, goruntulenme_gunu: kayit.goruntulenme_gunu })), 'goruntulenme_gunu'))
 
     const seriSayimMap =
       donemFiltre === 'tum'
@@ -1233,8 +1322,10 @@ function OkumaSayilariSayfasi() {
             'bolum_id'
           )
 
+    const seriMap = new Map((tumSeriler || []).map((seri) => [seri.id, { baslik: seri.baslik, kategoriIsim: seri.kategoriler?.isim || 'Diğer' }]))
     const seriRows = buildSeriRows(tumSeriler, seriSayimMap || new Map(), donemFiltre === 'tum')
-    const bolumRows = buildBolumRows(tumBolumler, bolumSayimMap || new Map(), donemFiltre === 'tum')
+    const bolumRows = buildBolumRows(tumBolumler, seriMap, bolumSayimMap || new Map(), donemFiltre === 'tum')
+    setKategoriSecenekleri([...new Set((tumSeriler || []).map((seri) => seri.kategoriler?.isim || 'Diğer'))].sort((a, b) => a.localeCompare(b, 'tr')))
 
     setTopSeriler(seriRows.slice(0, 12))
     setTopBolumler(bolumRows.slice(0, 12))
@@ -1242,6 +1333,20 @@ function OkumaSayilariSayfasi() {
     setTumBolumSatirlari(bolumRows)
     setYukleniyor(false)
   }
+
+  const arama = aramaMetni.trim().toLocaleLowerCase('tr-TR')
+  const filtrelenmisSeriler = tumSeriSatirlari.filter((seri) => {
+    const kategoriUygun = kategoriFiltre === 'tumu' || seri.kategoriIsim === kategoriFiltre
+    const aramaUygun = !arama || seri.baslik.toLocaleLowerCase('tr-TR').includes(arama)
+    return kategoriUygun && aramaUygun
+  })
+  const filtrelenmisBolumler = tumBolumSatirlari.filter((bolum) => {
+    const kategoriUygun = kategoriFiltre === 'tumu' || bolum.kategoriIsim === kategoriFiltre
+    const aramaUygun = !arama || `${bolum.seriBaslik} ${bolum.baslik}`.toLocaleLowerCase('tr-TR').includes(arama)
+    return kategoriUygun && aramaUygun
+  })
+  const filtreliTopSeriler = filtrelenmisSeriler.slice(0, 12)
+  const filtreliTopBolumler = filtrelenmisBolumler.slice(0, 12)
 
   return (
     <div>
@@ -1280,24 +1385,43 @@ function OkumaSayilariSayfasi() {
         ))}
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '12px', marginBottom: '16px' }}>
+        <input value={aramaMetni} onChange={(e) => setAramaMetni(e.target.value)} placeholder="Seri veya bölüm ara..." style={{ ...I, marginBottom: 0 }} />
+        <select value={kategoriFiltre} onChange={(e) => setKategoriFiltre(e.target.value)} style={{ ...S, marginBottom: 0 }}>
+          <option value="tumu">Tüm Kategoriler</option>
+          {kategoriSecenekleri.map((kategori) => <option key={kategori} value={kategori}>{kategori}</option>)}
+        </select>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+        <Surface>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>Son 7 Gün Seri Trendi</div>
+          <LineChart data={seriTrend} renk={PURPLE} />
+        </Surface>
+        <Surface>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>Son 7 Gün Bölüm Trendi</div>
+          <LineChart data={bolumTrend} renk={ACCENT} />
+        </Surface>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <Surface>
           <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Çok Okunan Seriler</div>
           <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>{donemFiltre === 'tum' ? 'Tüm zamanlar seri görüntülenme toplamı.' : 'Seçili dönemde seri detayına girişten beslenen seri görüntülenmeleri.'}</div>
-          {topSeriler.map((s, i) => (
+          {filtreliTopSeriler.map((s, i) => (
             <div key={`${s.baslik}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < topSeriler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
               <span style={{ flex: 1, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</span>
               <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{s.sayi || 0} görüntülenme</span>
             </div>
           ))}
-          {!yukleniyor && topSeriler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
+          {!yukleniyor && filtreliTopSeriler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Filtreye uyan veri yok.</div>}
         </Surface>
 
         <Surface>
           <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Çok Okunan Bölümler</div>
           <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>{donemFiltre === 'tum' ? 'Tüm zamanlar bölüm görüntülenme toplamı.' : 'Seçili dönemde okuyucuda 8 saniye kalındığında artan bölüm görüntülenmeleri.'}</div>
-          {topBolumler.map((b, i) => (
+          {filtreliTopBolumler.map((b, i) => (
             <div key={`${b.id || b.baslik}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < topBolumler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
               <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1307,41 +1431,60 @@ function OkumaSayilariSayfasi() {
               <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{b.sayi || b.goruntuleme_sayisi || 0} görüntülenme</span>
             </div>
           ))}
-          {!yukleniyor && topBolumler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
+          {!yukleniyor && filtreliTopBolumler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Filtreye uyan veri yok.</div>}
         </Surface>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <Surface>
-          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Tüm Serilerin Ayrı Ayrı Okuma Sayıları</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700 }}>Tüm Serilerin Ayrı Ayrı Okuma Sayıları</div>
+            <button onClick={() => exportCsv('seri-okuma-sayilari.csv', [
+              { key: 'baslik', label: 'Seri' },
+              { key: 'kategoriIsim', label: 'Kategori' },
+              { key: 'sayi', label: 'Goruntulenme' },
+            ], filtrelenmisSeriler)} style={BS}>CSV</button>
+          </div>
           <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>{donemFiltre === 'tum' ? 'Tüm zamanlar toplamına göre sıralanır.' : 'Seçili dönem filtresine göre sıralanır.'}</div>
           <div style={{ maxHeight: '540px', overflow: 'auto', paddingRight: '4px' }}>
-            {tumSeriSatirlari.map((seri, i) => (
-              <div key={seri.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < tumSeriSatirlari.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            {filtrelenmisSeriler.map((seri, i) => (
+              <div key={seri.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < filtrelenmisSeriler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                 <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
-                <span style={{ flex: 1, fontSize: '13px' }}>{seri.baslik}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px' }}>{seri.baslik}</div>
+                  <div style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{seri.kategoriIsim}</div>
+                </div>
                 <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{seri.sayi} görüntülenme</span>
               </div>
             ))}
-            {!yukleniyor && tumSeriSatirlari.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
+            {!yukleniyor && filtrelenmisSeriler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Filtreye uyan veri yok.</div>}
           </div>
         </Surface>
 
         <Surface>
-          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Tüm Bölümlerin Ayrı Ayrı Okuma Sayıları</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700 }}>Tüm Bölümlerin Ayrı Ayrı Okuma Sayıları</div>
+            <button onClick={() => exportCsv('bolum-okuma-sayilari.csv', [
+              { key: 'seriBaslik', label: 'Seri' },
+              { key: 'baslik', label: 'Bolum' },
+              { key: 'sayiNo', label: 'Bolum No' },
+              { key: 'kategoriIsim', label: 'Kategori' },
+              { key: 'sayi', label: 'Goruntulenme' },
+            ], filtrelenmisBolumler)} style={BS}>CSV</button>
+          </div>
           <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>{donemFiltre === 'tum' ? 'Tüm zamanlar toplamına göre sıralanır.' : 'Seçili dönem filtresine göre sıralanır.'}</div>
           <div style={{ maxHeight: '540px', overflow: 'auto', paddingRight: '4px' }}>
-            {tumBolumSatirlari.map((bolum, i) => (
-              <div key={bolum.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < tumBolumSatirlari.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+            {filtrelenmisBolumler.map((bolum, i) => (
+              <div key={bolum.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < filtrelenmisBolumler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
                 <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{bolum.seriBaslik}</div>
+                  <div style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{bolum.seriBaslik} · {bolum.kategoriIsim}</div>
                   <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{bolum.sayiNo} {bolum.baslik}</div>
                 </div>
                 <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{bolum.sayi} görüntülenme</span>
               </div>
             ))}
-            {!yukleniyor && tumBolumSatirlari.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
+            {!yukleniyor && filtrelenmisBolumler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Filtreye uyan veri yok.</div>}
           </div>
         </Surface>
       </div>

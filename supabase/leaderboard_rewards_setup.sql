@@ -9,6 +9,9 @@ create table if not exists public.rozet_tanimlari (
   isim text not null,
   aciklama text,
   ikon text,
+  renk text not null default '#111',
+  kriter_tip text not null default 'leaderboard',
+  kriter_deger integer not null default 0,
   aktif boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -18,6 +21,9 @@ alter table if exists public.rozet_tanimlari
   add column if not exists isim text,
   add column if not exists aciklama text,
   add column if not exists ikon text,
+  add column if not exists renk text not null default '#111',
+  add column if not exists kriter_tip text not null default 'leaderboard',
+  add column if not exists kriter_deger integer not null default 0,
   add column if not exists aktif boolean not null default true,
   add column if not exists created_at timestamptz not null default now();
 
@@ -87,20 +93,20 @@ for select
 to authenticated
 using (public.is_admin_user());
 
-insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, aktif)
-select 'gunun_en_iyi_okuyucusu', 'Günün En İyi Okuyucusu', 'Bir gün içinde en çok sayılan bölümü okuyarak zirveye çıktın.', '🥇', true
+insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, renk, kriter_tip, kriter_deger, aktif)
+select 'gunun_en_iyi_okuyucusu', 'Günün En İyi Okuyucusu', 'Bir gün içinde en çok sayılan bölümü okuyarak zirveye çıktın.', '🥇', '#d4a72c', 'leaderboard_daily', 1, true
 where not exists (
   select 1 from public.rozet_tanimlari where kod = 'gunun_en_iyi_okuyucusu'
 );
 
-insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, aktif)
-select 'haftanin_en_iyi_okuyucusu', 'Haftanın En İyi Okuyucusu', 'Haftalık okuyucu liderliğinde ilk sıraya yerleşerek haftanın okuyucusu oldun.', '🏆', true
+insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, renk, kriter_tip, kriter_deger, aktif)
+select 'haftanin_en_iyi_okuyucusu', 'Haftanın En İyi Okuyucusu', 'Haftalık okuyucu liderliğinde ilk sıraya yerleşerek haftanın okuyucusu oldun.', '🏆', '#8b5cf6', 'leaderboard_weekly', 1, true
 where not exists (
   select 1 from public.rozet_tanimlari where kod = 'haftanin_en_iyi_okuyucusu'
 );
 
-insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, aktif)
-select 'tum_zamanlarin_en_iyi_okuyucusu', 'Tüm Zamanların En İyi Okuyucusu', 'KonseyComics tarihinde en çok okuyan kullanıcı olarak zirveye çıktın.', '👑', true
+insert into public.rozet_tanimlari (kod, isim, aciklama, ikon, renk, kriter_tip, kriter_deger, aktif)
+select 'tum_zamanlarin_en_iyi_okuyucusu', 'Tüm Zamanların En İyi Okuyucusu', 'KonseyComics tarihinde en çok okuyan kullanıcı olarak zirveye çıktın.', '👑', '#f59e0b', 'leaderboard_all_time', 1, true
 where not exists (
   select 1 from public.rozet_tanimlari where kod = 'tum_zamanlarin_en_iyi_okuyucusu'
 );

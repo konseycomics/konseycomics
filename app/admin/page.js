@@ -120,6 +120,12 @@ export default function Admin() {
       if (profil?.rol === 'admin' || profil?.rol === 'yonetici') {
         setGiris(true)
         yukleGlobal()
+        fetch('/api/leaderboard/sync', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }).catch(() => {})
       } else {
         router.replace('/')
       }

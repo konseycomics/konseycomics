@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
+import { isTrustedBrowserRequest, isUuid } from '../../lib/requestSecurity'
 
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -46,7 +47,11 @@ export async function POST(req) {
   try {
     const { seriId } = await req.json()
 
-    if (!seriId) {
+    if (!isTrustedBrowserRequest(req)) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    }
+
+    if (!seriId || !isUuid(seriId)) {
       return NextResponse.json({ error: 'Missing series id.' }, { status: 400 })
     }
 

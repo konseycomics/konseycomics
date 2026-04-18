@@ -130,10 +130,7 @@ export async function POST(req) {
   const email = await resolveEmailFromIdentifier(adminClient, identifier)
 
   if (!email) {
-    return NextResponse.json(
-      { error: isEmail(identifier) ? 'Invalid login credentials' : 'USERNAME_NOT_FOUND' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'Invalid login credentials' }, { status: 400 })
   }
 
     const { data, error } = await publicClient.auth.signInWithPassword({

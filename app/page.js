@@ -42,14 +42,14 @@ function getDateKey(date) {
   return `${yil}-${ay}-${gun}`
 }
 
-function buildLeaderboardRows(reads, profiles, startDate) {
+function buildLeaderboardRows(reads, profiles, startDate = null) {
   const counts = new Map()
 
   ;(reads || []).forEach((item) => {
     const kullaniciId = item?.kullanici_id
     const okunduAt = item?.okundu_at
     if (!kullaniciId || !okunduAt) return
-    if (new Date(okunduAt) < startDate) return
+    if (startDate && new Date(okunduAt) < startDate) return
     counts.set(kullaniciId, (counts.get(kullaniciId) || 0) + 1)
   })
 
@@ -124,7 +124,7 @@ async function getLeaderboards() {
   return {
     gunluk: buildLeaderboardRows(reads, profileMap, bugun),
     haftalik: buildLeaderboardRows(reads, profileMap, hafta),
-    aylik: buildLeaderboardRows(reads, profileMap, ay),
+    tum: buildLeaderboardRows(reads, profileMap, null),
     trendEtiket: getDateKey(new Date()),
   }
 }

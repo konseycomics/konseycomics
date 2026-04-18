@@ -483,13 +483,14 @@ function LiderlikTablosu({ liderlik = {} }) {
   const kartlar = [
     { key: 'gunluk', baslik: 'Günlük En İyi Okuyucu' },
     { key: 'haftalik', baslik: 'Haftalık En İyi Okuyucu' },
-    { key: 'aylik', baslik: 'Aylık En İyi Okuyucu' },
+    { key: 'tum', baslik: 'Tüm Zamanların En İyi Okuyucusu' },
   ]
   const cerceveMap = {
     0: 'linear-gradient(135deg, #f7d774, #d4a72c)',
     1: 'linear-gradient(135deg, #d9dee6, #8e97a5)',
     2: 'linear-gradient(135deg, #d8a57a, #8c5a35)',
   }
+  const genelListe = liderlik?.tum || []
 
   return (
     <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
@@ -526,7 +527,8 @@ function LiderlikTablosu({ liderlik = {} }) {
         <div className="leaderboard-period-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
           {kartlar.map((kart) => {
             const liste = liderlik?.[kart.key] || []
-            const tamamlanmisListe = Array.from({ length: 5 }, (_, index) => liste[index] || null)
+            const tamamlayici = genelListe.filter((genelUye) => !liste.some((uye) => uye.id === genelUye.id))
+            const tamamlanmisListe = [...liste, ...tamamlayici].slice(0, 5)
 
             return (
               <article key={kart.key} style={{
@@ -534,18 +536,18 @@ function LiderlikTablosu({ liderlik = {} }) {
                 borderRadius: '24px',
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.08)',
-              }}>
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
-                    {kart.baslik}
+                }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
+                      {kart.baslik}
+                    </div>
+                    <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                      İlk 5 okuyucu
+                    </div>
                   </div>
-                  <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                    İlk 5 okuyucu
-                  </div>
-                </div>
 
                 <div style={{ display: 'grid', gap: '10px' }}>
-                  {tamamlanmisListe.map((uye, index) => {
+                  {Array.from({ length: 5 }, (_, index) => tamamlanmisListe[index] || null).map((uye, index) => {
                     const cerceve = cerceveMap[index]
                     const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
                     const satir = (
@@ -572,16 +574,18 @@ function LiderlikTablosu({ liderlik = {} }) {
                           <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.1)' }}>
                             {uye?.avatar_url
                               ? <img src={uye.avatar_url} alt={uye.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || '•'}</div>}
+                              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || ''}</div>}
                           </div>
                         </div>
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                           <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {uye?.kullanici_adi || 'Yer Açık'}
+                            {uye?.kullanici_adi || ''}
                           </div>
-                          <div style={{ color: '#9f9f99', fontSize: '11px', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {uye?.unvan || 'Henüz okuyucu gelmedi'}
-                          </div>
+                          {uye?.unvan ? (
+                            <div style={{ color: '#9f9f99', fontSize: '11px', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {uye.unvan}
+                            </div>
+                          ) : null}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
@@ -599,7 +603,7 @@ function LiderlikTablosu({ liderlik = {} }) {
                         {satir}
                       </Link>
                     ) : (
-                      <div key={`${kart.key}-placeholder-${index}`}>{satir}</div>
+                      <div key={`${kart.key}-placeholder-${index}`} style={{ opacity: 0.35 }}>{satir}</div>
                     )
                   })}
                 </div>

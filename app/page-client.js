@@ -479,30 +479,16 @@ function TurKart({ tur, count }) {
   )
 }
 
-function formatRoleLabel(rol) {
-  if (!rol) return 'Okuyucu'
-  return String(rol)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toLocaleUpperCase('tr-TR'))
-}
-
 function LiderlikTablosu({ liderlik = {} }) {
-  const [aktifSekme, setAktifSekme] = useState('gunluk')
-  const sekmeler = [
-    { key: 'gunluk', label: 'Günlük En İyi Okuyucu' },
-    { key: 'haftalik', label: 'Haftalık En İyi Okuyucu' },
-    { key: 'aylik', label: 'Aylık En İyi Okuyucu' },
+  const kartlar = [
+    { key: 'gunluk', baslik: 'Günlük En İyi Okuyucu' },
+    { key: 'haftalik', baslik: 'Haftalık En İyi Okuyucu' },
+    { key: 'aylik', baslik: 'Aylık En İyi Okuyucu' },
   ]
-  const veriMap = {
-    gunluk: liderlik?.gunluk || [],
-    haftalik: liderlik?.haftalik || [],
-    aylik: liderlik?.aylik || [],
-  }
-  const aktifListe = veriMap[aktifSekme] || []
-  const madalyaMap = {
-    0: { bg: 'linear-gradient(135deg, #f7d774, #d4a72c)', text: '#2a1b00', label: 'Altın Rozet' },
-    1: { bg: 'linear-gradient(135deg, #d9dee6, #8e97a5)', text: '#17202b', label: 'Gümüş Rozet' },
-    2: { bg: 'linear-gradient(135deg, #d8a57a, #8c5a35)', text: '#2a1303', label: 'Bronz Rozet' },
+  const cerceveMap = {
+    0: 'linear-gradient(135deg, #f7d774, #d4a72c)',
+    1: 'linear-gradient(135deg, #d9dee6, #8e97a5)',
+    2: 'linear-gradient(135deg, #d8a57a, #8c5a35)',
   }
 
   return (
@@ -516,7 +502,7 @@ function LiderlikTablosu({ liderlik = {} }) {
       }}>
         <div className="home-section-heading" style={{ textAlign: 'center', marginBottom: '22px' }}>
           <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(38px, 5vw, 60px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
-            Okuyucu Liderlik Tablosu
+            En İyi Okuyucular
           </h2>
           <p className="home-section-kicker" style={{ margin: '10px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.4px' }}>
             Günlük, haftalık ve aylık en iyi okuyucular
@@ -534,109 +520,92 @@ function LiderlikTablosu({ liderlik = {} }) {
           lineHeight: 1.7,
           textAlign: 'center',
         }}>
-          Günlük en iyi okuyucu, haftalık en iyi okuyucu ve aylık en iyi okuyucu rozetleri verilecek.
+          Günlük en iyi okuyucu, haftalık en iyi okuyucu ve aylık en iyi okuyucu rozetleri ve süpriz ödüller verilecek.
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-          {sekmeler.map((sekme) => (
-            <button
-              key={sekme.key}
-              type="button"
-              onClick={() => setAktifSekme(sekme.key)}
-              style={{
-                minHeight: '40px',
-                padding: '0 16px',
-                borderRadius: '999px',
-                border: aktifSekme === sekme.key ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                background: aktifSekme === sekme.key ? '#fff' : 'rgba(255,255,255,0.04)',
-                color: aktifSekme === sekme.key ? '#111' : '#fff',
-                fontSize: '12px',
-                fontWeight: 800,
-                fontFamily: 'inherit',
-                letterSpacing: '0.7px',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-              }}
-            >
-              {sekme.label}
-            </button>
-          ))}
-        </div>
+        <div className="leaderboard-period-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
+          {kartlar.map((kart) => {
+            const liste = liderlik?.[kart.key] || []
+            const tamamlanmisListe = Array.from({ length: 5 }, (_, index) => liste[index] || null)
 
-        <div className="leaderboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '14px' }}>
-          {aktifListe.length > 0 ? aktifListe.map((uye, index) => {
-            const madalya = madalyaMap[index]
             return (
-              <Link key={uye.id} href={`/profil/${uye.kullanici_adi}`} style={{ textDecoration: 'none' }}>
-                <article style={{
-                  position: 'relative',
-                  height: '100%',
-                  padding: '18px',
-                  borderRadius: '22px',
-                  background: index < 3 ? 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))' : 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: index === 0 ? '0 16px 40px rgba(212,167,44,0.12)' : 'none',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '14px' }}>
-                    <span style={{ color: '#8f8f8a', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      #{index + 1}
-                    </span>
-                    {madalya ? (
-                      <span style={{
-                        minHeight: '28px',
-                        display: 'inline-flex',
+              <article key={kart.key} style={{
+                padding: '18px',
+                borderRadius: '24px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
+                    {kart.baslik}
+                  </div>
+                  <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                    İlk 5 okuyucu
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {tamamlanmisListe.map((uye, index) => {
+                    const cerceve = cerceveMap[index]
+                    const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
+                    const satir = (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '28px 48px minmax(0, 1fr) auto',
+                        gap: '12px',
                         alignItems: 'center',
-                        padding: '0 10px',
-                        borderRadius: '999px',
-                        background: madalya.bg,
-                        color: madalya.text,
-                        fontSize: '10px',
-                        fontWeight: 900,
-                        letterSpacing: '0.8px',
-                        textTransform: 'uppercase',
+                        padding: '10px 12px',
+                        borderRadius: '18px',
+                        background: uye ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        minHeight: '76px',
                       }}>
-                        {madalya.label}
-                      </span>
-                    ) : null}
-                  </div>
+                        <div style={{ color: '#8f8f8a', fontSize: '12px', fontWeight: 900 }}>#{index + 1}</div>
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          padding: cerceve ? '2px' : '0',
+                          background: cerceve || 'transparent',
+                          boxShadow: cerceve ? '0 0 18px rgba(255,255,255,0.08)' : 'none',
+                        }}>
+                          <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.1)' }}>
+                            {uye?.avatar_url
+                              ? <img src={uye.avatar_url} alt={uye.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || '•'}</div>}
+                          </div>
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {uye?.kullanici_adi || 'Yer Açık'}
+                          </div>
+                          <div style={{ color: '#9f9f99', fontSize: '11px', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {uye?.unvan || 'Henüz okuyucu gelmedi'}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
+                            {uye?.okumaSayisi || 0}
+                          </div>
+                          <div style={{ color: '#bcbcb6', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>
+                            Okuma
+                          </div>
+                        </div>
+                      </div>
+                    )
 
-                  <div style={{ width: '78px', height: '78px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 14px', border: '2px solid rgba(255,255,255,0.12)', background: '#111' }}>
-                    {uye.avatar_url
-                      ? <img src={uye.avatar_url} alt={uye.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '28px', fontWeight: 800 }}>{uye.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
-                  </div>
-
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {uye.kullanici_adi}
-                    </div>
-                    <div style={{ color: '#9f9f99', fontSize: '11px', fontWeight: 700, letterSpacing: '0.7px', textTransform: 'uppercase', marginBottom: '12px' }}>
-                      {formatRoleLabel(uye.rol)}
-                    </div>
-                    <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 4vw, 40px)', lineHeight: 0.9 }}>
-                      {uye.okumaSayisi}
-                    </div>
-                    <div style={{ color: '#bcbcb6', fontSize: '11px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '6px' }}>
-                      Bölüm Okuma
-                    </div>
-                  </div>
-                </article>
-              </Link>
+                    return uye ? (
+                      <Link key={`${kart.key}-${uye.id}-${index}`} href={profilHref} style={{ textDecoration: 'none' }}>
+                        {satir}
+                      </Link>
+                    ) : (
+                      <div key={`${kart.key}-placeholder-${index}`}>{satir}</div>
+                    )
+                  })}
+                </div>
+              </article>
             )
-          }) : (
-            <div style={{
-              gridColumn: '1 / -1',
-              padding: '24px',
-              borderRadius: '20px',
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-              textAlign: 'center',
-              color: '#b8b8b2',
-              fontSize: '14px',
-            }}>
-              Henüz bu dönem için sıralamaya giren bir okuyucu yok.
-            </div>
-          )}
+          })}
         </div>
       </div>
     </section>
@@ -792,7 +761,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .series-showcase-grid > *:nth-child(1),
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
-          .leaderboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+          .leaderboard-period-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 640px) {
           .home-section-heading { margin-bottom: 22px !important; }
@@ -816,7 +785,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .category-block { min-height: 180px !important; border-radius: 20px !important; }
           .category-block.is-large { min-height: 300px !important; }
           .series-showcase-grid > * { grid-column: span 12 !important; }
-          .leaderboard-grid { grid-template-columns: 1fr !important; }
+          .leaderboard-period-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 

@@ -61,7 +61,7 @@ function buildLeaderboardRows(reads, profiles, startDate) {
         id: kullaniciId,
         kullanici_adi: profil.kullanici_adi,
         avatar_url: profil.avatar_url || '',
-        rol: profil.rol || '',
+        unvan: profil.secili_unvan || '',
         okumaSayisi,
       }
     })
@@ -95,7 +95,7 @@ async function getLeaderboards() {
     fetchAllRows(() =>
       admin
         .from('public_profiller')
-        .select('id, kullanici_adi, avatar_url, rol')
+        .select('id, kullanici_adi, avatar_url, secili_unvan')
     ),
   ])
 

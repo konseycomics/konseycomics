@@ -166,9 +166,7 @@ export default function Okuyucu() {
       if (cancelled) return
       try {
         const isNewBolumView = shouldTrackContentView('bolum', bolumData.id)
-        const isNewSeriView = shouldTrackContentView('seri', seriData.id)
-
-        if (!isNewBolumView && !isNewSeriView) return
+        if (!isNewBolumView) return
 
         const tasks = []
 
@@ -176,13 +174,9 @@ export default function Okuyucu() {
           tasks.push(supabase.rpc('increment_bolum_goruntuleme', { bolum_id: bolumData.id }))
         }
 
-        if (isNewSeriView) {
-          tasks.push(supabase.rpc('increment_seri_goruntuleme', { seri_id: seriData.id }))
-        }
-
         await Promise.all(tasks)
       } catch (error) {
-        console.warn('Bolum/seri goruntuleme sayisi guncellenemedi:', error?.message || error)
+        console.warn('Bolum goruntuleme sayisi guncellenemedi:', error?.message || error)
       }
     }, 8000)
 

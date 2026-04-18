@@ -8,7 +8,6 @@ import SeriPuan from '../../components/SeriPuan'
 import YorumSistemi from '../../components/YorumSistemi'
 import Link from 'next/link'
 import { trackSeriesFavoriteAndUnlock } from '../../lib/unvanClient'
-import { shouldTrackContentView } from '../../lib/visitorTracking'
 
 function tarih(dateStr) {
   if (!dateStr) return ''
@@ -50,9 +49,11 @@ export default function SeriDetay() {
 
       if (seriData) {
         setSeri(seriData)
-        if (shouldTrackContentView('seri', seriData.id)) {
-          await supabase.rpc('increment_seri_goruntuleme', { seri_id: seriData.id })
-        }
+        fetch('/api/series-views', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seriId: seriData.id }),
+        }).catch(() => {})
 
         const [b, y, c, t, detay, onerilen, unvanlar] = await Promise.all([
           supabase.from('bolumler')

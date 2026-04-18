@@ -103,7 +103,7 @@ export default function Admin() {
   if (!giris) return null
 
   const menu = [
-    { title: 'Genel Bakis', items: [{ key: 'istatistik', label: 'Istatistikler', icon: '◢' }] },
+    { title: 'Genel Bakis', items: [{ key: 'istatistik', label: 'Istatistikler', icon: '◢' }, { key: 'okuma', label: 'Okuma Sayilari', icon: '▤' }] },
     { title: 'Icerik', items: [
       { key: 'seriler', label: 'Seriler', icon: '◫' },
       { key: 'bolumler', label: 'Bolumler', icon: '≡' },
@@ -183,6 +183,7 @@ export default function Admin() {
         </div>
         <div style={{ padding: '28px 28px 48px', overflow: 'auto' }}>
           {aktif === 'istatistik' && <IstatistikSayfasi />}
+          {aktif === 'okuma' && <OkumaSayilariSayfasi />}
           {aktif === 'seriler' && <SerilerSayfasi />}
           {aktif === 'bolumler' && <BolumlerSayfasi />}
           {aktif === 'konsey' && <KonseySayfasi />}
@@ -1074,6 +1075,124 @@ function IstatistikSayfasi() {
             </div>
           ))}
           {topBolumler.length===0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Veri yok</div>}
+        </Surface>
+      </div>
+    </div>
+  )
+}
+
+function OkumaSayilariSayfasi() {
+  const [yukleniyor, setYukleniyor] = useState(true)
+  const [ozet, setOzet] = useState({
+    toplamSeriGoruntulenme: 0,
+    toplamBolumGoruntulenme: 0,
+    goruntulenenSeriSayisi: 0,
+    goruntulenenBolumSayisi: 0,
+  })
+  const [topSeriler, setTopSeriler] = useState([])
+  const [topBolumler, setTopBolumler] = useState([])
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  async function fetchTumKayitlar(tablo, alanlar) {
+    const hepsi = []
+    const sayfaBoyutu = 1000
+    let offset = 0
+
+    while (true) {
+      const { data, error } = await supabase
+        .from(tablo)
+        .select(alanlar)
+        .range(offset, offset + sayfaBoyutu - 1)
+
+      if (error) break
+      if (!data?.length) break
+
+      hepsi.push(...data)
+      if (data.length < sayfaBoyutu) break
+      offset += sayfaBoyutu
+    }
+
+    return hepsi
+  }
+
+  async function fetchData() {
+    setYukleniyor(true)
+
+    const [tumSeriler, tumBolumler, topSerilerRes, topBolumlerRes] = await Promise.all([
+      fetchTumKayitlar('seriler', 'id, goruntuleme_sayisi'),
+      fetchTumKayitlar('bolumler', 'id, goruntuleme_sayisi'),
+      supabase.from('seriler').select('baslik, goruntuleme_sayisi').order('goruntuleme_sayisi', { ascending: false }).limit(12),
+      supabase.from('bolumler').select('baslik, sayi, goruntuleme_sayisi, seriler(baslik)').order('goruntuleme_sayisi', { ascending: false }).limit(12),
+    ])
+
+    const toplamSeriGoruntulenme = (tumSeriler || []).reduce((toplam, seri) => toplam + Number(seri?.goruntuleme_sayisi || 0), 0)
+    const toplamBolumGoruntulenme = (tumBolumler || []).reduce((toplam, bolum) => toplam + Number(bolum?.goruntuleme_sayisi || 0), 0)
+    const goruntulenenSeriSayisi = (tumSeriler || []).filter((seri) => Number(seri?.goruntuleme_sayisi || 0) > 0).length
+    const goruntulenenBolumSayisi = (tumBolumler || []).filter((bolum) => Number(bolum?.goruntuleme_sayisi || 0) > 0).length
+
+    setOzet({
+      toplamSeriGoruntulenme,
+      toplamBolumGoruntulenme,
+      goruntulenenSeriSayisi,
+      goruntulenenBolumSayisi,
+    })
+    setTopSeriler(topSerilerRes.data || [])
+    setTopBolumler(topBolumlerRes.data || [])
+    setYukleniyor(false)
+  }
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Icerik Performansi" title="Okuma Sayilari" description="Seri ve bölüm görüntülenmelerini tek yerde takip edelim. Burası özellikle hangi içeriklerin gerçekten açıldığını hızlı görmek için ayrıldı." />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {[
+          { label: 'Toplam Seri Görüntülenme', deger: ozet.toplamSeriGoruntulenme, alt: 'Tüm serilerde biriken toplam açılış' },
+          { label: 'Toplam Bölüm Görüntülenme', deger: ozet.toplamBolumGoruntulenme, alt: 'Tüm bölümlerde biriken toplam açılış' },
+          { label: 'Görüntülenen Seri', deger: ozet.goruntulenenSeriSayisi, alt: 'En az 1 açılış almış seri sayısı' },
+          { label: 'Görüntülenen Bölüm', deger: ozet.goruntulenenBolumSayisi, alt: 'En az 1 açılış almış bölüm sayısı' },
+        ].map((kart) => (
+          <Surface key={kart.label} style={{ padding: '24px' }}>
+            <div style={{ ...LB, marginBottom: '12px' }}>{kart.label}</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '52px', lineHeight: 0.9 }}>
+              {yukleniyor ? '–' : kart.deger}
+            </div>
+            <div style={{ fontSize: '12px', color: TEXT_SOFT, marginTop: '8px', lineHeight: 1.6 }}>{kart.alt}</div>
+          </Surface>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <Surface>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Çok Görüntülenen Seriler</div>
+          <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>Seri detayına girişten beslenen günlük tekil IP mantıklı seri görüntülenmeleri.</div>
+          {topSeriler.map((s, i) => (
+            <div key={`${s.baslik}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < topSeriler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
+              <span style={{ flex: 1, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.baslik}</span>
+              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{s.goruntuleme_sayisi || 0} görüntülenme</span>
+            </div>
+          ))}
+          {!yukleniyor && topSeriler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
+        </Surface>
+
+        <Surface>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>En Çok Görüntülenen Bölümler</div>
+          <div style={{ fontSize: '11px', color: TEXT_SUBTLE, marginBottom: '14px' }}>Okuyucuda 8 saniye kalındığında artan günlük tekil bölüm görüntülenmeleri.</div>
+          {topBolumler.map((b, i) => (
+            <div key={`${b.id || b.baslik}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i < topBolumler.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+              <span style={{ color: TEXT_SUBTLE, fontSize: '12px', width: '18px' }}>{i + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '11px', color: TEXT_SUBTLE }}>{b.seriler?.baslik || 'Seri yok'}</div>
+                <div style={{ fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{b.sayi} {b.baslik}</div>
+              </div>
+              <span style={{ fontSize: '12px', color: TEXT_SOFT }}>{b.goruntuleme_sayisi || 0} görüntülenme</span>
+            </div>
+          ))}
+          {!yukleniyor && topBolumler.length === 0 && <div style={{ color: TEXT_SUBTLE, fontSize: '13px' }}>Henüz veri yok.</div>}
         </Surface>
       </div>
     </div>

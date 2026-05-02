@@ -59,6 +59,14 @@ function preloadReaderImages(urls) {
   )
 }
 
+function bolumKrediSatirlari(chapter) {
+  return [
+    chapter?.cevirmen?.isim ? ['Cevirmen', chapter.cevirmen.isim] : null,
+    chapter?.balonlama?.isim ? ['Balonlama', chapter.balonlama.isim] : null,
+    chapter?.grafik?.isim ? ['Grafik', chapter.grafik.isim] : null,
+  ].filter(Boolean)
+}
+
 export default function Okuyucu() {
   const { slug, bolum } = useParams()
   const router = useRouter()
@@ -131,7 +139,7 @@ export default function Okuyucu() {
 
       const { data: tumBolumlerData } = await supabase
         .from('bolumler')
-        .select('*')
+        .select('*, cevirmen:ekip!cevirmen_id(isim), balonlama:ekip!balonlama_id(isim), grafik:ekip!grafik_id(isim)')
         .eq('seri_id', seri.id)
         .order('sayi')
 
@@ -297,6 +305,7 @@ export default function Okuyucu() {
     : `${aktifSayfa}`
   const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
   const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
+  const bolumKredileri = bolumKrediSatirlari(bolumData)
 
   function flipSayfaGuncelle(yeniSayfa) {
     if (!toplamSayfa) return
@@ -1636,6 +1645,12 @@ export default function Okuyucu() {
                       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Okuma Konumu</div>
                       <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600 }}>{mevcutIndex >= 0 ? mevcutIndex + 1 : 1} / {toplamBolum || 1}</div>
                     </div>
+                    {bolumKredileri.map(([etiket, deger]) => (
+                      <div key={etiket}>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>{etiket}</div>
+                        <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600 }}>{deger}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </aside>

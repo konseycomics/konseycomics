@@ -21,6 +21,14 @@ function formatCount(value) {
   return `${count}`
 }
 
+function formatBolumEkip(chapter) {
+  return [
+    chapter?.cevirmen?.isim ? `Çeviri: ${chapter.cevirmen.isim}` : null,
+    chapter?.balonlama?.isim ? `Balonlama: ${chapter.balonlama.isim}` : null,
+    chapter?.grafik?.isim ? `Grafik: ${chapter.grafik.isim}` : null,
+  ].filter(Boolean).join(' · ')
+}
+
 export default function SeriDetay() {
   const { slug } = useParams()
   const [seri, setSeri] = useState(null)
@@ -504,41 +512,50 @@ export default function SeriDetay() {
                 <div style={{ padding: '20px 0', color: 'var(--text-muted)', fontSize: '14px' }}>
                   Henüz bölüm eklenmemiş.
                 </div>
-              ) : bolumler.map(ch => (
-                <Link key={ch.id} href={`/oku/${slug}/${ch.sayi}`} style={{ textDecoration: 'none' }}>
-                  <div className="seri-row">
-                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#6a6a64', lineHeight: 1, textAlign: 'right' }}>
-                      {ch.sayi}
-                    </div>
-                    <div style={{ width: '44px', height: '56px', borderRadius: '6px', overflow: 'hidden', background: '#111' }}>
-                      {ch.kapak_url ? (
-                        <img src={ch.kapak_url} alt={ch.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#888', fontSize: '11px' }}>#{ch.sayi}</div>
-                      )}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '16px', color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ch.baslik}
-                        </span>
-                        {sonOkunan?.sayi === ch.sayi && (
-                          <span style={{ padding: '3px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '999px', fontSize: '10px', fontWeight: 700 }}>
-                            KALDIĞIN YER
-                          </span>
+              ) : bolumler.map(ch => {
+                const bolumEkip = formatBolumEkip(ch)
+
+                return (
+                  <Link key={ch.id} href={`/oku/${slug}/${ch.sayi}`} style={{ textDecoration: 'none' }}>
+                    <div className="seri-row">
+                      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#6a6a64', lineHeight: 1, textAlign: 'right' }}>
+                        {ch.sayi}
+                      </div>
+                      <div style={{ width: '44px', height: '56px', borderRadius: '6px', overflow: 'hidden', background: '#111' }}>
+                        {ch.kapak_url ? (
+                          <img src={ch.kapak_url} alt={ch.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#888', fontSize: '11px' }}>#{ch.sayi}</div>
                         )}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                        Yüklendi {tarih(ch.created_at)}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '16px', color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {ch.baslik}
+                          </span>
+                          {sonOkunan?.sayi === ch.sayi && (
+                            <span style={{ padding: '3px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '999px', fontSize: '10px', fontWeight: 700 }}>
+                              KALDIĞIN YER
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                          Yüklendi {tarih(ch.created_at)}
+                        </div>
+                        {bolumEkip ? (
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                            {bolumEkip}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="seri-row-date" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-light)', fontSize: '13px', flexShrink: 0 }}>
+                        <span>{tarih(ch.created_at)}</span>
+                        <span>→</span>
                       </div>
                     </div>
-                    <div className="seri-row-date" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-light)', fontSize: '13px', flexShrink: 0 }}>
-                      <span>{tarih(ch.created_at)}</span>
-                      <span>→</span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
 
               <YorumSistemi seriId={seri.id} />
             </div>

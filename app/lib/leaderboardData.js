@@ -39,6 +39,14 @@ function getDateKey(date) {
   return `${yil}-${ay}-${gun}`
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
 function mapProfileToLeaderboardRow(profil, okumaSayisi = 0) {
   if (!profil?.kullanici_adi) return null
 
@@ -87,7 +95,7 @@ export async function getLeaderboards(existingAdminClient = null) {
   const hafta = new Date(bugun)
   hafta.setDate(hafta.getDate() - 6)
 
-  const [reads, profiles, activeTitles] = await Promise.all([
+  const [reads, profiles, activeTitles, ekipUyeleri] = await Promise.all([
     fetchAllRows(() =>
       admin
         .from('kullanici_bolum_okumalari')
@@ -106,6 +114,11 @@ export async function getLeaderboards(existingAdminClient = null) {
         .select('kullanici_id, one_cikarildi, unvan_tanimlari(isim)')
         .eq('one_cikarildi', true)
     ),
+    fetchAllRows(() =>
+      admin
+        .from('ekip')
+        .select('isim')
+    ),
   ])
 
   const activeTitleMap = new Map(
@@ -114,14 +127,28 @@ export async function getLeaderboards(existingAdminClient = null) {
       return [item.kullanici_id, title || '']
     })
   )
+  const excludedProfileIds = new Set()
+  const profileRows = (profiles || []).map((profil) => ({
+    ...profil,
+    secili_unvan: activeTitleMap.get(profil.id) || '',
+  }))
+
+  for (const uye of ekipUyeleri || []) {
+    const ekipIsmi = normalizeText(uye?.isim)
+    if (!ekipIsmi) continue
+
+    const eslesenProfil = profileRows.find((profil) => normalizeText(profil.kullanici_adi) === ekipIsmi)
+      || profileRows.find((profil) => normalizeText(profil.kullanici_adi).includes(ekipIsmi))
+
+    if (eslesenProfil?.id) {
+      excludedProfileIds.add(eslesenProfil.id)
+    }
+  }
+
   const profileMap = new Map(
-    (profiles || []).map((profil) => [
-      profil.id,
-      {
-        ...profil,
-        secili_unvan: activeTitleMap.get(profil.id) || '',
-      },
-    ])
+    profileRows
+      .filter((profil) => !excludedProfileIds.has(profil.id))
+      .map((profil) => [profil.id, profil])
   )
 
   return {

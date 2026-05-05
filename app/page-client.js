@@ -535,9 +535,6 @@ function LiderlikTablosu({ liderlik = {} }) {
               <div style={{ color: '#fff', fontSize: '24px', fontWeight: 900, marginBottom: '8px', lineHeight: 1.15 }}>
                 Tüm Zamanların En İyi Okuyucusu
               </div>
-              <div style={{ color: '#9c9c96', fontSize: '13px', lineHeight: 1.7, maxWidth: '32ch' }}>
-                Arşivde en çok okuma tamamlayan isim burada öne çıkar. Zirveyi tek bakışta hissettiren ana vitrin artık burası.
-              </div>
             </div>
 
             {birinci ? (

@@ -480,11 +480,7 @@ function TurKart({ tur, count }) {
 }
 
 function LiderlikTablosu({ liderlik = {} }) {
-  const kartlar = [
-    { key: 'gunluk', baslik: 'Günlük En İyi Okuyucu' },
-    { key: 'haftalik', baslik: 'Haftalık En İyi Okuyucu' },
-    { key: 'tum', baslik: 'Tüm Zamanların En İyi Okuyucusu' },
-  ]
+  const tumZamanlarListesi = liderlik?.tum || []
   const cerceveMap = {
     0: 'linear-gradient(135deg, #f7d774, #d4a72c)',
     1: 'linear-gradient(135deg, #d9dee6, #8e97a5)',
@@ -504,7 +500,7 @@ function LiderlikTablosu({ liderlik = {} }) {
             En İyi Okuyucular
           </h2>
           <p className="home-section-kicker" style={{ margin: '10px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.4px' }}>
-            Günlük, haftalık ve tüm zamanların en iyi okuyucuları
+            Tüm zamanların en iyi okuyucuları
           </p>
         </div>
 
@@ -519,93 +515,88 @@ function LiderlikTablosu({ liderlik = {} }) {
           lineHeight: 1.7,
           textAlign: 'center',
         }}>
-          Günlük en iyi okuyucu, haftalık en iyi okuyucu ve tüm zamanların en iyi okuyucusu rozetleri ve süpriz ödüller verilecek.
+          Tüm zamanların en iyi okuyucuları burada yer alır. En çok okuyan isimler vitrine çıkar ve özel ödüller kazanır.
         </div>
 
-        <div className="leaderboard-period-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '16px' }}>
-          {kartlar.map((kart) => {
-            const liste = liderlik?.[kart.key] || []
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <article style={{
+            width: 'min(100%, 820px)',
+            padding: '18px',
+            borderRadius: '24px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
+                Tüm Zamanların En İyi Okuyucusu
+              </div>
+              <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                İlk 5 okuyucu
+              </div>
+            </div>
 
-            return (
-              <article key={kart.key} style={{
-                padding: '18px',
-                borderRadius: '24px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                }}>
-                  <div style={{ marginBottom: '14px' }}>
-                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
-                      {kart.baslik}
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {Array.from({ length: 5 }, (_, index) => tumZamanlarListesi[index] || null).map((uye, index) => {
+                const cerceve = cerceveMap[index]
+                const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
+                const satir = (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '28px 48px minmax(0, 1fr) auto',
+                    gap: '12px',
+                    alignItems: 'center',
+                    padding: '10px 12px',
+                    borderRadius: '18px',
+                    background: uye ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    minHeight: '76px',
+                  }}>
+                    <div style={{ color: '#8f8f8a', fontSize: '12px', fontWeight: 900 }}>#{index + 1}</div>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '50%',
+                      padding: cerceve ? '2px' : '0',
+                      background: cerceve || 'transparent',
+                      boxShadow: cerceve ? '0 0 18px rgba(255,255,255,0.08)' : 'none',
+                    }}>
+                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.1)' }}>
+                        {uye?.avatar_url
+                          ? <img src={uye.avatar_url} alt={uye.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || ''}</div>}
+                      </div>
                     </div>
-                    <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                      İlk 5 okuyucu
+                    <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {uye?.kullanici_adi || ''}
+                      </div>
+                      {uye?.unvan ? (
+                        <div style={{ color: '#9f9f99', fontSize: '11px', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {uye.unvan}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
+                        {uye?.okumaSayisi || 0}
+                      </div>
+                      <div style={{ color: '#bcbcb6', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>
+                        Okuma
+                      </div>
                     </div>
                   </div>
+                )
 
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {Array.from({ length: 5 }, (_, index) => liste[index] || null).map((uye, index) => {
-                    const cerceve = cerceveMap[index]
-                    const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
-                    const satir = (
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '28px 48px minmax(0, 1fr) auto',
-                        gap: '12px',
-                        alignItems: 'center',
-                        padding: '10px 12px',
-                        borderRadius: '18px',
-                        background: uye ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        minHeight: '76px',
-                      }}>
-                        <div style={{ color: '#8f8f8a', fontSize: '12px', fontWeight: 900 }}>#{index + 1}</div>
-                        <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '50%',
-                          padding: cerceve ? '2px' : '0',
-                          background: cerceve || 'transparent',
-                          boxShadow: cerceve ? '0 0 18px rgba(255,255,255,0.08)' : 'none',
-                        }}>
-                          <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.1)' }}>
-                            {uye?.avatar_url
-                              ? <img src={uye.avatar_url} alt={uye.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || ''}</div>}
-                          </div>
-                        </div>
-                        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {uye?.kullanici_adi || ''}
-                          </div>
-                          {uye?.unvan ? (
-                            <div style={{ color: '#9f9f99', fontSize: '11px', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {uye.unvan}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
-                            {uye?.okumaSayisi || 0}
-                          </div>
-                          <div style={{ color: '#bcbcb6', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>
-                            Okuma
-                          </div>
-                        </div>
-                      </div>
-                    )
-
-                    return uye ? (
-                      <Link key={`${kart.key}-${uye.id}-${index}`} href={profilHref} style={{ textDecoration: 'none' }}>
-                        {satir}
-                      </Link>
-                    ) : (
-                      <div key={`${kart.key}-placeholder-${index}`} style={{ opacity: 0.35 }}>{satir}</div>
-                    )
-                  })}
-                </div>
-              </article>
-            )
-          })}
+                return uye ? (
+                  <Link key={`tum-${uye.id}-${index}`} href={profilHref} style={{ textDecoration: 'none' }}>
+                    {satir}
+                  </Link>
+                ) : (
+                  <div key={`tum-placeholder-${index}`} style={{ opacity: 0.35 }}>{satir}</div>
+                )
+              })}
+            </div>
+          </article>
         </div>
       </div>
     </section>

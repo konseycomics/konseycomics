@@ -481,11 +481,14 @@ function TurKart({ tur, count }) {
 
 function LiderlikTablosu({ liderlik = {} }) {
   const tumZamanlarListesi = liderlik?.tum || []
+  const birinci = tumZamanlarListesi[0] || null
+  const digerleri = Array.from({ length: 4 }, (_, index) => tumZamanlarListesi[index + 1] || null)
   const cerceveMap = {
     0: 'linear-gradient(135deg, #f7d774, #d4a72c)',
     1: 'linear-gradient(135deg, #d9dee6, #8e97a5)',
     2: 'linear-gradient(135deg, #d8a57a, #8c5a35)',
   }
+
   return (
     <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
       <div style={{
@@ -505,11 +508,7 @@ function LiderlikTablosu({ liderlik = {} }) {
         </div>
 
         <div style={{
-          marginBottom: '18px',
-          padding: '14px 16px',
-          borderRadius: '18px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          marginBottom: '22px',
           color: '#d4d4cf',
           fontSize: '13px',
           lineHeight: 1.7,
@@ -518,43 +517,126 @@ function LiderlikTablosu({ liderlik = {} }) {
           Tüm zamanların en iyi okuyucuları burada yer alır. En çok okuyan isimler vitrine çıkar ve özel ödüller kazanır.
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div className="leaderboard-single-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 0.92fr) minmax(360px, 1.08fr)', gap: '18px' }}>
           <article style={{
-            width: 'min(100%, 820px)',
+            padding: '24px',
+            borderRadius: '28px',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+            border: '1px solid rgba(255,255,255,0.08)',
+            minHeight: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '999px', background: 'rgba(247,215,116,0.12)', border: '1px solid rgba(247,215,116,0.28)', color: '#f7d774', fontSize: '11px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '18px' }}>
+                Zirvedeki Okuyucu
+              </div>
+              <div style={{ color: '#fff', fontSize: '24px', fontWeight: 900, marginBottom: '8px', lineHeight: 1.15 }}>
+                Tüm Zamanların En İyi Okuyucusu
+              </div>
+              <div style={{ color: '#9c9c96', fontSize: '13px', lineHeight: 1.7, maxWidth: '32ch' }}>
+                Arşivde en çok okuma tamamlayan isim burada öne çıkar. Zirveyi tek bakışta hissettiren ana vitrin artık burası.
+              </div>
+            </div>
+
+            {birinci ? (
+              <Link href={birinci.kullanici_adi ? `/profil/${birinci.kullanici_adi}` : '#'} style={{ textDecoration: 'none', marginTop: '26px' }}>
+                <div style={{
+                  borderRadius: '24px',
+                  padding: '22px',
+                  background: 'radial-gradient(circle at top, rgba(247,215,116,0.18), transparent 55%), rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(247,215,116,0.24)',
+                  boxShadow: '0 18px 40px rgba(0,0,0,0.24)',
+                }}>
+                  <div style={{ color: '#f7d774', fontSize: '12px', fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '18px' }}>
+                    #1 Zirve
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginBottom: '18px' }}>
+                    <div style={{
+                      width: '88px',
+                      height: '88px',
+                      borderRadius: '50%',
+                      padding: '3px',
+                      background: cerceveMap[0],
+                      boxShadow: '0 0 28px rgba(247,215,116,0.16)',
+                    }}>
+                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.12)' }}>
+                        {birinci.avatar_url
+                          ? <img src={birinci.avatar_url} alt={birinci.kullanici_adi} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '30px', fontWeight: 900 }}>{birinci.kullanici_adi?.[0]?.toUpperCase() || ''}</div>}
+                      </div>
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: '#fff', fontSize: '26px', fontWeight: 900, lineHeight: 1.05, marginBottom: '6px' }}>
+                        {birinci.kullanici_adi}
+                      </div>
+                      {birinci.unvan ? (
+                        <div style={{ color: '#c8c8c2', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {birinci.unvan}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                    <div style={{ padding: '14px 16px', borderRadius: '18px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ color: '#9f9f99', fontSize: '10px', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                        Toplam Okuma
+                      </div>
+                      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '42px', lineHeight: 0.9 }}>
+                        {birinci.okumaSayisi || 0}
+                      </div>
+                    </div>
+                    <div style={{ padding: '14px 16px', borderRadius: '18px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ color: '#9f9f99', fontSize: '10px', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                        Konum
+                      </div>
+                      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '42px', lineHeight: 0.9 }}>
+                        #1
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ) : null}
+          </article>
+
+          <article style={{
             padding: '18px',
-            borderRadius: '24px',
+            borderRadius: '28px',
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.08)',
           }}>
             <div style={{ marginBottom: '14px' }}>
               <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>
-                Tüm Zamanların En İyi Okuyucusu
+                Zirve Sıralaması
               </div>
               <div style={{ color: '#9c9c96', fontSize: '11px', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                İlk 5 okuyucu
+                2 - 5 arası
               </div>
             </div>
 
             <div style={{ display: 'grid', gap: '10px' }}>
-              {Array.from({ length: 5 }, (_, index) => tumZamanlarListesi[index] || null).map((uye, index) => {
-                const cerceve = cerceveMap[index]
+              {digerleri.map((uye, index) => {
+                const gercekSira = index + 2
+                const cerceve = cerceveMap[gercekSira - 1]
                 const profilHref = uye?.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '#'
                 const satir = (
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '28px 48px minmax(0, 1fr) auto',
+                    gridTemplateColumns: '36px 52px minmax(0, 1fr) auto',
                     gap: '12px',
                     alignItems: 'center',
-                    padding: '10px 12px',
+                    padding: '12px 14px',
                     borderRadius: '18px',
                     background: uye ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
                     border: '1px solid rgba(255,255,255,0.06)',
-                    minHeight: '76px',
+                    minHeight: '82px',
                   }}>
-                    <div style={{ color: '#8f8f8a', fontSize: '12px', fontWeight: 900 }}>#{index + 1}</div>
+                    <div style={{ color: '#8f8f8a', fontSize: '13px', fontWeight: 900 }}>#{gercekSira}</div>
                     <div style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '52px',
+                      height: '52px',
                       borderRadius: '50%',
                       padding: cerceve ? '2px' : '0',
                       background: cerceve || 'transparent',
@@ -566,8 +648,8 @@ function LiderlikTablosu({ liderlik = {} }) {
                           : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontSize: '18px', fontWeight: 800 }}>{uye?.kullanici_adi?.[0]?.toUpperCase() || ''}</div>}
                       </div>
                     </div>
-                    <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div style={{ color: '#fff', fontSize: '14px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: '#fff', fontSize: '15px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {uye?.kullanici_adi || ''}
                       </div>
                       {uye?.unvan ? (
@@ -577,7 +659,7 @@ function LiderlikTablosu({ liderlik = {} }) {
                       ) : null}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
+                      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>
                         {uye?.okumaSayisi || 0}
                       </div>
                       <div style={{ color: '#bcbcb6', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>
@@ -588,11 +670,11 @@ function LiderlikTablosu({ liderlik = {} }) {
                 )
 
                 return uye ? (
-                  <Link key={`tum-${uye.id}-${index}`} href={profilHref} style={{ textDecoration: 'none' }}>
+                  <Link key={`tum-${uye.id}-${gercekSira}`} href={profilHref} style={{ textDecoration: 'none' }}>
                     {satir}
                   </Link>
                 ) : (
-                  <div key={`tum-placeholder-${index}`} style={{ opacity: 0.35 }}>{satir}</div>
+                  <div key={`tum-placeholder-${gercekSira}`} style={{ opacity: 0.35 }}>{satir}</div>
                 )
               })}
             </div>
@@ -752,7 +834,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .series-showcase-grid > *:nth-child(1),
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
-          .leaderboard-period-grid { grid-template-columns: 1fr !important; }
+          .leaderboard-single-grid { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 640px) {
           .home-section-heading { margin-bottom: 22px !important; }
@@ -776,7 +858,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .category-block { min-height: 180px !important; border-radius: 20px !important; }
           .category-block.is-large { min-height: 300px !important; }
           .series-showcase-grid > * { grid-column: span 12 !important; }
-          .leaderboard-period-grid { grid-template-columns: 1fr !important; }
+          .leaderboard-single-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 

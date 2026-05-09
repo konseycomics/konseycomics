@@ -1,0 +1,315 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabase'
+
+const KATEGORILER = [
+  'Genel Sohbet',
+  'Çizgi Roman Tartışmaları',
+  'Seri Önerileri',
+  'Haberler & Duyurular',
+  'Etkinlikler',
+  'Çizimler & Fanart',
+  'Teknik Destek',
+]
+
+function formatDateTime(value) {
+  if (!value) return ''
+  return new Date(value).toLocaleString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function trimPreview(value, max = 230) {
+  const text = String(value || '').trim()
+  return text.length > max ? `${text.slice(0, max - 3).trim()}...` : text
+}
+
+function topicScore(topic) {
+  return Number(topic.yanit_sayisi || 0) * 3 + Number(topic.begeni_sayisi || 0) * 2 + Number(topic.goruntulenme_sayisi || 0)
+}
+
+export default function ToplulukFeedClient({ initialTopics = [] }) {
+  const [topics, setTopics] = useState(initialTopics)
+  const [aktifTab, setAktifTab] = useState('tumu')
+  const [kullanici, setKullanici] = useState(null)
+  const [profil, setProfil] = useState(null)
+  const [baslik, setBaslik] = useState('')
+  const [icerik, setIcerik] = useState('')
+  const [kategori, setKategori] = useState('Genel Sohbet')
+  const [etiketler, setEtiketler] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [mesaj, setMesaj] = useState('')
+  const [katilimKonuIdleri, setKatilimKonuIdleri] = useState([])
+
+  useEffect(() => {
+    let active = true
+
+    async function loadSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!active) return
+      const user = session?.user || null
+      setKullanici(user)
+
+      if (user?.id) {
+        const [{ data: profileData }, { data: repliesData, error: repliesError }, { data: ownTopics, error: ownTopicsError }] = await Promise.all([
+          supabase.from('public_profiller').select('id, kullanici_adi, avatar_url').eq('id', user.id).maybeSingle(),
+          supabase.from('topluluk_yanitlari').select('konu_id').eq('kullanici_id', user.id),
+          supabase.from('topluluk_konulari').select('id').eq('kullanici_id', user.id),
+        ])
+
+        if (!active) return
+        setProfil(profileData || null)
+        const ids = [
+          ...((repliesError ? [] : repliesData) || []).map((item) => item.konu_id),
+          ...((ownTopicsError ? [] : ownTopics) || []).map((item) => item.id),
+        ].filter(Boolean)
+        setKatilimKonuIdleri([...new Set(ids)])
+      } else {
+        setProfil(null)
+        setKatilimKonuIdleri([])
+      }
+    }
+
+    loadSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setKullanici(session?.user || null)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  const gorunenKonular = useMemo(() => {
+    if (aktifTab === 'takip') {
+      return topics.filter((item) => katilimKonuIdleri.includes(item.id))
+    }
+
+    if (aktifTab === 'populer') {
+      return [...topics].sort((a, b) => topicScore(b) - topicScore(a) || new Date(b.son_aktivite_at || b.created_at) - new Date(a.son_aktivite_at || a.created_at))
+    }
+
+    if (aktifTab === 'yeni') {
+      return [...topics].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    }
+
+    return topics
+  }, [aktifTab, katilimKonuIdleri, topics])
+
+  async function konuOlustur() {
+    if (!kullanici) {
+      setMesaj('Konu açmak için giriş yapman gerekiyor.')
+      return
+    }
+
+    setYukleniyor(true)
+    setMesaj('')
+
+    const tags = etiketler
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/topics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ baslik, icerik, kategori, etiketler: tags }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    setYukleniyor(false)
+
+    if (!response.ok) {
+      setMesaj(result?.error || 'Konu oluşturulamadı.')
+      return
+    }
+
+    const yeniKonu = {
+      ...result.topic,
+      etiketler: Array.isArray(result.topic.etiketler) ? result.topic.etiketler : [],
+      profil: result.topic.profil || profil,
+      created_at: result.topic.created_at,
+      son_aktivite_at: result.topic.son_aktivite_at || result.topic.created_at,
+      yanit_sayisi: Number(result.topic.yanit_sayisi || 0),
+      begeni_sayisi: Number(result.topic.begeni_sayisi || 0),
+      goruntulenme_sayisi: Number(result.topic.goruntulenme_sayisi || 0),
+      source: 'topic',
+    }
+
+    setTopics((prev) => [yeniKonu, ...prev.filter((item) => item.id !== yeniKonu.id)])
+    setKatilimKonuIdleri((prev) => [...new Set([yeniKonu.id, ...prev])])
+    setBaslik('')
+    setIcerik('')
+    setKategori('Genel Sohbet')
+    setEtiketler('')
+    setMesaj('Konun paylaşıldı.')
+    setAktifTab('tumu')
+  }
+
+  const sekmeler = [
+    { id: 'tumu', label: 'Tümü' },
+    { id: 'takip', label: 'Takip Edilen' },
+    { id: 'populer', label: 'Popüler' },
+    { id: 'yeni', label: 'En Yeni' },
+  ]
+
+  return (
+    <>
+      <div id="konu-olustur" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '16px', scrollMarginTop: '120px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
+            {profil?.avatar_url
+              ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (profil?.kullanici_adi?.[0]?.toUpperCase() || 'K')}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <input
+              value={baslik}
+              onChange={(e) => setBaslik(e.target.value)}
+              placeholder="Konu başlığı"
+              style={{ width: '100%', minHeight: '46px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '15px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
+            />
+            <textarea
+              value={icerik}
+              onChange={(e) => setIcerik(e.target.value)}
+              placeholder="Ne hakkında konuşmak istersin?"
+              rows={4}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+            />
+            <div className="community-composer-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 180px', gap: '10px' }}>
+              <input
+                value={etiketler}
+                onChange={(e) => setEtiketler(e.target.value)}
+                placeholder="Etiketler (virgülle)"
+                style={{ width: '100%', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <select
+                value={kategori}
+                onChange={(e) => setKategori(e.target.value)}
+                style={{ width: '100%', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+              >
+                {KATEGORILER.map((secenek) => (
+                  <option key={secenek} value={secenek} style={{ color: '#111' }}>
+                    {secenek}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '12px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>◫ Fotoğraf</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>≣ Anket</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}># Etiket</span>
+            </div>
+            {mesaj ? (
+              <div style={{ marginTop: '12px', color: mesaj === 'Konun paylaşıldı.' ? '#8fda8f' : '#ffb4b4', fontSize: '13px' }}>
+                {mesaj}
+              </div>
+            ) : null}
+          </div>
+          <button
+            onClick={konuOlustur}
+            disabled={yukleniyor}
+            style={{ minHeight: '42px', padding: '0 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#111', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center' }}
+          >
+            {yukleniyor ? 'Paylaşılıyor' : 'Paylaş'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
+        {sekmeler.map((sekme) => (
+          <button
+            key={sekme.id}
+            onClick={() => setAktifTab(sekme.id)}
+            style={{
+              color: aktifTab === sekme.id ? '#fff' : '#b3b3ad',
+              fontWeight: aktifTab === sekme.id ? 700 : 500,
+              paddingBottom: '10px',
+              borderBottom: aktifTab === sekme.id ? '2px solid #fff' : '2px solid transparent',
+              background: 'transparent',
+              borderInline: 'none',
+              borderTop: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {sekme.label}
+          </button>
+        ))}
+        <span style={{ marginInlineStart: 'auto', fontSize: '18px' }}>⚙</span>
+      </div>
+
+      <div id="son-aktiviteler" style={{ display: 'grid', gap: '14px' }}>
+        {gorunenKonular.length === 0 ? (
+          <div style={{ padding: '22px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#b8b8b2', fontSize: '14px' }}>
+            Bu filtrede henüz konu yok. İlk konuyu sen açabilirsin.
+          </div>
+        ) : gorunenKonular.map((seri, index) => (
+          <Link key={`${seri.source}-${seri.id}`} href={seri.href || `/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
+            <article style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  {seri.profil?.avatar_url
+                    ? <img src={seri.profil.avatar_url} alt={seri.profil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{seri.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                    <span style={{ color: '#fff', fontSize: '15px', fontWeight: 700 }}>{seri.profil?.kullanici_adi || 'Konsey Üyesi'}</span>
+                    <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
+                    {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
+                  </div>
+                  <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
+                    {seri.baslik}
+                  </div>
+                  <div style={{ color: '#c2c2bc', fontSize: '14px', lineHeight: 1.75, marginBottom: '12px' }}>
+                    {trimPreview(seri.icerik)}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {(seri.etiketler || []).slice(0, 3).map((tag) => (
+                      <span key={tag} style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#d5d5d0', fontSize: '11px', fontWeight: 700 }}>
+                        {tag.toLowerCase()}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#d2d2cc', fontSize: '14px', marginTop: '16px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>♡ {Math.max(Number(seri.begeni_sayisi || 0), Number(seri.yanit_sayisi || 0) * 2 + 5)}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>◔ {Number(seri.yanit_sayisi || 0)}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gap: '10px', minWidth: '96px' }}>
+                  <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
+                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                    <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '30px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
+                    <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorum</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </Link>
+        ))}
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .community-composer-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </>
+  )
+}

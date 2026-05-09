@@ -3,6 +3,8 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { buildMetadata, createSeoDescription, createSupabaseServerClient } from '../lib/seo'
 import { getLeaderboards } from '../lib/leaderboardData'
+import { getCommunityTopics } from '../lib/communityData'
+import ToplulukFeedClient from './ToplulukFeedClient'
 import { unstable_noStore as noStore } from 'next/cache'
 
 function formatDate(value) {
@@ -149,19 +151,6 @@ export async function generateMetadata() {
   })
 }
 
-function StatBox({ label, value }) {
-  return (
-    <div style={{ padding: '14px 16px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-      <div style={{ color: '#8f8f89', fontSize: '11px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '8px' }}>
-        {label}
-      </div>
-      <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '32px', lineHeight: 0.9 }}>
-        {value}
-      </div>
-    </div>
-  )
-}
-
 function CircleGlyph({ children, size = 18, bg = 'rgba(255,255,255,0.04)', color = '#fff' }) {
   return (
     <span
@@ -192,6 +181,7 @@ export default async function ToplulukPage() {
     populerEtiketler,
     istatistikler,
   } = await getCommunityData()
+  const { topics: gerçekKonular } = await getCommunityTopics({ limit: 12 })
 
   const solMenu = [
     { label: 'Anasayfa', href: '/topluluk', icon: '⌂' },
@@ -221,15 +211,29 @@ export default async function ToplulukPage() {
   }))].filter((uye, index, arr) => uye?.id && arr.findIndex((item) => item?.id === uye.id) === index).slice(0, 6)
 
   const akışKartlari = hareketliKonular.slice(0, 5)
-  const sagPopulerKonular = hareketliKonular.slice(0, 5)
+  const fallbackTopics = akışKartlari.map((seri) => ({
+    id: `fallback-${seri.id}`,
+    href: `/seri/${seri.slug}`,
+    baslik: `${seri.baslik} hakkında ne düşünüyorsunuz?`,
+    icerik: getCommentPreview(seri.sonYorum),
+    kategori: 'Seri Tartışmaları',
+    etiketler: seri.baslik.split(' ').slice(0, 2),
+    created_at: seri.sonYorumAt,
+    son_aktivite_at: seri.sonYorumAt,
+    yanit_sayisi: Number(seri.yorumSayisi || 0),
+    begeni_sayisi: Math.max(Number(seri.yorumSayisi || 0) * 2, 6),
+    goruntulenme_sayisi: 0,
+    profil: seri.sonYorumProfil || null,
+    source: 'fallback',
+  }))
+  const feedTopics = gerçekKonular.length > 0 ? gerçekKonular : fallbackTopics
+  const sagPopulerKonular = (gerçekKonular.length > 0 ? gerçekKonular : fallbackTopics).slice(0, 5)
   const sonRozetler = aktifOkuyucular.filter((uye) => uye.unvan).slice(0, 3)
   const etkinlikler = [
     { baslik: 'Canli Okuma: Haftanin Serisi', tarih: 'Pazar · 21:00' },
     { baslik: 'Topluluk Oneri Gecesi', tarih: 'Carsamba · 20:30' },
     { baslik: 'Editor Soru-Cevap', tarih: 'Cumartesi · 19:00' },
   ]
-  const besteci = onlineUyeler[0] || aktifOkuyucular[0] || null
-
   return (
     <>
       <Navbar />
@@ -238,7 +242,7 @@ export default async function ToplulukPage() {
           <div className="community-layout" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr) 300px', gap: '20px', alignItems: 'start' }}>
             <aside className="community-sidebar" style={{ position: 'sticky', top: '106px', alignSelf: 'start' }}>
               <div style={{ paddingRight: '18px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                <Link href={haftaninKonusu ? `/seri/${haftaninKonusu.slug}` : '/seriler'} style={{ minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>
+                <Link href="#konu-olustur" style={{ minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>
                   + Konu Olustur
                 </Link>
 
@@ -324,81 +328,7 @@ export default async function ToplulukPage() {
                 </p>
               </div>
 
-              <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '16px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
-                    {besteci?.avatar_url
-                      ? <img src={besteci.avatar_url} alt={besteci.kullanici_adi || 'Uye'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : (besteci?.kullanici_adi?.[0]?.toUpperCase() || 'K')}
-                  </div>
-                  <div>
-                    <div style={{ color: '#d9d9d4', fontSize: '18px', marginBottom: '12px' }}>Ne hakkında konuşmak istersin?</div>
-                    <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>◫</CircleGlyph>Fotograf</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>≣</CircleGlyph>Anket</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>#</CircleGlyph>Etiket</span>
-                    </div>
-                  </div>
-                  <button style={{ minHeight: '42px', padding: '0 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#111', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit' }}>
-                    Paylas
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
-                <span style={{ color: '#fff', fontWeight: 700, paddingBottom: '10px', borderBottom: '2px solid #fff' }}>Tumu</span>
-                <span>Takip Edilen</span>
-                <span>Populer</span>
-                <span>En Yeni</span>
-                <span style={{ marginInlineStart: 'auto', fontSize: '18px' }}>⚙</span>
-              </div>
-
-              <div id="son-aktiviteler" style={{ display: 'grid', gap: '14px' }}>
-                {akışKartlari.map((seri, index) => (
-                  <Link key={seri.id} href={`/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
-                    <article style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
-                        <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          {seri.sonYorumProfil?.avatar_url
-                            ? <img src={seri.sonYorumProfil.avatar_url} alt={seri.sonYorumProfil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{seri.sonYorumProfil?.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                            <span style={{ color: '#fff', fontSize: '15px', fontWeight: 700 }}>{seri.sonYorumProfil?.kullanici_adi || 'Konsey Uyesi'}</span>
-                            <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.sonYorumAt)}</span>
-                            {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
-                          </div>
-                          <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
-                            {seri.baslik} hakkında ne düşünüyorsunuz?
-                          </div>
-                          <div style={{ color: '#c2c2bc', fontSize: '14px', lineHeight: 1.75, marginBottom: '12px' }}>
-                            {getCommentPreview(seri.sonYorum)}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {seri.baslik.split(' ').slice(0, 2).map((tag) => (
-                              <span key={tag} style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#d5d5d0', fontSize: '11px', fontWeight: 700 }}>
-                                {tag.toLowerCase()}
-                              </span>
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#d2d2cc', fontSize: '14px', marginTop: '16px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>♡ {Math.max(seri.yorumSayisi * 2 + 5, 8)}</span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>◔ {seri.yorumSayisi}</span>
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gap: '10px', minWidth: '96px' }}>
-                          <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
-                          <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                            <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '30px', lineHeight: 0.9 }}>{seri.yorumSayisi}</div>
-                            <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorum</div>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                ))}
-              </div>
+              <ToplulukFeedClient initialTopics={feedTopics} />
             </section>
 
             <aside className="community-right-rail" style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '16px' }}>
@@ -425,15 +355,15 @@ export default async function ToplulukPage() {
                 <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '14px' }}>Popüler Konular</div>
                 <div style={{ display: 'grid', gap: '14px' }}>
                   {sagPopulerKonular.map((seri) => (
-                    <Link key={seri.id} href={`/seri/${seri.slug}`} style={{ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr)', gap: '10px', textDecoration: 'none' }}>
+                    <Link key={seri.id} href={seri.href || `/topluluk/konu/${seri.slug}`} style={{ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr)', gap: '10px', textDecoration: 'none' }}>
                       <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: '#111' }}>
-                        {seri.kapak_url
-                          ? <img src={seri.kapak_url} alt={seri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {seri.profil?.avatar_url
+                          ? <img src={seri.profil.avatar_url} alt={seri.profil.kullanici_adi || seri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           : null}
                       </div>
                       <div>
-                        <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, lineHeight: 1.35, marginBottom: '4px' }}>{seri.baslik} hakkında ne düşünüyorsunuz?</div>
-                        <div style={{ color: '#b5b5af', fontSize: '13px' }}>{seri.yorumSayisi} yorum</div>
+                        <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, lineHeight: 1.35, marginBottom: '4px' }}>{seri.baslik}</div>
+                        <div style={{ color: '#b5b5af', fontSize: '13px' }}>{Number(seri.yanit_sayisi || 0)} yorum</div>
                       </div>
                     </Link>
                   ))}

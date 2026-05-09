@@ -151,64 +151,13 @@ export async function generateMetadata() {
   })
 }
 
-function CircleGlyph({ children, size = 18, bg = 'rgba(255,255,255,0.04)', color = '#fff' }) {
-  return (
-    <span
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: bg,
-        color,
-        fontSize: Math.max(10, size * 0.52),
-        flexShrink: 0,
-      }}
-    >
-      {children}
-    </span>
-  )
-}
-
 export default async function ToplulukPage() {
   const {
     haftaninKonusu,
     hareketliKonular,
-    sonYorumlar,
     aktifOkuyucular,
-    populerEtiketler,
-    istatistikler,
   } = await getCommunityData()
   const { topics: gerçekKonular } = await getCommunityTopics({ limit: 12 })
-
-  const solMenu = [
-    { label: 'Anasayfa', href: '/topluluk', icon: '⌂' },
-    { label: 'Kesfet', href: '#kesfet', icon: '◌' },
-    { label: 'Bildirimler', href: '/giris', icon: '◔' },
-    { label: 'Mesajlar', href: '/giris', icon: '✉' },
-    { label: 'Yer Imleri', href: '/giris', icon: '⌑' },
-    { label: 'Profilim', href: '/giris', icon: '◉' },
-  ]
-
-  const kategoriListesi = [
-    'Genel Sohbet',
-    'Cizgi Roman Tartismalari',
-    'Seri Onerileri',
-    'Haberler & Duyurular',
-    'Etkinlikler',
-    'Cizimler & Fanart',
-    'Teknik Destek',
-  ]
-
-  const onlineUyeler = [...aktifOkuyucular, ...sonYorumlar.map((yorum) => ({
-    id: yorum.profil?.id,
-    kullanici_adi: yorum.profil?.kullanici_adi,
-    avatar_url: yorum.profil?.avatar_url,
-    unvan: null,
-    okumaSayisi: null,
-  }))].filter((uye, index, arr) => uye?.id && arr.findIndex((item) => item?.id === uye.id) === index).slice(0, 6)
 
   const akışKartlari = hareketliKonular.slice(0, 5)
   const fallbackTopics = akışKartlari.map((seri) => ({
@@ -227,220 +176,55 @@ export default async function ToplulukPage() {
     source: 'fallback',
   }))
   const feedTopics = gerçekKonular.length > 0 ? gerçekKonular : fallbackTopics
-  const sagPopulerKonular = (gerçekKonular.length > 0 ? gerçekKonular : fallbackTopics).slice(0, 5)
-  const sonRozetler = aktifOkuyucular.filter((uye) => uye.unvan).slice(0, 3)
-  const etkinlikler = [
-    { baslik: 'Canli Okuma: Haftanin Serisi', tarih: 'Pazar · 21:00' },
-    { baslik: 'Topluluk Oneri Gecesi', tarih: 'Carsamba · 20:30' },
-    { baslik: 'Editor Soru-Cevap', tarih: 'Cumartesi · 19:00' },
+  const kurallar = [
+    {
+      title: 'Spoiler Dengesini Koru',
+      text: 'Yeni çıkan bölümler ve büyük kırılma anlarında spoiler uyarısı koy. Herkesin okuma keyfini birlikte koruyalım.',
+    },
+    {
+      title: 'İşi Değil Fikri Tartış',
+      text: 'Eleştiri serbest ama kişiselleştirmeden. Yorum değil tartışma kalitesi öne çıksın istiyoruz.',
+    },
+    {
+      title: 'Kaynak ve Emeğe Saygı',
+      text: 'Çeviri, edit ve topluluk emeğine saygılı kal. Kısa, net ve katkı sağlayan paylaşımlar en çok öne çıkar.',
+    },
   ]
+
   return (
     <>
       <Navbar />
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '28px', paddingBottom: '34px' }}>
-          <div className="community-layout" style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr) 300px', gap: '20px', alignItems: 'start' }}>
-            <aside className="community-sidebar" style={{ position: 'sticky', top: '106px', alignSelf: 'start' }}>
-              <div style={{ paddingRight: '18px', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
-                <Link href="#konu-olustur" style={{ minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>
-                  + Konu Olustur
-                </Link>
-
-                <div style={{ display: 'grid', gap: '8px', marginBottom: '24px' }}>
-                  {solMenu.map((item, index) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      style={{
-                        minHeight: '46px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0 14px',
-                        borderRadius: '12px',
-                        background: index === 0 ? 'rgba(255,255,255,0.06)' : 'transparent',
-                        color: '#f4f4f1',
-                        textDecoration: 'none',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        border: index === 0 ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
-                      }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
-                        <CircleGlyph size={20} bg={index === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}>{item.icon}</CircleGlyph>
-                        {item.label}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-
-                <div style={{ paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
-                  <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '12px' }}>
-                    Kategoriler
-                  </div>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {kategoriListesi.map((kategori) => (
-                      <span key={kategori} style={{ minHeight: '42px', display: 'flex', alignItems: 'center', padding: '0 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', color: '#d8d8d3', fontSize: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-                          <CircleGlyph size={18} bg="rgba(255,255,255,0.05)">•</CircleGlyph>
-                          {kategori}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.08)', marginBottom: '24px' }}>
-                  <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '12px' }}>
-                    Popüler Etiketler
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {populerEtiketler.map((etiket) => (
-                      <Link key={etiket.id} href={`/seri/${etiket.slug}`} style={{ textDecoration: 'none' }}>
-                        <span style={{ minHeight: '30px', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#d8d8d3', fontSize: '11px', fontWeight: 700 }}>
-                          {etiket.label}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ padding: '18px', borderRadius: '18px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '8px' }}>
-                    Topluluk Kurallari
-                  </div>
-                  <div style={{ color: '#b8b8b2', fontSize: '13px', lineHeight: 1.7, marginBottom: '14px' }}>
-                    Daha temiz ve daha iyi bir ortam için temel kurallarımız burada.
-                  </div>
-                  <span style={{ minHeight: '40px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '12px', fontWeight: 700 }}>
-                    Kurallari Incele
-                  </span>
-                </div>
+          <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+            <div style={{ marginBottom: '26px', textAlign: 'center' }}>
+              <div style={{ color: '#9f9f98', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+                Konsey Sosyal
               </div>
-            </aside>
+              <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(44px, 6vw, 82px)', lineHeight: 0.92, fontFamily: 'var(--font-display)' }}>
+                Konu Oluştur
+              </h1>
+              <p style={{ margin: '12px auto 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8, maxWidth: '680px' }}>
+                Okuduklarını paylaş, teori bırak, öneri sor ya da sadece topluluğun nabzına katıl. Bu alan sitenin sosyal tarafı olacak.
+              </p>
+            </div>
 
-            <section>
-              <div style={{ marginBottom: '20px' }}>
-                <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(38px, 5vw, 58px)', lineHeight: 0.95, fontFamily: 'var(--font-display)' }}>
-                  Topluluk
-                </h1>
-                <p style={{ margin: '10px 0 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8 }}>
-                  Çizgi roman tutkunlarının bir araya geldiği yer.
-                </p>
-              </div>
+            <div style={{ display: 'grid', gap: '14px', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', marginBottom: '24px' }} className="community-rules-grid">
+              {kurallar.map((kural) => (
+                <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
+                  <div style={{ color: '#b8b8b2', fontSize: '14px', lineHeight: 1.7 }}>{kural.text}</div>
+                </section>
+              ))}
+            </div>
 
-              <ToplulukFeedClient initialTopics={feedTopics} />
-            </section>
-
-            <aside className="community-right-rail" style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '16px' }}>
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '10px' }}>Online Uyeler</div>
-                <div style={{ color: '#9fd67d', fontSize: '13px', marginBottom: '14px' }}>● {istatistikler.aktifUye || onlineUyeler.length} çevrimiçi</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {onlineUyeler.map((uye) => (
-                    <Link key={uye.id} href={uye.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '/giris'} style={{ textDecoration: 'none' }}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '2px solid rgba(255,255,255,0.08)' }}>
-                        {uye.avatar_url
-                          ? <img src={uye.avatar_url} alt={uye.kullanici_adi || 'Üye'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{uye.kullanici_adi?.[0]?.toUpperCase() || '+'}</div>}
-                      </div>
-                    </Link>
-                  ))}
-                  <div style={{ minWidth: '42px', height: '42px', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                    +{Math.max(0, istatistikler.toplamUye - onlineUyeler.length)}
-                  </div>
-                </div>
-              </section>
-
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '14px' }}>Popüler Konular</div>
-                <div style={{ display: 'grid', gap: '14px' }}>
-                  {sagPopulerKonular.map((seri) => (
-                    <Link key={seri.id} href={seri.href || `/topluluk/konu/${seri.slug}`} style={{ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr)', gap: '10px', textDecoration: 'none' }}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: '#111' }}>
-                        {seri.profil?.avatar_url
-                          ? <img src={seri.profil.avatar_url} alt={seri.profil.kullanici_adi || seri.baslik} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : null}
-                      </div>
-                      <div>
-                        <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, lineHeight: 1.35, marginBottom: '4px' }}>{seri.baslik}</div>
-                        <div style={{ color: '#b5b5af', fontSize: '13px' }}>{Number(seri.yanit_sayisi || 0)} yorum</div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-                <div style={{ marginTop: '16px' }}>
-                  <span style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', fontWeight: 700 }}>
-                    Tümünü Gör
-                  </span>
-                </div>
-              </section>
-
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '14px' }}>Yaklaşan Etkinlikler</div>
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  {etkinlikler.map((etkinlik) => (
-                    <div key={etkinlik.baslik}>
-                      <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, lineHeight: 1.35, marginBottom: '4px' }}>{etkinlik.baslik}</div>
-                      <div style={{ color: '#b5b5af', fontSize: '13px' }}>{etkinlik.tarih}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '14px' }}>Son Rozetler</div>
-                <div style={{ display: 'grid', gap: '14px' }}>
-                  {sonRozetler.length > 0 ? sonRozetler.map((uye) => (
-                    <Link key={uye.id} href={`/profil/${uye.kullanici_adi}`} style={{ display: 'grid', gridTemplateColumns: '42px minmax(0, 1fr)', gap: '10px', textDecoration: 'none' }}>
-                      <div style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', background: '#111' }}>
-                        {uye.avatar_url
-                          ? <img src={uye.avatar_url} alt={uye.kullanici_adi} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : null}
-                      </div>
-                      <div>
-                        <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, lineHeight: 1.35 }}>{uye.unvan}</div>
-                        <div style={{ color: '#b5b5af', fontSize: '13px', marginTop: '4px' }}>{uye.kullanici_adi}</div>
-                      </div>
-                    </Link>
-                  )) : (
-                    <div style={{ color: '#b5b5af', fontSize: '13px', lineHeight: 1.7 }}>
-                      Rozet akışı yakında burada görünecek.
-                    </div>
-                  )}
-                </div>
-              </section>
-            </aside>
+            <ToplulukFeedClient initialTopics={feedTopics} defaultTopics={aktifOkuyucular.slice(0, 3)} />
           </div>
         </section>
 
         <style>{`
-          @media (max-width: 1260px) {
-            .community-layout {
-              grid-template-columns: 1fr !important;
-            }
-
-            .community-sidebar,
-            .community-right-rail {
-              position: static !important;
-            }
-          }
-
-          @media (max-width: 860px) {
-            .community-layout {
-              gap: 18px !important;
-            }
-
-            .community-topic-card {
-              grid-template-columns: 1fr !important;
-            }
-
-            .community-topic-meta {
-              min-width: 0 !important;
-            }
-          }
-
-          @media (max-width: 640px) {
-            .community-layout {
+          @media (max-width: 900px) {
+            .community-rules-grid {
               grid-template-columns: 1fr !important;
             }
           }

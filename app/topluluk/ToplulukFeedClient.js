@@ -4,16 +4,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const KATEGORILER = [
-  'Genel Sohbet',
-  'Çizgi Roman Tartışmaları',
-  'Seri Önerileri',
-  'Haberler & Duyurular',
-  'Etkinlikler',
-  'Çizimler & Fanart',
-  'Teknik Destek',
-]
-
 function formatDateTime(value) {
   if (!value) return ''
   return new Date(value).toLocaleString('tr-TR', {
@@ -35,14 +25,11 @@ function topicScore(topic) {
 
 export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [topics, setTopics] = useState(initialTopics)
-  const [aktifTab, setAktifTab] = useState('tumu')
+  const [aktifTab, setAktifTab] = useState('yeni')
   const [kullanici, setKullanici] = useState(null)
   const [profil, setProfil] = useState(null)
-  const [arama, setArama] = useState('')
   const [baslik, setBaslik] = useState('')
   const [icerik, setIcerik] = useState('')
-  const [kategori, setKategori] = useState('Genel Sohbet')
-  const [etiketler, setEtiketler] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [katilimKonuIdleri, setKatilimKonuIdleri] = useState([])
@@ -122,24 +109,8 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
       listed = [...topics].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
 
-    const cleanSearch = arama.trim().toLocaleLowerCase('tr-TR')
-    if (!cleanSearch) return listed
-
-    return listed.filter((item) => {
-      const haystack = [
-        item.baslik,
-        item.icerik,
-        item.kategori,
-        ...(item.etiketler || []),
-        item.profil?.kullanici_adi,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLocaleLowerCase('tr-TR')
-
-      return haystack.includes(cleanSearch)
-    })
-  }, [aktifTab, arama, katilimKonuIdleri, topics, yerImiKonuIdleri])
+    return listed
+  }, [aktifTab, katilimKonuIdleri, topics, yerImiKonuIdleri])
 
   async function toggleReaction(konuId, type) {
     if (!kullanici) {
@@ -185,11 +156,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     setYukleniyor(true)
     setMesaj('')
 
-    const tags = etiketler
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-
     const { data: { session } } = await supabase.auth.getSession()
     const response = await fetch('/api/community/topics', {
       method: 'POST',
@@ -197,7 +163,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token || ''}`,
       },
-      body: JSON.stringify({ baslik, icerik, kategori, etiketler: tags }),
+      body: JSON.stringify({ baslik, icerik, kategori: 'Genel Sohbet', etiketler: [] }),
     })
 
     const result = await response.json().catch(() => ({}))
@@ -224,22 +190,19 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     setKatilimKonuIdleri((prev) => [...new Set([yeniKonu.id, ...prev])])
     setBaslik('')
     setIcerik('')
-    setKategori('Genel Sohbet')
-    setEtiketler('')
     setMesaj('Konun paylaşıldı.')
-    setAktifTab('tumu')
+    setAktifTab('yeni')
   }
 
   const sekmeler = [
     { id: 'tumu', label: 'Tümü' },
-    { id: 'takip', label: 'Takip Edilen' },
+    { id: 'yeni', label: 'En Son' },
     { id: 'populer', label: 'Popüler' },
-    { id: 'yeni', label: 'En Yeni' },
   ]
 
   return (
     <>
-      <div id="konu-olustur" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '16px', scrollMarginTop: '120px' }}>
+      <div id="konu-olustur" style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '22px', scrollMarginTop: '120px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
           <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
             {profil?.avatar_url
@@ -251,38 +214,21 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
               value={baslik}
               onChange={(e) => setBaslik(e.target.value)}
               placeholder="Konu başlığı"
-              style={{ width: '100%', minHeight: '46px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '15px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
+              style={{ width: '100%', minHeight: '50px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '16px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
             />
             <textarea
               value={icerik}
               onChange={(e) => setIcerik(e.target.value)}
               placeholder="Ne hakkında konuşmak istersin?"
               rows={4}
-              style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '10px' }}
+              style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '15px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '12px' }}
             />
-            <div className="community-composer-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 180px', gap: '10px' }}>
-              <input
-                value={etiketler}
-                onChange={(e) => setEtiketler(e.target.value)}
-                placeholder="Etiketler (virgülle)"
-                style={{ width: '100%', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-              />
-              <select
-                value={kategori}
-                onChange={(e) => setKategori(e.target.value)}
-                style={{ width: '100%', minHeight: '44px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-              >
-                {KATEGORILER.map((secenek) => (
-                  <option key={secenek} value={secenek} style={{ color: '#111' }}>
-                    {secenek}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '12px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>◫ Fotoğraf</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>≣ Anket</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}># Etiket</span>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
+              {['◫ Fotoğraf', '≣ Anket', '# Etiket'].map((item) => (
+                <span key={item} style={{ minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', gap: '8px' }}>
+                  {item}
+                </span>
+              ))}
             </div>
             {mesaj ? (
               <div style={{ marginTop: '12px', color: mesaj === 'Konun paylaşıldı.' ? '#8fda8f' : '#ffb4b4', fontSize: '13px' }}>
@@ -293,20 +239,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           <button
             onClick={konuOlustur}
             disabled={yukleniyor}
-            style={{ minHeight: '42px', padding: '0 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#111', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center' }}
+            style={{ minHeight: '50px', padding: '0 18px', borderRadius: '14px', border: 'none', background: '#fff', color: '#111', fontSize: '15px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center' }}
           >
             {yukleniyor ? 'Paylaşılıyor' : 'Paylaş'}
           </button>
         </div>
-      </div>
-
-      <div style={{ marginBottom: '16px' }}>
-        <input
-          value={arama}
-          onChange={(e) => setArama(e.target.value)}
-          placeholder="Konularda, etiketlerde ve kullanıcı adlarında ara..."
-          style={{ width: '100%', minHeight: '46px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-        />
       </div>
 
       <div style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
@@ -331,7 +268,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             {sekme.label}
           </button>
         ))}
-        <span style={{ marginInlineStart: 'auto', fontSize: '18px' }}>⚙</span>
       </div>
 
       <div id="son-aktiviteler" style={{ display: 'grid', gap: '14px' }}>
@@ -340,7 +276,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             Bu filtrede henüz konu yok. İlk konuyu sen açabilirsin.
           </div>
         ) : gorunenKonular.map((seri, index) => (
-            <article key={`${seri.source}-${seri.id}`} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
+            <article key={`${seri.source}-${seri.id}`} style={{ padding: '20px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {seri.profil?.avatar_url
@@ -368,43 +304,37 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       </span>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#d2d2cc', fontSize: '14px', marginTop: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#d2d2cc', fontSize: '14px', marginTop: '18px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => toggleReaction(seri.id, 'like')}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: begeniKonuIdleri.includes(seri.id) ? '#ff9ea1' : '#d2d2cc', fontSize: '14px', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                      style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.28)' : 'rgba(255,255,255,0.08)'}`, color: begeniKonuIdleri.includes(seri.id) ? '#ff9ea1' : '#f0f0eb', fontSize: '14px', cursor: 'pointer', borderRadius: '999px', fontFamily: 'inherit', fontWeight: 700 }}
                     >
                       {begeniKonuIdleri.includes(seri.id) ? '♥' : '♡'} {Number(seri.begeni_sayisi || 0)}
                     </button>
                     <Link href={seri.href || `/seri/${seri.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}>
-                      ◔ {Number(seri.yanit_sayisi || 0)}
+                      <span style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0eb', fontSize: '14px', borderRadius: '999px', fontWeight: 700 }}>
+                        ◔ {Number(seri.yanit_sayisi || 0)} yorum
+                      </span>
                     </Link>
                     <button
                       onClick={() => toggleReaction(seri.id, 'bookmark')}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: yerImiKonuIdleri.includes(seri.id) ? '#f3d287' : '#d2d2cc', fontSize: '14px', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                      style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: yerImiKonuIdleri.includes(seri.id) ? 'rgba(243,210,135,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${yerImiKonuIdleri.includes(seri.id) ? 'rgba(243,210,135,0.28)' : 'rgba(255,255,255,0.08)'}`, color: yerImiKonuIdleri.includes(seri.id) ? '#f3d287' : '#f0f0eb', fontSize: '14px', cursor: 'pointer', borderRadius: '999px', fontFamily: 'inherit', fontWeight: 700 }}
                     >
                       {yerImiKonuIdleri.includes(seri.id) ? '▣' : '▢'} Yer imi
                     </button>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gap: '10px', minWidth: '96px' }}>
+                <div style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
                   <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
-                  <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                    <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '30px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
-                    <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorum</div>
-                  </div>
+                  <Link href={seri.href || `/seri/${seri.slug}`} style={{ padding: '14px 12px', borderRadius: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', textDecoration: 'none' }}>
+                    <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
+                    <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorumu aç</div>
+                  </Link>
                 </div>
               </div>
             </article>
         ))}
       </div>
-
-      <style>{`
-        @media (max-width: 900px) {
-          .community-composer-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </>
   )
 }

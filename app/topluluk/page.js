@@ -220,37 +220,34 @@ export default async function ToplulukPage() {
                   ))}
                 </div>
 
-                <div className="community-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
-                  <article style={{ padding: '18px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>Genel Sohbet</div>
-                    <div style={{ color: '#a4a49e', fontSize: '13px', lineHeight: 1.7 }}>
-                      Güncel okuma, kısa fikirler ve hızlı yorumlar burada toplanıyor.
-                    </div>
-                    <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '12px' }}>
+                <article style={{ padding: '18px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ minHeight: '24px', padding: '0 10px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', background: 'rgba(245,185,66,0.14)', color: '#f5b942', fontSize: '10px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                      Haftanın Konusu
+                    </span>
+                    {haftaninKonusu ? (
+                      <span style={{ color: '#8f8f89', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                        {haftaninKonusu.yorumSayisi} yorum · {formatDateTime(haftaninKonusu.sonYorumAt)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div style={{ color: '#fff', fontSize: '24px', fontWeight: 800, lineHeight: 1.2, marginBottom: '10px' }}>
+                    {haftaninKonusu?.baslik || 'İlk konuşmayı başlatan sen ol'}
+                  </div>
+                  <div style={{ color: '#b4b4ae', fontSize: '14px', lineHeight: 1.75, marginBottom: '14px', maxWidth: '64ch' }}>
+                    {haftaninKonusu
+                      ? getCommentPreview(haftaninKonusu.sonYorum)
+                      : 'Henüz belirgin bir gündem yok. Yeni bir seri hakkında ilk yorumu bırakarak topluluk akışını başlatabilirsin.'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <Link href={haftaninKonusu ? `/seri/${haftaninKonusu.slug}` : '/seriler'} style={{ minHeight: '42px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', borderRadius: '14px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '12px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                      Tartışmaya Git
+                    </Link>
+                    <span style={{ minHeight: '42px', display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase' }}>
                       {istatistikler.toplamYorum} toplam yorum
-                    </div>
-                  </article>
-
-                  <article style={{ padding: '18px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>Seri Tartışmaları</div>
-                    <div style={{ color: '#a4a49e', fontSize: '13px', lineHeight: 1.7 }}>
-                      Son 7 günde konuşulan seriler öne çıkıyor, yeni yorumla akış değişiyor.
-                    </div>
-                    <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '12px' }}>
-                      {istatistikler.konusulanSeri} hareketli seri
-                    </div>
-                  </article>
-
-                  <article style={{ padding: '18px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>Aktif Okurlar</div>
-                    <div style={{ color: '#a4a49e', fontSize: '13px', lineHeight: 1.7 }}>
-                      Sadece konuşanlar değil, gerçekten okuyup geri dönen çekirdek kitle burada.
-                    </div>
-                    <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '12px' }}>
-                      {aktifOkuyucular.length} öne çıkan üye
-                    </div>
-                  </article>
-                </div>
+                    </span>
+                  </div>
+                </article>
               </section>
 
               <aside style={{ padding: '22px', borderRadius: '28px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', boxShadow: '0 18px 40px rgba(0,0,0,0.18)' }}>
@@ -264,19 +261,12 @@ export default async function ToplulukPage() {
                   <StatBox label="Aktif Üye" value={istatistikler.aktifUye} />
                   <StatBox label="Konuşulan Seri" value={istatistikler.konusulanSeri} />
                 </div>
-                {haftaninKonusu ? (
-                  <div style={{ padding: '16px', borderRadius: '20px', border: '1px solid rgba(245,185,66,0.22)', background: 'linear-gradient(180deg, rgba(245,185,66,0.12), rgba(245,185,66,0.04))' }}>
-                    <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Haftanın Konusu
-                    </div>
-                    <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
-                      {haftaninKonusu.baslik}
-                    </div>
-                    <div style={{ color: '#d0d0cb', fontSize: '13px', lineHeight: 1.7 }}>
-                      {haftaninKonusu.yorumSayisi} yorum aldı, son hareket {formatDateTime(haftaninKonusu.sonYorumAt)}.
-                    </div>
+                <div style={{ padding: '16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>Topluluk Notu</div>
+                  <div style={{ color: '#b9b9b3', fontSize: '13px', lineHeight: 1.7 }}>
+                    Burası Konsey’in sosyal alanı. Yorum bırak, yeni seri konuş, diğer okurlarla aynı masaya otur.
                   </div>
-                ) : null}
+                </div>
               </aside>
             </div>
           </div>
@@ -318,7 +308,7 @@ export default async function ToplulukPage() {
                           </span>
                         </div>
                         <div style={{ color: '#fff', fontSize: '20px', fontWeight: 800, lineHeight: 1.25, marginBottom: '8px' }}>
-                          {seri.baslik} hakkında neler dönüyor?
+                          {seri.baslik} hakkında ne düşünüyorsunuz?
                         </div>
                         <div style={{ color: '#c0c0bb', fontSize: '14px', lineHeight: 1.7, maxWidth: '70ch' }}>
                           {getCommentPreview(seri.sonYorum)}

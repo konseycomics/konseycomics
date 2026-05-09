@@ -167,10 +167,11 @@ function SeriKart({ seri }) {
   )
 }
 
-function PopulerSeriKart({ seri, sira }) {
+function PopulerSeriKart({ seri, sira, featured = false }) {
   const [hover, setHover] = useState(false)
   const rating = Number(seri.ortalama_puan || 0)
   const yeniSeri = isRecentlyAddedSeries(seri.created_at)
+  const goruntulenme = Number(seri.goruntuleme_sayisi || 0)
   const statusColor = seri.durum === 'Devam Eden'
     ? '#16a34a'
     : seri.durum === 'Tamamlandı'
@@ -190,7 +191,7 @@ function PopulerSeriKart({ seri, sira }) {
         }}
       >
         <div style={{
-          position: 'relative', aspectRatio: '2/3', borderRadius: '14px',
+          position: 'relative', aspectRatio: featured ? '16/10' : '2/3', borderRadius: '14px',
           overflow: 'hidden', marginBottom: '12px', background: '#111',
           boxShadow: hover ? '0 18px 34px rgba(0,0,0,0.14)' : '0 10px 24px rgba(0,0,0,0.08)'
         }}>
@@ -199,12 +200,17 @@ function PopulerSeriKart({ seri, sira }) {
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '22px', color: '#fff', textAlign: 'center', padding: '16px' }}>{seri.baslik}</div>
           }
 
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 52%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: featured ? 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.1) 58%)' : 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 52%)' }} />
 
           <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
+            <span style={{ background: featured ? 'rgba(245,185,66,0.92)' : 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
               #{sira}
             </span>
+            {featured && (
+              <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                Zirvede
+              </span>
+            )}
           </div>
 
           <div style={{ position: 'absolute', right: '10px', bottom: '10px', left: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -220,7 +226,7 @@ function PopulerSeriKart({ seri, sira }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '5px' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>
+          <div style={{ fontSize: featured ? '18px' : '15px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>
             {seri.baslik}
           </div>
           <span style={{
@@ -249,8 +255,13 @@ function PopulerSeriKart({ seri, sira }) {
               </span>
             ))}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 500 }}>
-            {seri.puan_sayisi || 0} oy
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: featured ? '12px' : '11px', color: 'var(--text-light)', fontWeight: 700 }}>
+              {formatCount(goruntulenme)} görüntülenme
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {seri.puan_sayisi || 0} oy
+            </div>
           </div>
         </div>
       </div>
@@ -736,8 +747,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
       return Number(b.ortalama_puan || 0) - Number(a.ortalama_puan || 0)
     })
     .slice(0, 5)
-  const sonBolumlerTop = bolumler.slice(0, 5)
-  const sonBolumlerAlt = bolumler.slice(5, 10)
+  const sonBolumlerVitrin = bolumler.slice(0, 6)
   const turKartlari = SERI_TURLERI.map(tur => ({
     ...tur,
     count: seriler.filter(seri => hasCategoryMatch(seri, [tur.key])).length,
@@ -812,11 +822,15 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
         .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
         .grid-bolumler-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+        .grid-bolumler-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
         .grid-bolumler { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
         .home-categories { display: grid; grid-template-columns: 1.5fr 1fr; gap: 18px; }
         .home-categories-right { display: grid; grid-template-rows: 1fr 1fr; gap: 18px; }
         .home-search-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr); gap: 18px; align-items: stretch; }
         .series-showcase-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
+        .popular-spotlight-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; align-items: start; }
+        .popular-spotlight-grid > *:first-child { grid-column: span 4; }
+        .popular-spotlight-grid > *:not(:first-child) { grid-column: span 2; }
         .series-showcase-grid > *:nth-child(1),
         .series-showcase-grid > *:nth-child(2) { grid-column: span 6; }
         .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
@@ -824,10 +838,13 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .grid-4 { grid-template-columns: repeat(3, 1fr) !important; }
           .grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
           .grid-bolumler-5 { grid-template-columns: repeat(3, 1fr) !important; }
+          .grid-bolumler-6 { grid-template-columns: repeat(3, 1fr) !important; }
           .grid-bolumler { grid-template-columns: repeat(3, 1fr) !important; }
           .home-categories { grid-template-columns: 1fr !important; }
           .home-categories-right { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none !important; }
           .home-search-grid { grid-template-columns: 1fr !important; }
+          .popular-spotlight-grid > *:first-child { grid-column: span 6 !important; }
+          .popular-spotlight-grid > *:not(:first-child) { grid-column: span 3 !important; }
           .series-showcase-grid > *:nth-child(1),
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
@@ -847,9 +864,11 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
           .grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
           .grid-bolumler-5 { grid-template-columns: repeat(2, 1fr) !important; }
+          .grid-bolumler-6 { grid-template-columns: repeat(2, 1fr) !important; }
           .grid-bolumler { grid-template-columns: repeat(2, 1fr) !important; }
           .home-categories-right { grid-template-columns: 1fr !important; }
           .home-categories-right { grid-template-rows: auto auto !important; }
+          .popular-spotlight-grid > * { grid-column: span 6 !important; }
           .showcase-card { min-height: 216px !important; border-radius: 20px !important; }
           .showcase-card.is-large { min-height: 240px !important; }
           .category-block { min-height: 180px !important; border-radius: 20px !important; }
@@ -1233,11 +1252,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
             </p>
           </div>
           {loading
-            ? <LoadingGrid count={10} className="grid-bolumler-5" />
-            : <>
-              <div className="grid-bolumler-5" style={{ marginBottom: '14px' }}>{sonBolumlerTop.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
-              <div className="grid-bolumler-5">{sonBolumlerAlt.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
-            </>
+            ? <LoadingGrid count={6} className="grid-bolumler-6" />
+            : <div className="grid-bolumler-6">{sonBolumlerVitrin.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
           }
         </section>
       )}
@@ -1248,10 +1264,13 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
             <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(38px, 5vw, 62px)', lineHeight: 0.95, letterSpacing: '0.8px', color: 'var(--text)' }}>
               En Çok Okunan Seriler
             </h2>
+            <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Okurların en çok döndüğü seri vitrinleri
+            </p>
           </div>
-          <div className="grid-5">
+          <div className="popular-spotlight-grid">
             {populerSeriler.map((seri, index) => (
-              <PopulerSeriKart key={seri.id} seri={seri} sira={index + 1} />
+              <PopulerSeriKart key={seri.id} seri={seri} sira={index + 1} featured={index === 0} />
             ))}
           </div>
         </section>
@@ -1296,23 +1315,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
       {!loading && (
         <LiderlikTablosu liderlik={liderlik} />
       )}
-
-      {/* Tüm Seriler */}
-      <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
-        <div className="home-section-heading" style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
-            Tüm Seriler
-          </h2>
-          <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-            Evrenlere göre keşfet
-          </p>
-        </div>
-        <div className="series-showcase-grid" style={{ marginBottom: '28px' }}>
-          {turKartlari.map(tur => (
-            <TurKart key={tur.key} tur={tur} count={tur.count} />
-          ))}
-        </div>
-      </section>
 
       <Footer />
     </main>

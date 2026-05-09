@@ -7,6 +7,7 @@ import Hero from './components/Hero'
 import Footer from './components/Footer'
 import Link from 'next/link'
 import { isRecentlyAddedSeries } from './lib/seriesBadges'
+import { supabase } from './lib/supabase'
 
 const SERI_TURLERI = [
   {
@@ -741,6 +742,204 @@ function LiderlikTablosu({ liderlik = {} }) {
   )
 }
 
+function MiniGorevKutusu() {
+  const [oturumKontrolEdildi, setOturumKontrolEdildi] = useState(false)
+  const [kullanici, setKullanici] = useState(null)
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [gorevDurumu, setGorevDurumu] = useState({
+    takip: false,
+    okuma: false,
+    puan: false,
+  })
+
+  useEffect(() => {
+    let aktif = true
+
+    async function yukle(user) {
+      if (!user?.id) {
+        if (!aktif) return
+        setKullanici(null)
+        setGorevDurumu({ takip: false, okuma: false, puan: false })
+        setOturumKontrolEdildi(true)
+        return
+      }
+
+      setKullanici(user)
+      setYukleniyor(true)
+
+      const [listeCount, okumaCount, puanCount] = await Promise.all([
+        supabase.from('okuma_listesi').select('seri_id', { count: 'exact', head: true }).eq('kullanici_id', user.id),
+        supabase.from('kullanici_bolum_okumalari').select('id', { count: 'exact', head: true }).eq('kullanici_id', user.id).gte('completion_ratio', 0.7),
+        supabase.from('seri_puanlari').select('seri_id', { count: 'exact', head: true }).eq('kullanici_id', user.id),
+      ])
+
+      if (!aktif) return
+
+      setGorevDurumu({
+        takip: Number(listeCount.count || 0) > 0,
+        okuma: Number(okumaCount.count || 0) > 0,
+        puan: Number(puanCount.count || 0) > 0,
+      })
+      setYukleniyor(false)
+      setOturumKontrolEdildi(true)
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      yukle(data?.session?.user || null)
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      yukle(session?.user || null)
+    })
+
+    return () => {
+      aktif = false
+      listener?.subscription?.unsubscribe()
+    }
+  }, [])
+
+  const gorevler = [
+    {
+      key: 'takip',
+      tamamlandi: gorevDurumu.takip,
+      title: '1 seri takip et',
+      desc: 'Yeni bölüm geldiğinde geri çağırabilelim.',
+      cta: 'Seri Seç',
+      href: '/seriler',
+    },
+    {
+      key: 'okuma',
+      tamamlandi: gorevDurumu.okuma,
+      title: '1 bölümü bitir',
+      desc: 'Kaldığın yeri ve okuma ilerlemeni başlatalım.',
+      cta: 'Okumaya Başla',
+      href: '/seriler',
+    },
+    {
+      key: 'puan',
+      tamamlandi: gorevDurumu.puan,
+      title: '1 seriye puan ver',
+      desc: 'Zevkini profiline ve önerilere yansıtalım.',
+      cta: 'Serileri Gör',
+      href: '/seriler',
+    },
+  ]
+
+  const tamamlanan = gorevler.filter((item) => item.tamamlandi).length
+
+  return (
+    <section className="site-section" style={{ marginTop: '24px' }}>
+      <div style={{
+        padding: '22px',
+        borderRadius: '28px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))',
+        boxShadow: '0 18px 40px rgba(0,0,0,0.18)',
+      }}>
+        {!oturumKontrolEdildi ? (
+          <div style={{ color: '#a3a39d', fontSize: '14px' }}>Hesap avantajlari yukleniyor...</div>
+        ) : !kullanici ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '16px', alignItems: 'center' }} className="mini-gorev-hero">
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Hesap Avantajlari
+              </div>
+              <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4vw, 44px)', lineHeight: 0.92, marginBottom: '10px' }}>
+                Kayit Ol, Okuma Deneyimini Ac
+              </div>
+              <div style={{ color: '#b9b9b4', fontSize: '14px', lineHeight: 1.7, maxWidth: '62ch' }}>
+                Kaldigin yeri kaydet, serileri takip et, yeni bolum bildirimi al ve liderlik tablosuna gir. Hesabin oldugunda site seni daha iyi hatirlar.
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: '10px', minWidth: '220px' }}>
+              <Link href="/giris" style={{ minHeight: '48px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '13px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                Giris Yap / Kayit Ol
+              </Link>
+              <div style={{ color: '#8f8f89', fontSize: '12px', textAlign: 'center' }}>
+                Takip, rozet ve bildirimler sadece hesapla acilir.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
+              <div>
+                <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Baslangic Gorevleri
+                </div>
+                <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4vw, 44px)', lineHeight: 0.92, marginBottom: '10px' }}>
+                  Ilk 3 Adimi Tamamla
+                </div>
+                <div style={{ color: '#b9b9b4', fontSize: '14px', lineHeight: 1.7, maxWidth: '60ch' }}>
+                  Takip, ilk bolum ve ilk puan; bu uc adimdan sonra site senin icin daha kisilesmis calismaya baslar.
+                </div>
+              </div>
+
+              <div style={{
+                minWidth: '220px',
+                padding: '16px 18px',
+                borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)',
+              }}>
+                <div style={{ color: '#999992', fontSize: '10px', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Ilerleme
+                </div>
+                <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '42px', lineHeight: 0.9, marginBottom: '10px' }}>
+                  {yukleniyor ? '...' : `${tamamlanan}/3`}
+                </div>
+                <div style={{ height: '8px', borderRadius: '999px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                  <div style={{ width: `${(tamamlanan / 3) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #7c3aed, #2563eb)' }} />
+                </div>
+              </div>
+            </div>
+
+            <div className="mini-gorev-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+              {gorevler.map((gorev) => (
+                <div key={gorev.key} style={{
+                  padding: '18px',
+                  borderRadius: '22px',
+                  border: `1px solid ${gorev.tamamlandi ? 'rgba(16,185,129,0.28)' : 'rgba(255,255,255,0.08)'}`,
+                  background: gorev.tamamlandi ? 'linear-gradient(180deg, rgba(16,185,129,0.08), rgba(255,255,255,0.03))' : 'rgba(255,255,255,0.03)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ color: '#fff', fontSize: '16px', fontWeight: 800 }}>{gorev.title}</div>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: gorev.tamamlandi ? 'rgba(16,185,129,0.16)' : 'rgba(255,255,255,0.06)',
+                      color: gorev.tamamlandi ? '#34d399' : '#8d8d87',
+                      fontSize: '14px',
+                      fontWeight: 900,
+                    }}>
+                      {gorev.tamamlandi ? '✓' : '•'}
+                    </div>
+                  </div>
+                  <div style={{ color: '#a6a6a0', fontSize: '13px', lineHeight: 1.7, minHeight: '44px', marginBottom: '14px' }}>
+                    {gorev.desc}
+                  </div>
+                  {gorev.tamamlandi ? (
+                    <div style={{ color: '#34d399', fontSize: '11px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                      Tamamlandi
+                    </div>
+                  ) : (
+                    <Link href={gorev.href} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: '42px', padding: '0 14px', borderRadius: '12px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '12px', fontWeight: 800, letterSpacing: '0.7px', textTransform: 'uppercase' }}>
+                      {gorev.cta}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {} }) {
   const router = useRouter()
   const loading = false
@@ -892,6 +1091,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
           .leaderboard-single-grid { grid-template-columns: 1fr !important; }
+          .mini-gorev-grid { grid-template-columns: 1fr !important; }
+          .mini-gorev-hero { grid-template-columns: 1fr !important; }
         }
         @media (max-width: 640px) {
           .home-section-heading { margin-bottom: 22px !important; }
@@ -917,6 +1118,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .category-block.is-large { min-height: 300px !important; }
           .series-showcase-grid > * { grid-column: span 12 !important; }
           .leaderboard-single-grid { grid-template-columns: 1fr !important; }
+          .mini-gorev-grid { grid-template-columns: 1fr !important; }
+          .mini-gorev-hero { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -1282,6 +1485,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           </div>
         </div>
       </section>
+
+      <MiniGorevKutusu />
 
       {(bolumler.length > 0 || loading) && (
         <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>

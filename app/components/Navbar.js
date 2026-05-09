@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
 
@@ -11,6 +11,8 @@ export default function Navbar() {
   const [kullanici, setKullanici] = useState(null)
   const [profil, setProfil] = useState(null)
   const router = useRouter()
+  const pathname = usePathname()
+  const toplulukModu = pathname === '/topluluk'
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -71,6 +73,19 @@ export default function Navbar() {
           </ul>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+          {toplulukModu && (
+            <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '4px' }}>
+              <div style={{ minWidth: '250px', height: '42px', borderRadius: '12px', border: '1px solid #222', background: '#0d0d0d', display: 'flex', alignItems: 'center', padding: '0 14px', color: '#8e8e88', fontSize: '14px' }}>
+                <span style={{ marginRight: '10px', fontSize: '16px' }}>⌕</span>
+                Ara...
+              </div>
+              {!kullanici && (
+                <button style={{ width: '42px', height: '42px', borderRadius: '12px', border: '1px solid #222', background: '#0d0d0d', color: '#f5f5f3', fontSize: '16px', cursor: 'pointer' }}>
+                  🔔
+                </button>
+              )}
+            </div>
+          )}
           {kullanici && profil ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="desktop-only">
               {(profil.rol === 'admin' || profil.rol === 'yonetici') && (

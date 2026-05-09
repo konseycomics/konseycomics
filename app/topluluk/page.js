@@ -162,6 +162,27 @@ function StatBox({ label, value }) {
   )
 }
 
+function CircleGlyph({ children, size = 18, bg = 'rgba(255,255,255,0.04)', color = '#fff' }) {
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: bg,
+        color,
+        fontSize: Math.max(10, size * 0.52),
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
 export default async function ToplulukPage() {
   const {
     haftaninKonusu,
@@ -173,12 +194,12 @@ export default async function ToplulukPage() {
   } = await getCommunityData()
 
   const solMenu = [
-    { label: 'Anasayfa', href: '/topluluk' },
-    { label: 'Kesfet', href: '#kesfet' },
-    { label: 'Bildirimler', href: '/giris' },
-    { label: 'Mesajlar', href: '/giris' },
-    { label: 'Yer Imleri', href: '/giris' },
-    { label: 'Profilim', href: '/giris' },
+    { label: 'Anasayfa', href: '/topluluk', icon: '⌂' },
+    { label: 'Kesfet', href: '#kesfet', icon: '◌' },
+    { label: 'Bildirimler', href: '/giris', icon: '◔' },
+    { label: 'Mesajlar', href: '/giris', icon: '✉' },
+    { label: 'Yer Imleri', href: '/giris', icon: '⌑' },
+    { label: 'Profilim', href: '/giris', icon: '◉' },
   ]
 
   const kategoriListesi = [
@@ -207,6 +228,7 @@ export default async function ToplulukPage() {
     { baslik: 'Topluluk Oneri Gecesi', tarih: 'Carsamba · 20:30' },
     { baslik: 'Editor Soru-Cevap', tarih: 'Cumartesi · 19:00' },
   ]
+  const besteci = onlineUyeler[0] || aktifOkuyucular[0] || null
 
   return (
     <>
@@ -229,7 +251,7 @@ export default async function ToplulukPage() {
                         minHeight: '46px',
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '0 16px',
+                        padding: '0 14px',
                         borderRadius: '12px',
                         background: index === 0 ? 'rgba(255,255,255,0.06)' : 'transparent',
                         color: '#f4f4f1',
@@ -239,7 +261,10 @@ export default async function ToplulukPage() {
                         border: index === 0 ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
                       }}
                     >
-                      {item.label}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+                        <CircleGlyph size={20} bg={index === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.05)'}>{item.icon}</CircleGlyph>
+                        {item.label}
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -251,7 +276,10 @@ export default async function ToplulukPage() {
                   <div style={{ display: 'grid', gap: '8px' }}>
                     {kategoriListesi.map((kategori) => (
                       <span key={kategori} style={{ minHeight: '42px', display: 'flex', alignItems: 'center', padding: '0 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', color: '#d8d8d3', fontSize: '14px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        {kategori}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                          <CircleGlyph size={18} bg="rgba(255,255,255,0.05)">•</CircleGlyph>
+                          {kategori}
+                        </span>
                       </span>
                     ))}
                   </div>
@@ -298,15 +326,17 @@ export default async function ToplulukPage() {
 
               <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '16px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'center' }}>
-                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
-                    K
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
+                    {besteci?.avatar_url
+                      ? <img src={besteci.avatar_url} alt={besteci.kullanici_adi || 'Uye'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : (besteci?.kullanici_adi?.[0]?.toUpperCase() || 'K')}
                   </div>
                   <div>
                     <div style={{ color: '#d9d9d4', fontSize: '18px', marginBottom: '12px' }}>Ne hakkında konuşmak istersin?</div>
                     <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px' }}>
-                      <span>Fotograf</span>
-                      <span>Anket</span>
-                      <span>Etiket</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>◫</CircleGlyph>Fotograf</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>≣</CircleGlyph>Anket</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><CircleGlyph size={18}>#</CircleGlyph>Etiket</span>
                     </div>
                   </div>
                   <button style={{ minHeight: '42px', padding: '0 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#111', fontSize: '14px', fontWeight: 700, fontFamily: 'inherit' }}>
@@ -320,10 +350,11 @@ export default async function ToplulukPage() {
                 <span>Takip Edilen</span>
                 <span>Populer</span>
                 <span>En Yeni</span>
+                <span style={{ marginInlineStart: 'auto', fontSize: '18px' }}>⚙</span>
               </div>
 
               <div id="son-aktiviteler" style={{ display: 'grid', gap: '14px' }}>
-                {akışKartlari.map((seri) => (
+                {akışKartlari.map((seri, index) => (
                   <Link key={seri.id} href={`/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
                     <article style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
@@ -336,6 +367,7 @@ export default async function ToplulukPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                             <span style={{ color: '#fff', fontSize: '15px', fontWeight: 700 }}>{seri.sonYorumProfil?.kullanici_adi || 'Konsey Uyesi'}</span>
                             <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.sonYorumAt)}</span>
+                            {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                           </div>
                           <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
                             {seri.baslik} hakkında ne düşünüyorsunuz?
@@ -350,8 +382,13 @@ export default async function ToplulukPage() {
                               </span>
                             ))}
                           </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#d2d2cc', fontSize: '14px', marginTop: '16px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>♡ {Math.max(seri.yorumSayisi * 2 + 5, 8)}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>◔ {seri.yorumSayisi}</span>
+                          </div>
                         </div>
                         <div style={{ display: 'grid', gap: '10px', minWidth: '96px' }}>
+                          <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
                           <div style={{ padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
                             <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '30px', lineHeight: 0.9 }}>{seri.yorumSayisi}</div>
                             <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorum</div>
@@ -367,7 +404,7 @@ export default async function ToplulukPage() {
             <aside className="community-right-rail" style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '16px' }}>
               <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
                 <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '10px' }}>Online Uyeler</div>
-                <div style={{ color: '#9fd67d', fontSize: '13px', marginBottom: '14px' }}>{istatistikler.aktifUye || onlineUyeler.length} çevrimiçi</div>
+                <div style={{ color: '#9fd67d', fontSize: '13px', marginBottom: '14px' }}>● {istatistikler.aktifUye || onlineUyeler.length} çevrimiçi</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {onlineUyeler.map((uye) => (
                     <Link key={uye.id} href={uye.kullanici_adi ? `/profil/${uye.kullanici_adi}` : '/giris'} style={{ textDecoration: 'none' }}>

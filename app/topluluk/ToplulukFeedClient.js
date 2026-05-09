@@ -38,6 +38,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [aktifTab, setAktifTab] = useState('tumu')
   const [kullanici, setKullanici] = useState(null)
   const [profil, setProfil] = useState(null)
+  const [arama, setArama] = useState('')
   const [baslik, setBaslik] = useState('')
   const [icerik, setIcerik] = useState('')
   const [kategori, setKategori] = useState('Genel Sohbet')
@@ -45,6 +46,8 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [katilimKonuIdleri, setKatilimKonuIdleri] = useState([])
+  const [begeniKonuIdleri, setBegeniKonuIdleri] = useState([])
+  const [yerImiKonuIdleri, setYerImiKonuIdleri] = useState([])
 
   useEffect(() => {
     let active = true
@@ -56,10 +59,18 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
       setKullanici(user)
 
       if (user?.id) {
-        const [{ data: profileData }, { data: repliesData, error: repliesError }, { data: ownTopics, error: ownTopicsError }] = await Promise.all([
+        const [
+          { data: profileData },
+          { data: repliesData, error: repliesError },
+          { data: ownTopics, error: ownTopicsError },
+          { data: likeRows, error: likeError },
+          { data: bookmarkRows, error: bookmarkError },
+        ] = await Promise.all([
           supabase.from('public_profiller').select('id, kullanici_adi, avatar_url').eq('id', user.id).maybeSingle(),
           supabase.from('topluluk_yanitlari').select('konu_id').eq('kullanici_id', user.id),
           supabase.from('topluluk_konulari').select('id').eq('kullanici_id', user.id),
+          supabase.from('topluluk_begenileri').select('konu_id').eq('kullanici_id', user.id),
+          supabase.from('topluluk_yer_imleri').select('konu_id').eq('kullanici_id', user.id),
         ])
 
         if (!active) return
@@ -67,11 +78,20 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         const ids = [
           ...((repliesError ? [] : repliesData) || []).map((item) => item.konu_id),
           ...((ownTopicsError ? [] : ownTopics) || []).map((item) => item.id),
+          ...((bookmarkError ? [] : bookmarkRows) || []).map((item) => item.konu_id),
         ].filter(Boolean)
         setKatilimKonuIdleri([...new Set(ids)])
+        setBegeniKonuIdleri([...
+          new Set((((likeError ? [] : likeRows) || []).map((item) => item.konu_id)).filter(Boolean)),
+        ])
+        setYerImiKonuIdleri([...
+          new Set((((bookmarkError ? [] : bookmarkRows) || []).map((item) => item.konu_id)).filter(Boolean)),
+        ])
       } else {
         setProfil(null)
         setKatilimKonuIdleri([])
+        setBegeniKonuIdleri([])
+        setYerImiKonuIdleri([])
       }
     }
 
@@ -88,20 +108,73 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   }, [])
 
   const gorunenKonular = useMemo(() => {
+    let listed = topics
+
     if (aktifTab === 'takip') {
-      return topics.filter((item) => katilimKonuIdleri.includes(item.id))
+      listed = topics.filter((item) => katilimKonuIdleri.includes(item.id) || yerImiKonuIdleri.includes(item.id))
     }
 
     if (aktifTab === 'populer') {
-      return [...topics].sort((a, b) => topicScore(b) - topicScore(a) || new Date(b.son_aktivite_at || b.created_at) - new Date(a.son_aktivite_at || a.created_at))
+      listed = [...topics].sort((a, b) => topicScore(b) - topicScore(a) || new Date(b.son_aktivite_at || b.created_at) - new Date(a.son_aktivite_at || a.created_at))
     }
 
     if (aktifTab === 'yeni') {
-      return [...topics].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      listed = [...topics].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
 
-    return topics
-  }, [aktifTab, katilimKonuIdleri, topics])
+    const cleanSearch = arama.trim().toLocaleLowerCase('tr-TR')
+    if (!cleanSearch) return listed
+
+    return listed.filter((item) => {
+      const haystack = [
+        item.baslik,
+        item.icerik,
+        item.kategori,
+        ...(item.etiketler || []),
+        item.profil?.kullanici_adi,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('tr-TR')
+
+      return haystack.includes(cleanSearch)
+    })
+  }, [aktifTab, arama, katilimKonuIdleri, topics, yerImiKonuIdleri])
+
+  async function toggleReaction(konuId, type) {
+    if (!kullanici) {
+      setMesaj('Bu etkileşim için giriş yapman gerekiyor.')
+      return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/reactions/toggle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ konuId, type }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setMesaj(result?.error || 'İşlem tamamlanamadı.')
+      return
+    }
+
+    if (type === 'like') {
+      setBegeniKonuIdleri((prev) => result.active ? [...new Set([...prev, konuId])] : prev.filter((id) => id !== konuId))
+      setTopics((prev) => prev.map((item) => item.id === konuId ? {
+        ...item,
+        begeni_sayisi: Math.max(0, Number(item.begeni_sayisi || 0) + (result.active ? 1 : -1)),
+      } : item))
+      return
+    }
+
+    setYerImiKonuIdleri((prev) => result.active ? [...new Set([...prev, konuId])] : prev.filter((id) => id !== konuId))
+    setKatilimKonuIdleri((prev) => result.active ? [...new Set([...prev, konuId])] : prev)
+  }
 
   async function konuOlustur() {
     if (!kullanici) {
@@ -227,6 +300,15 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         </div>
       </div>
 
+      <div style={{ marginBottom: '16px' }}>
+        <input
+          value={arama}
+          onChange={(e) => setArama(e.target.value)}
+          placeholder="Konularda, etiketlerde ve kullanıcı adlarında ara..."
+          style={{ width: '100%', minHeight: '46px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
+
       <div style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
         {sekmeler.map((sekme) => (
           <button
@@ -258,8 +340,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             Bu filtrede henüz konu yok. İlk konuyu sen açabilirsin.
           </div>
         ) : gorunenKonular.map((seri, index) => (
-          <Link key={`${seri.source}-${seri.id}`} href={seri.href || `/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
-            <article style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
+            <article key={`${seri.source}-${seri.id}`} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {seri.profil?.avatar_url
@@ -272,12 +353,14 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                   </div>
-                  <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
-                    {seri.baslik}
-                  </div>
-                  <div style={{ color: '#c2c2bc', fontSize: '14px', lineHeight: 1.75, marginBottom: '12px' }}>
-                    {trimPreview(seri.icerik)}
-                  </div>
+                  <Link href={seri.href || `/seri/${seri.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+                    <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
+                      {seri.baslik}
+                    </div>
+                    <div style={{ color: '#c2c2bc', fontSize: '14px', lineHeight: 1.75, marginBottom: '12px' }}>
+                      {trimPreview(seri.icerik)}
+                    </div>
+                  </Link>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {(seri.etiketler || []).slice(0, 3).map((tag) => (
                       <span key={tag} style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#d5d5d0', fontSize: '11px', fontWeight: 700 }}>
@@ -286,8 +369,21 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     ))}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '18px', color: '#d2d2cc', fontSize: '14px', marginTop: '16px' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>♡ {Math.max(Number(seri.begeni_sayisi || 0), Number(seri.yanit_sayisi || 0) * 2 + 5)}</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>◔ {Number(seri.yanit_sayisi || 0)}</span>
+                    <button
+                      onClick={() => toggleReaction(seri.id, 'like')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: begeniKonuIdleri.includes(seri.id) ? '#ff9ea1' : '#d2d2cc', fontSize: '14px', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                    >
+                      {begeniKonuIdleri.includes(seri.id) ? '♥' : '♡'} {Number(seri.begeni_sayisi || 0)}
+                    </button>
+                    <Link href={seri.href || `/seri/${seri.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}>
+                      ◔ {Number(seri.yanit_sayisi || 0)}
+                    </Link>
+                    <button
+                      onClick={() => toggleReaction(seri.id, 'bookmark')}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: yerImiKonuIdleri.includes(seri.id) ? '#f3d287' : '#d2d2cc', fontSize: '14px', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                    >
+                      {yerImiKonuIdleri.includes(seri.id) ? '▣' : '▢'} Yer imi
+                    </button>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gap: '10px', minWidth: '96px' }}>
@@ -299,7 +395,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                 </div>
               </div>
             </article>
-          </Link>
         ))}
       </div>
 

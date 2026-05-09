@@ -34,6 +34,22 @@ create table if not exists public.topluluk_yanitlari (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.topluluk_begenileri (
+  id uuid primary key default gen_random_uuid(),
+  konu_id uuid not null references public.topluluk_konulari(id) on delete cascade,
+  kullanici_id uuid not null references public.profiller(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (konu_id, kullanici_id)
+);
+
+create table if not exists public.topluluk_yer_imleri (
+  id uuid primary key default gen_random_uuid(),
+  konu_id uuid not null references public.topluluk_konulari(id) on delete cascade,
+  kullanici_id uuid not null references public.profiller(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (konu_id, kullanici_id)
+);
+
 create index if not exists idx_topluluk_konulari_aktif_son_aktivite
   on public.topluluk_konulari (aktif, son_aktivite_at desc);
 
@@ -45,6 +61,12 @@ create index if not exists idx_topluluk_yanitlari_konu
 
 create index if not exists idx_topluluk_yanitlari_kullanici
   on public.topluluk_yanitlari (kullanici_id, created_at desc);
+
+create index if not exists idx_topluluk_begenileri_kullanici
+  on public.topluluk_begenileri (kullanici_id, created_at desc);
+
+create index if not exists idx_topluluk_yer_imleri_kullanici
+  on public.topluluk_yer_imleri (kullanici_id, created_at desc);
 
 create or replace function public.touch_topluluk_updated_at()
 returns trigger
@@ -100,6 +122,27 @@ begin
 end;
 $$;
 
+create or replace function public.sync_topluluk_like_stats()
+returns trigger
+language plpgsql
+as $$
+declare
+  target_konu uuid;
+begin
+  target_konu = coalesce(new.konu_id, old.konu_id);
+
+  update public.topluluk_konulari
+  set begeni_sayisi = (
+    select count(*)
+    from public.topluluk_begenileri b
+    where b.konu_id = target_konu
+  )
+  where id = target_konu;
+
+  return coalesce(new, old);
+end;
+$$;
+
 drop trigger if exists trigger_sync_topluluk_stats_after_insert on public.topluluk_yanitlari;
 create trigger trigger_sync_topluluk_stats_after_insert
 after insert on public.topluluk_yanitlari
@@ -118,8 +161,22 @@ after delete on public.topluluk_yanitlari
 for each row
 execute function public.sync_topluluk_konu_stats();
 
+drop trigger if exists trigger_sync_topluluk_likes_after_insert on public.topluluk_begenileri;
+create trigger trigger_sync_topluluk_likes_after_insert
+after insert on public.topluluk_begenileri
+for each row
+execute function public.sync_topluluk_like_stats();
+
+drop trigger if exists trigger_sync_topluluk_likes_after_delete on public.topluluk_begenileri;
+create trigger trigger_sync_topluluk_likes_after_delete
+after delete on public.topluluk_begenileri
+for each row
+execute function public.sync_topluluk_like_stats();
+
 alter table public.topluluk_konulari enable row level security;
 alter table public.topluluk_yanitlari enable row level security;
+alter table public.topluluk_begenileri enable row level security;
+alter table public.topluluk_yer_imleri enable row level security;
 
 drop policy if exists "topluluk konulari public okur" on public.topluluk_konulari;
 create policy "topluluk konulari public okur"
@@ -164,5 +221,47 @@ for update
 to authenticated
 using (auth.uid() = kullanici_id or public.is_admin_user())
 with check (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk begenileri sahibi okur" on public.topluluk_begenileri;
+create policy "topluluk begenileri sahibi okur"
+on public.topluluk_begenileri
+for select
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk begenileri sahibi ekler" on public.topluluk_begenileri;
+create policy "topluluk begenileri sahibi ekler"
+on public.topluluk_begenileri
+for insert
+to authenticated
+with check (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk begenileri sahibi siler" on public.topluluk_begenileri;
+create policy "topluluk begenileri sahibi siler"
+on public.topluluk_begenileri
+for delete
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk yer imleri sahibi okur" on public.topluluk_yer_imleri;
+create policy "topluluk yer imleri sahibi okur"
+on public.topluluk_yer_imleri
+for select
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk yer imleri sahibi ekler" on public.topluluk_yer_imleri;
+create policy "topluluk yer imleri sahibi ekler"
+on public.topluluk_yer_imleri
+for insert
+to authenticated
+with check (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk yer imleri sahibi siler" on public.topluluk_yer_imleri;
+create policy "topluluk yer imleri sahibi siler"
+on public.topluluk_yer_imleri
+for delete
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
 
 commit;

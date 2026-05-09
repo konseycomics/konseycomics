@@ -78,6 +78,9 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   const [spoiler, setSpoiler] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [begendim, setBegendim] = useState(false)
+  const [yerImledim, setYerImledim] = useState(false)
+  const [likeCount, setLikeCount] = useState(Number(topic?.begeni_sayisi || 0))
 
   useEffect(() => {
     let active = true
@@ -90,14 +93,30 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
       setSessionUser(user)
 
       if (user?.id) {
-        const { data } = await supabase
-          .from('public_profiller')
-          .select('id, kullanici_adi, avatar_url')
-          .eq('id', user.id)
-          .maybeSingle()
+        const [{ data }, { data: liked }, { data: bookmarked }] = await Promise.all([
+          supabase
+            .from('public_profiller')
+            .select('id, kullanici_adi, avatar_url')
+            .eq('id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('topluluk_begenileri')
+            .select('id')
+            .eq('kullanici_id', user.id)
+            .eq('konu_id', topic.id)
+            .maybeSingle(),
+          supabase
+            .from('topluluk_yer_imleri')
+            .select('id')
+            .eq('kullanici_id', user.id)
+            .eq('konu_id', topic.id)
+            .maybeSingle(),
+        ])
 
         if (!active) return
         setProfile(data || null)
+        setBegendim(Boolean(liked?.id))
+        setYerImledim(Boolean(bookmarked?.id))
       } else {
         setProfile(null)
       }
@@ -114,6 +133,37 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
       subscription.unsubscribe()
     }
   }, [])
+
+  async function toggleReaction(type) {
+    if (!sessionUser) {
+      setMessage('Bu etkileşim için giriş yapman gerekiyor.')
+      return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/reactions/toggle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ konuId: topic.id, type }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setMessage(result?.error || 'İşlem tamamlanamadı.')
+      return
+    }
+
+    if (type === 'like') {
+      setBegendim(result.active)
+      setLikeCount((prev) => Math.max(0, prev + (result.active ? 1 : -1)))
+      return
+    }
+
+    setYerImledim(result.active)
+  }
 
   async function handleReplySubmit() {
     if (!sessionUser) {
@@ -227,7 +277,18 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
 
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#c8c8c1', fontSize: '13px' }}>
               <span>◔ {Number(topic?.yanit_sayisi || replies.length)} yorum</span>
-              <span>♡ {Number(topic?.begeni_sayisi || 0)} beğeni</span>
+              <button
+                onClick={() => toggleReaction('like')}
+                style={{ background: 'transparent', border: 'none', padding: 0, color: begendim ? '#ff9ea1' : '#c8c8c1', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
+              >
+                {begendim ? '♥' : '♡'} {likeCount} beğeni
+              </button>
+              <button
+                onClick={() => toggleReaction('bookmark')}
+                style={{ background: 'transparent', border: 'none', padding: 0, color: yerImledim ? '#f3d287' : '#c8c8c1', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
+              >
+                {yerImledim ? '▣' : '▢'} yer imi
+              </button>
               <span>⌕ {Number(topic?.goruntulenme_sayisi || 0)} görüntülenme</span>
             </div>
           </div>

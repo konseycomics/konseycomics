@@ -46,6 +46,7 @@ export default function Navbar() {
     { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
     { label: 'Manga', href: '/kategori/manga' },
     { label: 'Webtoon', href: '/kategori/webtoon' },
+    { label: 'Topluluk', href: '/topluluk' },
     { label: 'Hakkımızda', href: '/hakkimizda' },
     { label: 'İletişim', href: '/iletisim' },
   ]

@@ -167,7 +167,7 @@ function SeriKart({ seri }) {
   )
 }
 
-function PopulerSeriKart({ seri, sira, featured = false }) {
+function PopulerSeriKart({ seri, sira }) {
   const [hover, setHover] = useState(false)
   const rating = Number(seri.ortalama_puan || 0)
   const yeniSeri = isRecentlyAddedSeries(seri.created_at)
@@ -177,6 +177,33 @@ function PopulerSeriKart({ seri, sira, featured = false }) {
     : seri.durum === 'Tamamlandı'
       ? '#2563eb'
       : '#f59e0b'
+  const rankTheme = sira === 1
+    ? {
+        border: 'rgba(247,215,116,0.65)',
+        glow: '0 20px 44px rgba(247,215,116,0.12)',
+        ribbon: 'linear-gradient(180deg, #f7d774 0%, #d4a72c 100%)',
+        ribbonText: '#111',
+      }
+    : sira === 2
+      ? {
+          border: 'rgba(217,222,230,0.55)',
+          glow: '0 18px 38px rgba(217,222,230,0.08)',
+          ribbon: 'linear-gradient(180deg, #d9dee6 0%, #8e97a5 100%)',
+          ribbonText: '#111',
+        }
+      : sira === 3
+        ? {
+            border: 'rgba(216,165,122,0.55)',
+            glow: '0 18px 38px rgba(216,165,122,0.08)',
+            ribbon: 'linear-gradient(180deg, #f2a85d 0%, #c96a20 100%)',
+            ribbonText: '#111',
+          }
+        : {
+            border: 'rgba(255,255,255,0.12)',
+            glow: '0 14px 30px rgba(0,0,0,0.12)',
+            ribbon: 'linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 100%)',
+            ribbonText: '#fff',
+          }
 
   return (
     <Link href={`/seri/${seri.slug}`} style={{ textDecoration: 'none' }}>
@@ -185,32 +212,53 @@ function PopulerSeriKart({ seri, sira, featured = false }) {
         onMouseLeave={() => setHover(false)}
         style={{
           position: 'relative',
-          transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+          transition: 'transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease',
           transform: hover ? 'translateY(-5px)' : 'none',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          borderRadius: '18px',
+          padding: '10px',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015))',
+          border: `1px solid ${hover ? rankTheme.border : 'rgba(255,255,255,0.08)'}`,
+          boxShadow: hover ? rankTheme.glow : '0 12px 26px rgba(0,0,0,0.14)',
         }}
       >
         <div style={{
-          position: 'relative', aspectRatio: featured ? '16/10' : '2/3', borderRadius: '14px',
+          position: 'relative', aspectRatio: '2/3', borderRadius: '14px',
           overflow: 'hidden', marginBottom: '12px', background: '#111',
-          boxShadow: hover ? '0 18px 34px rgba(0,0,0,0.14)' : '0 10px 24px rgba(0,0,0,0.08)'
+          boxShadow: hover ? '0 18px 34px rgba(0,0,0,0.18)' : '0 10px 24px rgba(0,0,0,0.08)',
         }}>
           {seri.kapak_url
             ? <img src={seri.kapak_url} alt={seri.baslik} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: hover ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.3s ease' }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: '22px', color: '#fff', textAlign: 'center', padding: '16px' }}>{seri.baslik}</div>
           }
 
-          <div style={{ position: 'absolute', inset: 0, background: featured ? 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.1) 58%)' : 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 52%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 54%)' }} />
 
-          <div style={{ position: 'absolute', top: '10px', left: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ background: featured ? 'rgba(245,185,66,0.92)' : 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '12px',
+            width: '38px',
+            height: '64px',
+            background: rankTheme.ribbon,
+            color: rankTheme.ribbonText,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            paddingTop: '10px',
+            fontSize: '20px',
+            fontWeight: 900,
+            lineHeight: 1,
+            clipPath: 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)',
+            boxShadow: '0 12px 20px rgba(0,0,0,0.24)',
+          }}>
+            {sira}
+          </div>
+
+          <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)' }}>
               #{sira}
             </span>
-            {featured && (
-              <span style={{ background: 'rgba(17,17,16,0.86)', color: '#fff', fontSize: '10px', fontWeight: 800, padding: '5px 8px', borderRadius: '999px', backdropFilter: 'blur(6px)', letterSpacing: '0.7px', textTransform: 'uppercase' }}>
-                Zirvede
-              </span>
-            )}
           </div>
 
           <div style={{ position: 'absolute', right: '10px', bottom: '10px', left: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -226,7 +274,7 @@ function PopulerSeriKart({ seri, sira, featured = false }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '5px' }}>
-          <div style={{ fontSize: featured ? '18px' : '15px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.25 }}>
             {seri.baslik}
           </div>
           <span style={{
@@ -256,7 +304,7 @@ function PopulerSeriKart({ seri, sira, featured = false }) {
             ))}
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: featured ? '12px' : '11px', color: 'var(--text-light)', fontWeight: 700 }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 700 }}>
               {formatCount(goruntulenme)} görüntülenme
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -828,9 +876,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         .home-categories-right { display: grid; grid-template-rows: 1fr 1fr; gap: 18px; }
         .home-search-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr); gap: 18px; align-items: stretch; }
         .series-showcase-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; }
-        .popular-spotlight-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; align-items: start; }
-        .popular-spotlight-grid > *:first-child { grid-column: span 4; }
-        .popular-spotlight-grid > *:not(:first-child) { grid-column: span 2; }
         .series-showcase-grid > *:nth-child(1),
         .series-showcase-grid > *:nth-child(2) { grid-column: span 6; }
         .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
@@ -843,8 +888,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .home-categories { grid-template-columns: 1fr !important; }
           .home-categories-right { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none !important; }
           .home-search-grid { grid-template-columns: 1fr !important; }
-          .popular-spotlight-grid > *:first-child { grid-column: span 6 !important; }
-          .popular-spotlight-grid > *:not(:first-child) { grid-column: span 3 !important; }
           .series-showcase-grid > *:nth-child(1),
           .series-showcase-grid > *:nth-child(2) { grid-column: span 12; }
           .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
@@ -868,7 +911,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .grid-bolumler { grid-template-columns: repeat(2, 1fr) !important; }
           .home-categories-right { grid-template-columns: 1fr !important; }
           .home-categories-right { grid-template-rows: auto auto !important; }
-          .popular-spotlight-grid > * { grid-column: span 6 !important; }
           .showcase-card { min-height: 216px !important; border-radius: 20px !important; }
           .showcase-card.is-large { min-height: 240px !important; }
           .category-block { min-height: 180px !important; border-radius: 20px !important; }
@@ -1268,9 +1310,9 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
               Okurların en çok döndüğü seri vitrinleri
             </p>
           </div>
-          <div className="popular-spotlight-grid">
+          <div className="grid-5">
             {populerSeriler.map((seri, index) => (
-              <PopulerSeriKart key={seri.id} seri={seri} sira={index + 1} featured={index === 0} />
+              <PopulerSeriKart key={seri.id} seri={seri} sira={index + 1} />
             ))}
           </div>
         </section>

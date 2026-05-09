@@ -1962,6 +1962,30 @@ function BolumlerSayfasi() {
     setBolumSayfaMap(temizMap)
   }
 
+  async function takipcilereYeniBolumBildirimGonder({ seriId, seriBaslik, bolumBaslik, bolumNo }) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+      if (!accessToken || !seriId || !seriBaslik || !bolumBaslik) return
+
+      const response = await fetch('/api/notifications/new-chapter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ seriId, seriBaslik, bolumBaslik, bolumNo }),
+      })
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        console.warn('Yeni bölüm bildirimi gönderilemedi:', body?.error || response.statusText)
+      }
+    } catch (error) {
+      console.warn('Yeni bölüm bildirimi atlandı:', error?.message || error)
+    }
+  }
+
   async function kaydet() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     setYukleniyor(true)
@@ -1984,6 +2008,15 @@ function BolumlerSayfasi() {
     else {
       const { data } = await supabase.from('bolumler').insert([payload]).select().single()
       bolumId = data?.id
+      const seriBaslik = seriler.find((item) => item.id === form.seri_id)?.baslik
+      if (data?.id && seriBaslik) {
+        await takipcilereYeniBolumBildirimGonder({
+          seriId: form.seri_id,
+          seriBaslik,
+          bolumBaslik: form.baslik,
+          bolumNo: payload.sayi,
+        })
+      }
     }
     if (bolumId) await kaydetBolumSayfalari(bolumId, form.sayfa_gorselleri)
     setMsg(duzenleId?'✅ Güncellendi!':'✅ Bölüm eklendi!')

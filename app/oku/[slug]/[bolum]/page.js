@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import YorumSistemi from '../../../components/YorumSistemi'
-import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock } from '../../../lib/unvanClient'
+import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock, trackSeriesFavoriteAndUnlock } from '../../../lib/unvanClient'
 
 const INITIAL_VISIBLE_PAGE_COUNT = 6
 const PAGE_BATCH_SIZE = 4
@@ -92,6 +92,10 @@ export default function Okuyucu() {
   const flipGecisZamanlayiciRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
+  const [kullanici, setKullanici] = useState(null)
+  const [listeDurumu, setListeDurumu] = useState(null)
+  const [listeYukleniyor, setListeYukleniyor] = useState(false)
+  const yorumlarRef = useRef(null)
 
   async function handleDownloadClick() {
     try {
@@ -150,11 +154,24 @@ export default function Okuyucu() {
 
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
+          setKullanici(session.user)
           await supabase.from('okuma_gecmisi').upsert([{
             kullanici_id: session.user.id,
             bolum_id: bolumKaydi.id,
             seri_id: seri.id,
           }], { onConflict: 'kullanici_id,bolum_id' })
+
+          const { data: liste } = await supabase
+            .from('okuma_listesi')
+            .select('durum')
+            .eq('kullanici_id', session.user.id)
+            .eq('seri_id', seri.id)
+            .maybeSingle()
+
+          setListeDurumu(liste?.durum || null)
+        } else {
+          setKullanici(null)
+          setListeDurumu(null)
         }
       }
 
@@ -164,6 +181,47 @@ export default function Okuyucu() {
 
     fetchData()
   }, [slug, bolum])
+
+  async function listeGuncelle(durum) {
+    if (!kullanici || !seriData) return
+    setListeYukleniyor(true)
+
+    try {
+      if (listeDurumu === durum) {
+        await supabase
+          .from('okuma_listesi')
+          .delete()
+          .eq('kullanici_id', kullanici.id)
+          .eq('seri_id', seriData.id)
+        setListeDurumu(null)
+      } else {
+        await supabase.from('okuma_listesi').upsert(
+          [{
+            kullanici_id: kullanici.id,
+            seri_id: seriData.id,
+            durum,
+            updated_at: new Date().toISOString(),
+          }],
+          { onConflict: 'kullanici_id,seri_id' }
+        )
+        setListeDurumu(durum)
+
+        if (durum === 'okumak_istiyorum') {
+          const unlocked = await trackSeriesFavoriteAndUnlock({ userId: kullanici.id, seriId: seriData.id })
+          if (unlocked.length > 0) {
+            setAcilanUnvanlar(unlocked)
+            window.setTimeout(() => setAcilanUnvanlar([]), 4200)
+          }
+        }
+      }
+    } finally {
+      setListeYukleniyor(false)
+    }
+  }
+
+  function yorumlaraGit() {
+    yorumlarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   useEffect(() => {
     if (!bolumData?.id) return
@@ -1563,8 +1621,82 @@ export default function Okuyucu() {
                     Bolum Sonu
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', lineHeight: 1.6, maxWidth: '28ch' }}>
-                    Okumaya seri detayindan veya bir sonraki bolumden devam edebilirsin.
+                    Okumaya seri detayindan veya bir sonraki bolumden devam edebilirsin. Kayitliysan seriyi takip listene ekleyip yeni bolum geldiginde bildirimi da acabilirsin.
                   </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', marginTop: '18px' }}>
+                    <Link href={`/seri/${slug}`} style={{ padding: '12px 16px', borderRadius: '12px', background: '#fff', color: '#111', textDecoration: 'none', fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                      Seri Detayina Git
+                    </Link>
+                    {kullanici ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => listeGuncelle('okunuyor')}
+                          disabled={listeYukleniyor}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            background: listeDurumu === 'okunuyor' ? '#2563eb' : 'rgba(255,255,255,0.08)',
+                            border: `1px solid ${listeDurumu === 'okunuyor' ? '#2563eb' : 'rgba(255,255,255,0.12)'}`,
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {listeDurumu === 'okunuyor' ? 'Takipte' : 'Seriyi Takibe Al'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => listeGuncelle('okumak_istiyorum')}
+                          disabled={listeYukleniyor}
+                          style={{
+                            padding: '12px 16px',
+                            borderRadius: '12px',
+                            background: listeDurumu === 'okumak_istiyorum' ? '#7c3aed' : 'rgba(255,255,255,0.08)',
+                            border: `1px solid ${listeDurumu === 'okumak_istiyorum' ? '#7c3aed' : 'rgba(255,255,255,0.12)'}`,
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {listeDurumu === 'okumak_istiyorum' ? 'Okuyacaklarimda' : 'Okuyacaklara Ekle'}
+                        </button>
+                      </>
+                    ) : (
+                      <Link href="/giris" style={{ padding: '12px 16px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', textDecoration: 'none', fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        Takip icin Giris Yap
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={yorumlaraGit}
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Yoruma Gec
+                    </button>
+                  </div>
+                  {kullanici && listeDurumu ? (
+                    <div style={{ marginTop: '10px', color: 'rgba(255,255,255,0.54)', fontSize: '11px', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                      {listeDurumu === 'okunuyor' ? 'Bu seri takip listende.' : listeDurumu === 'okumak_istiyorum' ? 'Bu seri okuyacaklar listende.' : 'Bu seri tamamlandi olarak isaretli.'}
+                    </div>
+                  ) : null}
                 </div>
 
                 {siradakiBolum ? (
@@ -1599,7 +1731,7 @@ export default function Okuyucu() {
 
             {!tamEkranAktif && (
             <section className="reader-after">
-              <div className="reader-panel">
+              <div className="reader-panel" ref={yorumlarRef}>
                 <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '44px', color: '#fff', marginBottom: '12px', lineHeight: 0.95 }}>
                   Yorumlar
                 </div>

@@ -1222,8 +1222,24 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         </div>
       </section>
 
-      {!loading && (
-        <LiderlikTablosu liderlik={liderlik} />
+      {(bolumler.length > 0 || loading) && (
+        <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
+          <div className="home-section-heading" style={{ marginBottom: '30px', textAlign: 'center' }}>
+            <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
+              Son Eklenen Bölümler
+            </h2>
+            <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              Yeni eklenen bölümler
+            </p>
+          </div>
+          {loading
+            ? <LoadingGrid count={10} className="grid-bolumler-5" />
+            : <>
+              <div className="grid-bolumler-5" style={{ marginBottom: '14px' }}>{sonBolumlerTop.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
+              <div className="grid-bolumler-5">{sonBolumlerAlt.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
+            </>
+          }
+        </section>
       )}
 
       {!loading && populerSeriler.length > 0 && (
@@ -1277,24 +1293,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         </div>
       </section>
 
-      {(bolumler.length > 0 || loading) && (
-        <section className="site-section" style={{ marginTop: 'var(--section-gap)' }}>
-          <div className="home-section-heading" style={{ marginBottom: '30px', textAlign: 'center' }}>
-            <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
-              Son Eklenen Bölümler
-            </h2>
-            <p className="home-section-kicker" style={{ margin: '8px 0 0', color: '#b8b8b2', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
-              Yeni eklenen bölümler
-            </p>
-          </div>
-          {loading
-            ? <LoadingGrid count={10} className="grid-bolumler-5" />
-            : <>
-              <div className="grid-bolumler-5" style={{ marginBottom: '14px' }}>{sonBolumlerTop.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
-              <div className="grid-bolumler-5">{sonBolumlerAlt.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
-            </>
-          }
-        </section>
+      {!loading && (
+        <LiderlikTablosu liderlik={liderlik} />
       )}
 
       {/* Tüm Seriler */}

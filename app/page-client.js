@@ -751,6 +751,7 @@ function MiniGorevKutusu() {
     okuma: false,
     puan: false,
   })
+  const [odulMesaji, setOdulMesaji] = useState('')
 
   useEffect(() => {
     let aktif = true
@@ -827,6 +828,35 @@ function MiniGorevKutusu() {
 
   const tamamlanan = gorevler.filter((item) => item.tamamlandi).length
 
+  useEffect(() => {
+    async function onboardingOdulunuKontrolEt() {
+      if (!kullanici?.id || tamamlanan !== 3) return
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token
+        if (!accessToken) return
+
+        const response = await fetch('/api/onboarding/reward', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        const body = await response.json().catch(() => ({}))
+        if (response.ok && body?.awarded && body?.title?.isim) {
+          setOdulMesaji(`${body.title.isim} unvanı açıldı.`)
+        }
+      } catch (error) {
+        console.warn('Onboarding odulu kontrolu atlandi:', error?.message || error)
+      }
+    }
+
+    onboardingOdulunuKontrolEt()
+  }, [kullanici?.id, tamamlanan])
+
   return (
     <section className="site-section" style={{ marginTop: '24px' }}>
       <div style={{
@@ -862,6 +892,20 @@ function MiniGorevKutusu() {
           </div>
         ) : (
           <>
+            {odulMesaji ? (
+              <div style={{
+                marginBottom: '16px',
+                padding: '14px 16px',
+                borderRadius: '18px',
+                border: '1px solid rgba(16,185,129,0.24)',
+                background: 'linear-gradient(180deg, rgba(16,185,129,0.12), rgba(255,255,255,0.03))',
+                color: '#d1fae5',
+                fontSize: '13px',
+                fontWeight: 700,
+              }}>
+                {odulMesaji}
+              </div>
+            ) : null}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div>
                 <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '8px' }}>
@@ -872,6 +916,9 @@ function MiniGorevKutusu() {
                 </div>
                 <div style={{ color: '#b9b9b4', fontSize: '14px', lineHeight: 1.7, maxWidth: '60ch' }}>
                   Takip, ilk bolum ve ilk puan; bu uc adimdan sonra site senin icin daha kisilesmis calismaya baslar.
+                </div>
+                <div style={{ color: '#8f8f89', fontSize: '12px', lineHeight: 1.6, marginTop: '8px' }}>
+                  Tamamlayana: <strong style={{ color: '#fff' }}>Konsey Yolcusu</strong> unvani.
                 </div>
               </div>
 

@@ -159,23 +159,7 @@ export default async function ToplulukPage() {
   } = await getCommunityData()
   const { topics: gerçekKonular } = await getCommunityTopics({ limit: 12 })
 
-  const akışKartlari = hareketliKonular.slice(0, 5)
-  const fallbackTopics = akışKartlari.map((seri) => ({
-    id: `fallback-${seri.id}`,
-    href: `/seri/${seri.slug}`,
-    baslik: `${seri.baslik} hakkında ne düşünüyorsunuz?`,
-    icerik: getCommentPreview(seri.sonYorum),
-    kategori: 'Seri Tartışmaları',
-    etiketler: seri.baslik.split(' ').slice(0, 2),
-    created_at: seri.sonYorumAt,
-    son_aktivite_at: seri.sonYorumAt,
-    yanit_sayisi: Number(seri.yorumSayisi || 0),
-    begeni_sayisi: Math.max(Number(seri.yorumSayisi || 0) * 2, 6),
-    goruntulenme_sayisi: 0,
-    profil: seri.sonYorumProfil || null,
-    source: 'fallback',
-  }))
-  const feedTopics = gerçekKonular.length > 0 ? gerçekKonular : fallbackTopics
+  const feedTopics = gerçekKonular
   const kurallar = [
     {
       title: 'Spoiler Dengesini Koru',

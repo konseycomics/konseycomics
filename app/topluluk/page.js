@@ -221,9 +221,9 @@ export default async function ToplulukPage() {
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Kategoriler
                 </div>
-                <div style={{ display: 'grid', gap: '8px' }}>
+                <div className="community-category-list" style={{ display: 'grid', gap: '8px' }}>
                   {kategoriListesi.map((kategori) => (
-                    <div key={kategori} style={{ minHeight: '44px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
+                    <div className="community-category-item" key={kategori} style={{ minHeight: '44px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
                       {kategori}
                     </div>
                   ))}
@@ -234,10 +234,10 @@ export default async function ToplulukPage() {
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Popüler Konular
                 </div>
-                <div style={{ display: 'grid', gap: '12px' }}>
+                <div className="community-popular-list" style={{ display: 'grid', gap: '12px' }}>
                   {populerKonular.map((konu) => (
                     <Link key={konu.id} href={konu.href || `/topluluk/konu/${konu.slug}`} style={{ textDecoration: 'none' }}>
-                      <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div className="community-popular-item" style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700, lineHeight: 1.4, marginBottom: '4px' }}>{konu.baslik}</div>
                         <div style={{ color: '#a9a9a3', fontSize: '12px' }}>{Number(konu.yanit_sayisi || 0)} yorum</div>
                       </div>
@@ -255,10 +255,10 @@ export default async function ToplulukPage() {
                 <div style={{ color: '#9f9f98', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
                   Konsey Sosyal
                 </div>
-                <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(44px, 6vw, 82px)', lineHeight: 0.92, fontFamily: 'var(--font-display)' }}>
+                <h1 className="community-hero-title" style={{ margin: 0, color: '#fff', fontSize: 'clamp(44px, 6vw, 82px)', lineHeight: 0.92, fontFamily: 'var(--font-display)' }}>
                   Konu Oluştur
                 </h1>
-                <p style={{ margin: '12px auto 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8, maxWidth: '680px' }}>
+                <p className="community-hero-copy" style={{ margin: '12px auto 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8, maxWidth: '680px' }}>
                   Okuduklarını paylaş, teori bırak, öneri sor ya da sadece topluluğun nabzına katıl. Bu alan sitenin sosyal tarafı olacak.
                 </p>
               </div>
@@ -310,6 +310,44 @@ export default async function ToplulukPage() {
             }
           }
 
+          @media (max-width: 640px) {
+            .community-hero-v3 {
+              text-align: left !important;
+              margin-bottom: 14px !important;
+            }
+
+            .community-hero-title {
+              font-size: 52px !important;
+              line-height: 0.94 !important;
+            }
+
+            .community-hero-copy {
+              margin: 10px 0 0 !important;
+              max-width: none !important;
+              font-size: 14px !important;
+              line-height: 1.65 !important;
+            }
+
+            .community-category-list {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+              gap: 8px !important;
+            }
+
+            .community-category-item {
+              min-height: 40px !important;
+              padding: 0 12px !important;
+              font-size: 13px !important;
+            }
+
+            .community-popular-list {
+              gap: 10px !important;
+            }
+
+            .community-popular-item {
+              padding: 12px !important;
+            }
+          }
+
           @media (max-width: 560px) {
             .community-sidebar-v3 {
               display: grid !important;
@@ -321,15 +359,21 @@ export default async function ToplulukPage() {
             }
           }
 
-          @media (max-width: 640px) {
-            .community-hero-v3 {
-              text-align: left !important;
-            }
-          }
-
           @media (max-width: 520px) {
             .community-layout-v3 {
               gap: 14px !important;
+            }
+
+            .community-category-list {
+              grid-template-columns: 1fr !important;
+            }
+
+            .community-sidebar-card {
+              padding: 12px !important;
+            }
+
+            .community-hero-title {
+              font-size: 44px !important;
             }
           }
         `}</style>

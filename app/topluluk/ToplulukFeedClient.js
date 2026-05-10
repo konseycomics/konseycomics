@@ -331,10 +331,10 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                   </div>
                   <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
-                    <div style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
+                    <div className="community-topic-title" style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
                       {seri.baslik}
                     </div>
-                    <div style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
+                    <div className="community-topic-preview" style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
                       {trimPreview(seri.icerik)}
                     </div>
                   </Link>
@@ -397,10 +397,10 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                   </div>
                 </div>
                 <div className="community-topic-cta" style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
-                  <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
-                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '16px 12px', borderRadius: '18px', background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', textDecoration: 'none', boxShadow: '0 10px 28px rgba(0,0,0,0.18)' }}>
-                    <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
-                    <div style={{ color: '#d4d4ce', fontSize: '11px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '6px', fontWeight: 800 }}>Konuyu Aç</div>
+                  <div className="community-topic-more" style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
+                  <Link className="community-topic-cta-link" href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '16px 12px', borderRadius: '18px', background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', textDecoration: 'none', boxShadow: '0 10px 28px rgba(0,0,0,0.18)' }}>
+                    <div className="community-topic-cta-count" style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
+                    <div className="community-topic-cta-label" style={{ color: '#d4d4ce', fontSize: '11px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '6px', fontWeight: 800 }}>Konuyu Aç</div>
                   </Link>
                 </div>
               </div>
@@ -467,7 +467,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-grid {
-            grid-template-columns: 44px minmax(0, 1fr) 88px !important;
+            grid-template-columns: 44px minmax(0, 1fr) 82px !important;
             gap: 10px !important;
           }
 
@@ -492,26 +492,28 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
           .community-topic-cta {
             grid-column: auto !important;
-            min-width: 88px !important;
+            min-width: 82px !important;
             justify-content: flex-start !important;
             align-self: start !important;
           }
 
           .community-topic-cta a {
             width: auto !important;
-            padding: 12px 10px !important;
+            padding: 10px 8px !important;
             border-radius: 16px !important;
           }
         }
 
-        @media (max-width: 520px) {
+        @media (max-width: 640px) {
           .community-composer {
             padding: 16px !important;
             margin-bottom: 18px !important;
+            border-radius: 20px !important;
           }
 
           .community-composer-grid {
             grid-template-columns: 1fr !important;
+            gap: 12px !important;
           }
 
           .community-composer-avatar {
@@ -523,33 +525,111 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             font-size: 14px !important;
           }
 
+          .community-composer-submit {
+            width: 100% !important;
+            min-height: 52px !important;
+            border-radius: 14px !important;
+          }
+
           .community-tabs {
             margin-bottom: 10px !important;
             padding-bottom: 8px !important;
+            gap: 14px !important;
           }
 
           .community-topic-card {
             padding: 14px !important;
+            border-radius: 18px !important;
           }
 
           .community-topic-grid {
             grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+
+          .community-topic-title {
+            font-size: 18px !important;
+            line-height: 1.3 !important;
+          }
+
+          .community-topic-preview {
+            font-size: 14px !important;
+            line-height: 1.65 !important;
+            margin-bottom: 10px !important;
+          }
+
+          .community-topic-actions {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            margin-top: 16px !important;
+          }
+
+          .community-topic-actions a,
+          .community-topic-actions button {
+            width: 100% !important;
+            min-height: 46px !important;
+            justify-content: center !important;
+            padding: 0 12px !important;
           }
 
           .community-topic-cta {
             grid-column: 1 / -1 !important;
-            justify-content: flex-end !important;
+            min-width: 0 !important;
+            display: block !important;
           }
 
-          .community-topic-cta a {
-            width: auto !important;
-            min-width: 96px !important;
+          .community-topic-more {
+            display: none !important;
+          }
+
+          .community-topic-cta-link {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 54px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 0 16px !important;
+            border-radius: 16px !important;
+            box-sizing: border-box !important;
+          }
+
+          .community-topic-cta-count {
+            font-size: 24px !important;
+            line-height: 1 !important;
+          }
+
+          .community-topic-cta-label {
+            margin-top: 0 !important;
+            font-size: 12px !important;
+          }
+        }
+
+        @media (max-width: 520px) {
+          .community-composer {
+            padding: 14px !important;
+          }
+
+          .community-composer-fields textarea {
+            min-height: 132px !important;
+          }
+
+          .community-topic-card {
+            padding: 13px !important;
+          }
+
+          .community-tabs {
+            gap: 12px !important;
+            font-size: 12px !important;
           }
 
           .community-topic-actions {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 8px !important;
+            grid-template-columns: 1fr !important;
+          }
+
+          .community-topic-cta-link {
+            padding: 0 14px !important;
           }
         }
       `}</style>

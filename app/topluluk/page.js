@@ -190,42 +190,94 @@ export default async function ToplulukPage() {
       text: 'Çeviri, edit ve topluluk emeğine saygılı kal. Kısa, net ve katkı sağlayan paylaşımlar en çok öne çıkar.',
     },
   ]
+  const kategoriListesi = [
+    'Genel Sohbet',
+    'Çizgi Roman Tartışmaları',
+    'Seri Önerileri',
+    'Haberler & Duyurular',
+    'Etkinlikler',
+    'Çizimler & Fanart',
+    'Teknik Destek',
+  ]
+  const populerKonular = [...feedTopics]
+    .sort((a, b) => Number(b.yanit_sayisi || 0) - Number(a.yanit_sayisi || 0) || new Date(b.son_aktivite_at || b.created_at) - new Date(a.son_aktivite_at || a.created_at))
+    .slice(0, 3)
 
   return (
     <>
       <Navbar />
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '28px', paddingBottom: '34px' }}>
-          <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '26px', textAlign: 'center' }}>
-              <div style={{ color: '#9f9f98', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Konsey Sosyal
-              </div>
-              <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(44px, 6vw, 82px)', lineHeight: 0.92, fontFamily: 'var(--font-display)' }}>
-                Konu Oluştur
-              </h1>
-              <p style={{ margin: '12px auto 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8, maxWidth: '680px' }}>
-                Okuduklarını paylaş, teori bırak, öneri sor ya da sadece topluluğun nabzına katıl. Bu alan sitenin sosyal tarafı olacak.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gap: '14px', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', marginBottom: '24px' }} className="community-rules-grid">
+          <div className="community-layout-v3" style={{ maxWidth: '1240px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '26px', alignItems: 'start' }}>
+            <aside style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '14px' }}>
               {kurallar.map((kural) => (
                 <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-                  <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
-                  <div style={{ color: '#b8b8b2', fontSize: '14px', lineHeight: 1.7 }}>{kural.text}</div>
+                  <div style={{ color: '#fff', fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
+                  <div style={{ color: '#b8b8b2', fontSize: '13px', lineHeight: 1.7 }}>{kural.text}</div>
                 </section>
               ))}
-            </div>
 
-            <ToplulukFeedClient initialTopics={feedTopics} defaultTopics={aktifOkuyucular.slice(0, 3)} />
+              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                  Kategoriler
+                </div>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {kategoriListesi.map((kategori) => (
+                    <div key={kategori} style={{ minHeight: '42px', display: 'flex', alignItems: 'center', padding: '0 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
+                      {kategori}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                  Popüler Konular
+                </div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {populerKonular.map((konu) => (
+                    <Link key={konu.id} href={konu.href || `/topluluk/konu/${konu.slug}`} style={{ textDecoration: 'none' }}>
+                      <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700, lineHeight: 1.4, marginBottom: '4px' }}>{konu.baslik}</div>
+                        <div style={{ color: '#a9a9a3', fontSize: '12px' }}>{Number(konu.yanit_sayisi || 0)} yorum</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <Link href="/topluluk" style={{ marginTop: '14px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                  Tümünü Gör
+                </Link>
+              </section>
+            </aside>
+
+            <section>
+              <div style={{ marginBottom: '26px', textAlign: 'center' }}>
+                <div style={{ color: '#9f9f98', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+                  Konsey Sosyal
+                </div>
+                <h1 style={{ margin: 0, color: '#fff', fontSize: 'clamp(44px, 6vw, 82px)', lineHeight: 0.92, fontFamily: 'var(--font-display)' }}>
+                  Konu Oluştur
+                </h1>
+                <p style={{ margin: '12px auto 0', color: '#b8b8b2', fontSize: '15px', lineHeight: 1.8, maxWidth: '680px' }}>
+                  Okuduklarını paylaş, teori bırak, öneri sor ya da sadece topluluğun nabzına katıl. Bu alan sitenin sosyal tarafı olacak.
+                </p>
+              </div>
+
+              <ToplulukFeedClient initialTopics={feedTopics} />
+            </section>
           </div>
         </section>
 
         <style>{`
-          @media (max-width: 900px) {
-            .community-rules-grid {
+          @media (max-width: 1080px) {
+            .community-layout-v3 {
               grid-template-columns: 1fr !important;
+            }
+          }
+
+          @media (max-width: 900px) {
+            .community-layout-v3 {
+              gap: 18px !important;
             }
           }
         `}</style>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -24,6 +25,7 @@ function topicScore(topic) {
 }
 
 export default function ToplulukFeedClient({ initialTopics = [] }) {
+  const router = useRouter()
   const [topics, setTopics] = useState(initialTopics)
   const [aktifTab, setAktifTab] = useState('yeni')
   const [kullanici, setKullanici] = useState(null)
@@ -32,9 +34,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [icerik, setIcerik] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
-  const [katilimKonuIdleri, setKatilimKonuIdleri] = useState([])
   const [begeniKonuIdleri, setBegeniKonuIdleri] = useState([])
-  const [yerImiKonuIdleri, setYerImiKonuIdleri] = useState([])
 
   useEffect(() => {
     let active = true
@@ -48,37 +48,20 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
       if (user?.id) {
         const [
           { data: profileData },
-          { data: repliesData, error: repliesError },
-          { data: ownTopics, error: ownTopicsError },
           { data: likeRows, error: likeError },
-          { data: bookmarkRows, error: bookmarkError },
         ] = await Promise.all([
           supabase.from('public_profiller').select('id, kullanici_adi, avatar_url').eq('id', user.id).maybeSingle(),
-          supabase.from('topluluk_yanitlari').select('konu_id').eq('kullanici_id', user.id),
-          supabase.from('topluluk_konulari').select('id').eq('kullanici_id', user.id),
           supabase.from('topluluk_begenileri').select('konu_id').eq('kullanici_id', user.id),
-          supabase.from('topluluk_yer_imleri').select('konu_id').eq('kullanici_id', user.id),
         ])
 
         if (!active) return
         setProfil(profileData || null)
-        const ids = [
-          ...((repliesError ? [] : repliesData) || []).map((item) => item.konu_id),
-          ...((ownTopicsError ? [] : ownTopics) || []).map((item) => item.id),
-          ...((bookmarkError ? [] : bookmarkRows) || []).map((item) => item.konu_id),
-        ].filter(Boolean)
-        setKatilimKonuIdleri([...new Set(ids)])
         setBegeniKonuIdleri([...
           new Set((((likeError ? [] : likeRows) || []).map((item) => item.konu_id)).filter(Boolean)),
         ])
-        setYerImiKonuIdleri([...
-          new Set((((bookmarkError ? [] : bookmarkRows) || []).map((item) => item.konu_id)).filter(Boolean)),
-        ])
       } else {
         setProfil(null)
-        setKatilimKonuIdleri([])
         setBegeniKonuIdleri([])
-        setYerImiKonuIdleri([])
       }
     }
 
@@ -97,10 +80,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const gorunenKonular = useMemo(() => {
     let listed = topics
 
-    if (aktifTab === 'takip') {
-      listed = topics.filter((item) => katilimKonuIdleri.includes(item.id) || yerImiKonuIdleri.includes(item.id))
-    }
-
     if (aktifTab === 'populer') {
       listed = [...topics].sort((a, b) => topicScore(b) - topicScore(a) || new Date(b.son_aktivite_at || b.created_at) - new Date(a.son_aktivite_at || a.created_at))
     }
@@ -110,7 +89,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     }
 
     return listed
-  }, [aktifTab, katilimKonuIdleri, topics, yerImiKonuIdleri])
+  }, [aktifTab, topics])
 
   async function toggleReaction(konuId, type) {
     if (!kullanici) {
@@ -143,8 +122,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
       return
     }
 
-    setYerImiKonuIdleri((prev) => result.active ? [...new Set([...prev, konuId])] : prev.filter((id) => id !== konuId))
-    setKatilimKonuIdleri((prev) => result.active ? [...new Set([...prev, konuId])] : prev)
   }
 
   async function konuOlustur() {
@@ -187,7 +164,6 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     }
 
     setTopics((prev) => [yeniKonu, ...prev.filter((item) => item.id !== yeniKonu.id)])
-    setKatilimKonuIdleri((prev) => [...new Set([yeniKonu.id, ...prev])])
     setBaslik('')
     setIcerik('')
     setMesaj('Konun paylaşıldı.')
@@ -224,7 +200,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
               style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '15px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '12px' }}
             />
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
-              {['◫ Fotoğraf', '≣ Anket', '# Etiket'].map((item) => (
+              {['≣ Anket'].map((item) => (
                 <span key={item} style={{ minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', gap: '8px' }}>
                   {item}
                 </span>
@@ -276,7 +252,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             Bu filtrede henüz konu yok. İlk konuyu sen açabilirsin.
           </div>
         ) : gorunenKonular.map((seri, index) => (
-            <article key={`${seri.source}-${seri.id}`} style={{ padding: '20px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))' }}>
+            <article
+              key={`${seri.source}-${seri.id}`}
+              onClick={() => router.push(seri.href || `/topluluk/konu/${seri.slug}`)}
+              style={{ padding: '20px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', cursor: 'pointer', transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease' }}
+            >
               <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {seri.profil?.avatar_url
@@ -289,7 +269,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                   </div>
-                  <Link href={seri.href || `/seri/${seri.slug}`} style={{ textDecoration: 'none', display: 'block' }}>
+                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
                     <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
                       {seri.baslik}
                     </div>
@@ -297,36 +277,32 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       {trimPreview(seri.icerik)}
                     </div>
                   </Link>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {(seri.etiketler || []).slice(0, 3).map((tag) => (
-                      <span key={tag} style={{ minHeight: '28px', display: 'inline-flex', alignItems: 'center', padding: '0 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#d5d5d0', fontSize: '11px', fontWeight: 700 }}>
-                        {tag.toLowerCase()}
-                      </span>
-                    ))}
-                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#d2d2cc', fontSize: '14px', marginTop: '18px', flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => toggleReaction(seri.id, 'like')}
-                      style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.28)' : 'rgba(255,255,255,0.08)'}`, color: begeniKonuIdleri.includes(seri.id) ? '#ff9ea1' : '#f0f0eb', fontSize: '14px', cursor: 'pointer', borderRadius: '999px', fontFamily: 'inherit', fontWeight: 700 }}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        toggleReaction(seri.id, 'like')
+                      }}
+                      style={{ minHeight: '46px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.14)' : 'rgba(255,255,255,0.045)', border: `1px solid ${begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.32)' : 'rgba(255,255,255,0.1)'}`, color: begeniKonuIdleri.includes(seri.id) ? '#ffb2b5' : '#ffffff', fontSize: '14px', cursor: 'pointer', borderRadius: '14px', fontFamily: 'inherit', fontWeight: 800, boxShadow: begeniKonuIdleri.includes(seri.id) ? '0 10px 28px rgba(255,112,118,0.12)' : 'none' }}
                     >
-                      {begeniKonuIdleri.includes(seri.id) ? '♥' : '♡'} {Number(seri.begeni_sayisi || 0)}
+                      <span style={{ fontSize: '16px' }}>{begeniKonuIdleri.includes(seri.id) ? '♥' : '♡'}</span>
+                      <span>{Number(seri.begeni_sayisi || 0)} beğeni</span>
                     </button>
-                    <Link href={seri.href || `/seri/${seri.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}>
-                      <span style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0eb', fontSize: '14px', borderRadius: '999px', fontWeight: 700 }}>
-                        ◔ {Number(seri.yanit_sayisi || 0)} yorum
+                    <Link
+                      href={seri.href || `/topluluk/konu/${seri.slug}`}
+                      onClick={(event) => event.stopPropagation()}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}
+                    >
+                      <span style={{ minHeight: '46px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', fontSize: '14px', borderRadius: '14px', fontWeight: 800 }}>
+                        <span style={{ fontSize: '16px' }}>◔</span>
+                        <span>{Number(seri.yanit_sayisi || 0)} yorum</span>
                       </span>
                     </Link>
-                    <button
-                      onClick={() => toggleReaction(seri.id, 'bookmark')}
-                      style={{ minHeight: '40px', padding: '0 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', background: yerImiKonuIdleri.includes(seri.id) ? 'rgba(243,210,135,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${yerImiKonuIdleri.includes(seri.id) ? 'rgba(243,210,135,0.28)' : 'rgba(255,255,255,0.08)'}`, color: yerImiKonuIdleri.includes(seri.id) ? '#f3d287' : '#f0f0eb', fontSize: '14px', cursor: 'pointer', borderRadius: '999px', fontFamily: 'inherit', fontWeight: 700 }}
-                    >
-                      {yerImiKonuIdleri.includes(seri.id) ? '▣' : '▢'} Yer imi
-                    </button>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
                   <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
-                  <Link href={seri.href || `/seri/${seri.slug}`} style={{ padding: '14px 12px', borderRadius: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', textDecoration: 'none' }}>
+                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '14px 12px', borderRadius: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', textDecoration: 'none' }}>
                     <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
                     <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorumu aç</div>
                   </Link>

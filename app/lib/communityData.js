@@ -64,13 +64,26 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
     return { available: false, topics: [] }
   }
 
-  const { data: topicRows, error } = await admin
+  let topicRows
+  let error
+
+  ;({ data: topicRows, error } = await admin
     .from('topluluk_konulari')
     .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('aktif', true)
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
-    .limit(limit)
+    .limit(limit))
+
+  if (error?.code === '42703') {
+    ;({ data: topicRows, error } = await admin
+      .from('topluluk_konulari')
+      .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+      .eq('aktif', true)
+      .order('sabitlendi', { ascending: false })
+      .order('son_aktivite_at', { ascending: false })
+      .limit(limit))
+  }
 
   if (error) {
     if (error.code === '42P01') {
@@ -103,12 +116,24 @@ export async function getCommunityTopicBySlug(slug) {
   const admin = createSupabaseAdminClient()
   if (!admin) return { available: false, topic: null, replies: [] }
 
-  const { data: topicRow, error } = await admin
+  let topicRow
+  let error
+
+  ;({ data: topicRow, error } = await admin
     .from('topluluk_konulari')
     .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('slug', slug)
     .eq('aktif', true)
-    .maybeSingle()
+    .maybeSingle())
+
+  if (error?.code === '42703') {
+    ;({ data: topicRow, error } = await admin
+      .from('topluluk_konulari')
+      .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+      .eq('slug', slug)
+      .eq('aktif', true)
+      .maybeSingle())
+  }
 
   if (error) {
     if (error.code === '42P01') return { available: false, topic: null, replies: [] }

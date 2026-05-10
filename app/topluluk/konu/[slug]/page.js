@@ -6,13 +6,15 @@ import { buildMetadata, createSeoDescription } from '../../../lib/seo'
 import { getCommunityTopicBySlug, incrementCommunityTopicView } from '../../../lib/communityData'
 
 export async function generateMetadata({ params }) {
-  const { topic } = await getCommunityTopicBySlug(params.slug)
+  const resolvedParams = await params
+  const slug = resolvedParams?.slug
+  const { topic } = await getCommunityTopicBySlug(slug)
 
   if (!topic) {
     return buildMetadata({
       title: 'Konu Bulunamadı | KonseyComics',
       description: 'Aradığın topluluk konusu bulunamadı.',
-      path: `/topluluk/konu/${params.slug}`,
+      path: `/topluluk/konu/${slug}`,
       keywords: ['KonseyComics topluluk', 'konu bulunamadı'],
     })
   }
@@ -20,13 +22,15 @@ export async function generateMetadata({ params }) {
   return buildMetadata({
     title: `${topic.baslik} | Topluluk | KonseyComics`,
     description: createSeoDescription(topic.icerik_tam || topic.icerik, 'KonseyComics topluluk tartışmaları ve okur yanıtları.'),
-    path: `/topluluk/konu/${params.slug}`,
+    path: `/topluluk/konu/${slug}`,
     keywords: ['KonseyComics topluluk', topic.kategori, ...(topic.etiketler || [])].filter(Boolean),
   })
 }
 
 export default async function ToplulukKonuDetayPage({ params }) {
-  const { available, topic, replies } = await getCommunityTopicBySlug(params.slug)
+  const resolvedParams = await params
+  const slug = resolvedParams?.slug
+  const { available, topic, replies } = await getCommunityTopicBySlug(slug)
 
   if (!available) {
     return (

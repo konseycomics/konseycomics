@@ -26,6 +26,15 @@ create table if not exists public.topluluk_konulari (
   updated_at timestamptz not null default now()
 );
 
+alter table if exists public.topluluk_konulari
+  add column if not exists anket_aktif boolean not null default false;
+
+alter table if exists public.topluluk_konulari
+  add column if not exists anket_sorusu text;
+
+alter table if exists public.topluluk_konulari
+  add column if not exists anket_secenekleri jsonb not null default '[]'::jsonb;
+
 create table if not exists public.topluluk_yanitlari (
   id uuid primary key default gen_random_uuid(),
   konu_id uuid not null references public.topluluk_konulari(id) on delete cascade,

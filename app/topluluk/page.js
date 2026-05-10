@@ -217,10 +217,10 @@ export default async function ToplulukPage() {
                 </section>
               ))}
 
-              <section className="community-sidebar-card" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
-                <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
+              <details className="community-sidebar-card community-sidebar-group" open style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+                <summary className="community-sidebar-summary" style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px', listStyle: 'none', cursor: 'pointer' }}>
                   Kategoriler
-                </div>
+                </summary>
                 <div className="community-category-list" style={{ display: 'grid', gap: '8px' }}>
                   {kategoriListesi.map((kategori) => (
                     <div className="community-category-item" key={kategori} style={{ minHeight: '44px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
@@ -228,12 +228,12 @@ export default async function ToplulukPage() {
                     </div>
                   ))}
                 </div>
-              </section>
+              </details>
 
-              <section className="community-sidebar-card" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
-                <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
+              <details className="community-sidebar-card community-sidebar-group" open style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+                <summary className="community-sidebar-summary" style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px', listStyle: 'none', cursor: 'pointer' }}>
                   Popüler Konular
-                </div>
+                </summary>
                 <div className="community-popular-list" style={{ display: 'grid', gap: '12px' }}>
                   {populerKonular.map((konu) => (
                     <Link key={konu.id} href={konu.href || `/topluluk/konu/${konu.slug}`} style={{ textDecoration: 'none' }}>
@@ -247,7 +247,7 @@ export default async function ToplulukPage() {
                 <Link href="/topluluk" style={{ marginTop: '14px', minHeight: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', fontWeight: 800, textDecoration: 'none', background: 'rgba(255,255,255,0.025)' }}>
                   Tümünü Gör
                 </Link>
-              </section>
+              </details>
             </aside>
 
             <section className="community-main-v3">
@@ -345,6 +345,28 @@ export default async function ToplulukPage() {
 
             .community-popular-item {
               padding: 12px !important;
+            }
+
+            .community-sidebar-group {
+              padding: 0 !important;
+              overflow: hidden !important;
+            }
+
+            .community-sidebar-summary {
+              min-height: 48px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: space-between !important;
+              padding: 0 14px !important;
+              margin-bottom: 0 !important;
+            }
+
+            .community-sidebar-summary::-webkit-details-marker {
+              display: none !important;
+            }
+
+            .community-sidebar-group > *:not(summary) {
+              padding: 0 14px 14px !important;
             }
           }
 

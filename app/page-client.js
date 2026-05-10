@@ -362,6 +362,140 @@ function BolumKart({ bolum }) {
   )
 }
 
+function CommunityShowcase({ topics = [] }) {
+  if (!topics.length) return null
+
+  const [spotlight, pollTopic, newestTopic] = [
+    topics[0] || null,
+    topics.find((topic) => topic.anket_aktif) || topics[1] || topics[0] || null,
+    [...topics].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || topics[0] || null,
+  ]
+
+  const cards = [
+    spotlight && {
+      key: `spotlight-${spotlight.id}`,
+      label: 'Popüler Konu',
+      title: spotlight.spoiler ? 'Spoilerlı Konu' : spotlight.baslik,
+      excerpt: spotlight.spoiler ? 'Spoiler uyarılı tartışma toplulukta konuşuluyor.' : spotlight.icerik,
+      meta: `${Number(spotlight.yanit_sayisi || 0)} yorum`,
+      href: spotlight.href || `/topluluk/konu/${spotlight.slug}`,
+      accent: 'rgba(245, 185, 66, 0.18)',
+      border: 'rgba(245, 185, 66, 0.26)',
+    },
+    pollTopic && {
+      key: `poll-${pollTopic.id}`,
+      label: 'Anketli Konu',
+      title: pollTopic.spoiler ? 'Spoilerlı Konu' : pollTopic.baslik,
+      excerpt: pollTopic.anket_sorusu || pollTopic.icerik,
+      meta: pollTopic.anket_aktif ? `${Number(pollTopic.anket_toplam_oy || 0)} oy` : `${Number(pollTopic.yanit_sayisi || 0)} yorum`,
+      href: pollTopic.href || `/topluluk/konu/${pollTopic.slug}`,
+      accent: 'rgba(124, 58, 237, 0.16)',
+      border: 'rgba(124, 58, 237, 0.24)',
+    },
+    newestTopic && {
+      key: `new-${newestTopic.id}`,
+      label: 'Yeni Konu',
+      title: newestTopic.spoiler ? 'Spoilerlı Konu' : newestTopic.baslik,
+      excerpt: newestTopic.spoiler ? 'Toplulukta yeni açılan spoilerlı başlık.' : newestTopic.icerik,
+      meta: zaman(newestTopic.created_at),
+      href: newestTopic.href || `/topluluk/konu/${newestTopic.slug}`,
+      accent: 'rgba(255, 255, 255, 0.08)',
+      border: 'rgba(255, 255, 255, 0.12)',
+    },
+  ].filter((item, index, arr) => item && arr.findIndex((other) => other.href === item.href) === index)
+
+  return (
+    <section className="site-section" style={{ marginTop: '30px' }}>
+      <div
+        style={{
+          padding: '24px',
+          borderRadius: '30px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))',
+          boxShadow: '0 20px 48px rgba(0,0,0,0.2)',
+        }}
+      >
+        <div className="community-home-hero" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '18px', alignItems: 'end', marginBottom: '20px' }}>
+          <div>
+            <div style={{ color: 'rgba(255,255,255,0.52)', fontSize: '11px', fontWeight: 800, letterSpacing: '1.3px', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Konsey Sosyal
+            </div>
+            <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(34px, 5vw, 52px)', lineHeight: 0.92, marginBottom: '10px' }}>
+              Toplulukta Neler Konuşuluyor?
+            </div>
+            <p style={{ margin: 0, color: '#b7b7b1', fontSize: '14px', lineHeight: 1.7, maxWidth: '62ch' }}>
+              Konu aç, anket başlat, tartışmalara katıl. Okurların şu an konuştuğu başlıklara tek bakışta gir.
+            </p>
+          </div>
+          <Link
+            href="/topluluk"
+            style={{
+              minHeight: '50px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 20px',
+              borderRadius: '16px',
+              background: '#fff',
+              color: '#111',
+              textDecoration: 'none',
+              fontSize: '13px',
+              fontWeight: 800,
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Topluluğa Gir
+          </Link>
+        </div>
+
+        <div className="community-showcase-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+          {cards.map((card) => (
+            <Link
+              key={card.key}
+              href={card.href}
+              style={{
+                textDecoration: 'none',
+                minHeight: '100%',
+              }}
+            >
+              <article
+                style={{
+                  height: '100%',
+                  padding: '18px',
+                  borderRadius: '22px',
+                  border: `1px solid ${card.border}`,
+                  background: `linear-gradient(180deg, ${card.accent}, rgba(255,255,255,0.03))`,
+                  boxShadow: '0 16px 32px rgba(0,0,0,0.16)',
+                }}
+              >
+                <div style={{ color: '#f5b942', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
+                  {card.label}
+                </div>
+                <div style={{ color: '#fff', fontSize: '20px', fontWeight: 800, lineHeight: 1.2, marginBottom: '10px' }}>
+                  {card.title}
+                </div>
+                <div style={{ color: '#bdbdb7', fontSize: '13px', lineHeight: 1.7, marginBottom: '16px' }}>
+                  {String(card.excerpt || '').slice(0, 120)}{String(card.excerpt || '').length > 120 ? '...' : ''}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <span style={{ color: '#f1f1ed', fontSize: '12px', fontWeight: 700 }}>
+                    {card.meta}
+                  </span>
+                  <span style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                    İncele →
+                  </span>
+                </div>
+              </article>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function LoadingGrid({ count = 8, className = 'grid-4' }) {
   return (
     <div className={className}>
@@ -987,7 +1121,7 @@ function MiniGorevKutusu() {
   )
 }
 
-export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {} }) {
+export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, communityTopics = [] }) {
   const router = useRouter()
   const loading = false
   const [arama, setArama] = useState('')
@@ -1223,6 +1357,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         </section>
       )}
       <Hero seriler={heroSeriler} slides={heroSlides} />
+      <CommunityShowcase topics={communityTopics} />
 
       <section className="site-section" style={{ marginTop: '28px' }}>
         <div className="home-search-grid">

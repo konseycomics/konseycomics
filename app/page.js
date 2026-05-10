@@ -1,14 +1,13 @@
 import HomeClient from './page-client'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
 import { getLeaderboards } from './lib/leaderboardData'
-import { getCommunityTopics } from './lib/communityData'
 import { unstable_noStore as noStore } from 'next/cache'
 
 async function getHomePageData() {
   noStore()
   const supabase = createSupabaseServerClient()
 
-  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik, communityTopicsResult] = await Promise.all([
+  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik] = await Promise.all([
     supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
     supabase
       .from('bolumler')
@@ -17,7 +16,6 @@ async function getHomePageData() {
       .limit(10),
     supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']),
     getLeaderboards(),
-    getCommunityTopics({ limit: 6 }),
   ])
 
   const siteAyarlari = {}
@@ -30,7 +28,6 @@ async function getHomePageData() {
     bolumler: bolumler || [],
     siteAyarlari,
     liderlik,
-    communityTopics: communityTopicsResult?.topics || [],
   }
 }
 

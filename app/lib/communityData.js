@@ -33,6 +33,7 @@ function mapProfiles(rows, titles) {
 }
 
 function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
+  const pollOptions = Array.isArray(row.anket_secenekleri) ? row.anket_secenekleri : []
   return {
     id: row.id,
     slug: row.slug,
@@ -47,6 +48,11 @@ function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
     begeni_sayisi: Number(row.begeni_sayisi || 0),
     goruntulenme_sayisi: Number(row.goruntulenme_sayisi || 0),
     sabitlendi: Boolean(row.sabitlendi),
+    anket_aktif: Boolean(row.anket_aktif),
+    anket_sorusu: row.anket_sorusu || '',
+    anket_secenekleri: pollOptions,
+    anket_toplam_oy: Number(row.anket_toplam_oy || 0),
+    anket_sonuclari: Array.isArray(row.anket_sonuclari) ? row.anket_sonuclari : [],
     profil: profil || null,
     source: 'topic',
   }
@@ -60,7 +66,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 
   const { data: topicRows, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('aktif', true)
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
@@ -99,7 +105,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   const { data: topicRow, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('slug', slug)
     .eq('aktif', true)
     .maybeSingle()
@@ -117,6 +123,29 @@ export async function getCommunityTopicBySlug(slug) {
     .eq('konu_id', topicRow.id)
     .eq('aktif', true)
     .order('created_at', { ascending: true })
+
+  let pollResults = []
+  let pollTotalVotes = 0
+
+  if (topicRow.anket_aktif && Array.isArray(topicRow.anket_secenekleri) && topicRow.anket_secenekleri.length > 0) {
+    const { data: voteRows } = await admin
+      .from('topluluk_anket_oylari')
+      .select('secenek_index')
+      .eq('konu_id', topicRow.id)
+
+    const voteCounts = new Map()
+    for (const row of voteRows || []) {
+      voteCounts.set(row.secenek_index, (voteCounts.get(row.secenek_index) || 0) + 1)
+      pollTotalVotes += 1
+    }
+
+    pollResults = topicRow.anket_secenekleri.map((option, index) => ({
+      index,
+      label: String(option || ''),
+      oy: Number(voteCounts.get(index) || 0),
+      yuzde: pollTotalVotes > 0 ? Math.round((Number(voteCounts.get(index) || 0) / pollTotalVotes) * 100) : 0,
+    }))
+  }
 
   const userIds = [...new Set([topicRow.kullanici_id, ...(replyRows || []).map((row) => row.kullanici_id)].filter(Boolean))]
 
@@ -136,7 +165,11 @@ export async function getCommunityTopicBySlug(slug) {
   return {
     available: true,
     topic: {
-      ...formatTopicRow(topicRow, profileMap.get(topicRow.kullanici_id)),
+      ...formatTopicRow({
+        ...topicRow,
+        anket_sonuclari: pollResults,
+        anket_toplam_oy: pollTotalVotes,
+      }, profileMap.get(topicRow.kullanici_id)),
       icerik_tam: topicRow.icerik,
     },
     replies: (replyRows || []).map((row) => ({

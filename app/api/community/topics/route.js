@@ -31,6 +31,11 @@ function normalizeTags(input) {
   return [...new Set(source.filter(Boolean).slice(0, 6))]
 }
 
+function normalizePollOptions(input) {
+  const source = Array.isArray(input) ? input : []
+  return [...new Set(source.map((item) => String(item || '').trim()).filter(Boolean))].slice(0, 4)
+}
+
 async function buildUniqueSlug(adminClient, title) {
   const base = slugifyTopicTitle(title) || 'topluluk-konusu'
   let candidate = base
@@ -58,7 +63,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { baslik, icerik, kategori, etiketler } = await req.json()
+    const { baslik, icerik, kategori, etiketler, anket } = await req.json()
     const cleanTitle = String(baslik || '').trim()
     const cleanBody = String(icerik || '').trim()
 
@@ -79,6 +84,12 @@ export async function POST(req) {
 
     const slug = await buildUniqueSlug(adminClient, cleanTitle)
     const safeTags = normalizeTags(etiketler)
+    const pollEnabled = Boolean(anket?.aktif)
+    const pollOptions = normalizePollOptions(anket?.secenekler)
+
+    if (pollEnabled && pollOptions.length < 2) {
+      return NextResponse.json({ error: 'Anket için en az 2 seçenek girmelisin.' }, { status: 400 })
+    }
 
     const { data: inserted, error: insertError } = await adminClient
       .from('topluluk_konulari')
@@ -89,8 +100,11 @@ export async function POST(req) {
         icerik: cleanBody,
         kategori: String(kategori || 'Genel Sohbet').trim() || 'Genel Sohbet',
         etiketler: safeTags,
+        anket_aktif: pollEnabled,
+        anket_sorusu: pollEnabled ? cleanTitle : null,
+        anket_secenekleri: pollEnabled ? pollOptions : [],
       })
-      .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi')
+      .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi')
       .single()
 
     if (insertError) {

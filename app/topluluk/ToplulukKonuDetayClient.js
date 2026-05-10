@@ -16,6 +16,7 @@ function formatDateTime(value) {
 
 function ReplyCard({ reply }) {
   const avatarLetter = reply?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
+  const [spoilerVisible, setSpoilerVisible] = useState(!reply?.spoiler)
 
   return (
     <article
@@ -61,9 +62,23 @@ function ReplyCard({ reply }) {
               {formatDateTime(reply.created_at)}
             </span>
           </div>
-          <div style={{ color: '#d4d4ce', fontSize: '14px', lineHeight: 1.75 }}>
-            {reply.icerik}
-          </div>
+          {reply?.spoiler && !spoilerVisible ? (
+            <div style={{ padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(243,210,135,0.22)', background: 'rgba(243,210,135,0.08)' }}>
+              <div style={{ color: '#f3d287', fontSize: '13px', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Spoiler İçeriyor
+              </div>
+              <button
+                onClick={() => setSpoilerVisible(true)}
+                style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+              >
+                Spoileri Göster
+              </button>
+            </div>
+          ) : (
+            <div style={{ color: '#d4d4ce', fontSize: '14px', lineHeight: 1.75 }}>
+              {reply.icerik}
+            </div>
+          )}
         </div>
       </div>
     </article>
@@ -81,6 +96,9 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   const [begendim, setBegendim] = useState(false)
   const [yerImledim, setYerImledim] = useState(false)
   const [likeCount, setLikeCount] = useState(Number(topic?.begeni_sayisi || 0))
+  const [pollResults, setPollResults] = useState(topic?.anket_sonuclari || [])
+  const [pollTotalVotes, setPollTotalVotes] = useState(Number(topic?.anket_toplam_oy || 0))
+  const [pollSelection, setPollSelection] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -93,7 +111,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
       setSessionUser(user)
 
       if (user?.id) {
-        const [{ data }, { data: liked }, { data: bookmarked }] = await Promise.all([
+        const requests = [
           supabase
             .from('public_profiller')
             .select('id, kullanici_adi, avatar_url')
@@ -111,12 +129,26 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             .eq('kullanici_id', user.id)
             .eq('konu_id', topic.id)
             .maybeSingle(),
-        ])
+        ]
+
+        if (topic?.anket_aktif) {
+          requests.push(
+            supabase
+              .from('topluluk_anket_oylari')
+              .select('secenek_index')
+              .eq('kullanici_id', user.id)
+              .eq('konu_id', topic.id)
+              .maybeSingle()
+          )
+        }
+
+        const [profileResult, likedResult, bookmarkedResult, votedResult] = await Promise.all(requests)
 
         if (!active) return
-        setProfile(data || null)
-        setBegendim(Boolean(liked?.id))
-        setYerImledim(Boolean(bookmarked?.id))
+        setProfile(profileResult?.data || null)
+        setBegendim(Boolean(likedResult?.data?.id))
+        setYerImledim(Boolean(bookmarkedResult?.data?.id))
+        setPollSelection(votedResult?.data?.secenek_index ?? null)
       } else {
         setProfile(null)
       }
@@ -207,6 +239,36 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
     setMessage('Yanıtın paylaşıldı.')
   }
 
+  async function handlePollVote(index) {
+    if (!sessionUser) {
+      setMessage('Oy vermek için giriş yapman gerekiyor.')
+      return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/polls/vote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({
+        konuId: topic.id,
+        secenekIndex: index,
+      }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setMessage(result?.error || 'Oy verilemedi.')
+      return
+    }
+
+    setPollSelection(result.seciliIndex)
+    setPollResults(result.sonuclar || [])
+    setPollTotalVotes(Number(result.toplamOy || 0))
+  }
+
   const avatarLetter = topic?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
 
   return (
@@ -293,6 +355,38 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             </div>
           </div>
         </div>
+
+        {topic?.anket_aktif && Array.isArray(topic?.anket_sonuclari) ? (
+          <section style={{ marginTop: '20px', padding: '18px', borderRadius: '18px', border: '1px solid rgba(243,210,135,0.18)', background: 'rgba(243,210,135,0.06)' }}>
+            <div style={{ color: '#f3d287', fontSize: '12px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Anket
+            </div>
+            <div style={{ color: '#fff', fontSize: '22px', fontWeight: 800, marginBottom: '14px' }}>
+              {topic.anket_sorusu || topic.baslik}
+            </div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {pollResults.map((option) => (
+                <button
+                  key={option.index}
+                  onClick={() => handlePollVote(option.index)}
+                  style={{ padding: '14px 16px', borderRadius: '14px', border: `1px solid ${pollSelection === option.index ? 'rgba(243,210,135,0.34)' : 'rgba(255,255,255,0.08)'}`, background: pollSelection === option.index ? 'rgba(243,210,135,0.12)' : 'rgba(255,255,255,0.03)', color: '#fff', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '15px', fontWeight: 700 }}>{option.label}</span>
+                    <span style={{ color: '#d6d6d0', fontSize: '13px', fontWeight: 700 }}>%{option.yuzde}</span>
+                  </div>
+                  <div style={{ height: '8px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '8px' }}>
+                    <div style={{ width: `${option.yuzde}%`, height: '100%', background: 'linear-gradient(90deg, rgba(243,210,135,0.9), rgba(255,255,255,0.45))' }} />
+                  </div>
+                  <div style={{ color: '#bdbdb7', fontSize: '12px' }}>{option.oy} oy</div>
+                </button>
+              ))}
+            </div>
+            <div style={{ color: '#bdbdb7', fontSize: '12px', marginTop: '12px' }}>
+              Toplam oy: {pollTotalVotes}
+            </div>
+          </section>
+        ) : null}
       </section>
 
       <section

@@ -13,6 +13,9 @@ create table if not exists public.topluluk_konulari (
   icerik text not null,
   kategori text not null default 'Genel Sohbet',
   etiketler text[] not null default '{}',
+  anket_aktif boolean not null default false,
+  anket_sorusu text,
+  anket_secenekleri jsonb not null default '[]'::jsonb,
   aktif boolean not null default true,
   sabitlendi boolean not null default false,
   yanit_sayisi integer not null default 0,
@@ -50,6 +53,15 @@ create table if not exists public.topluluk_yer_imleri (
   unique (konu_id, kullanici_id)
 );
 
+create table if not exists public.topluluk_anket_oylari (
+  id uuid primary key default gen_random_uuid(),
+  konu_id uuid not null references public.topluluk_konulari(id) on delete cascade,
+  kullanici_id uuid not null references public.profiller(id) on delete cascade,
+  secenek_index integer not null check (secenek_index >= 0),
+  created_at timestamptz not null default now(),
+  unique (konu_id, kullanici_id)
+);
+
 create index if not exists idx_topluluk_konulari_aktif_son_aktivite
   on public.topluluk_konulari (aktif, son_aktivite_at desc);
 
@@ -67,6 +79,12 @@ create index if not exists idx_topluluk_begenileri_kullanici
 
 create index if not exists idx_topluluk_yer_imleri_kullanici
   on public.topluluk_yer_imleri (kullanici_id, created_at desc);
+
+create index if not exists idx_topluluk_anket_oylari_konu
+  on public.topluluk_anket_oylari (konu_id, created_at desc);
+
+create index if not exists idx_topluluk_anket_oylari_kullanici
+  on public.topluluk_anket_oylari (kullanici_id, created_at desc);
 
 create or replace function public.touch_topluluk_updated_at()
 returns trigger
@@ -177,6 +195,7 @@ alter table public.topluluk_konulari enable row level security;
 alter table public.topluluk_yanitlari enable row level security;
 alter table public.topluluk_begenileri enable row level security;
 alter table public.topluluk_yer_imleri enable row level security;
+alter table public.topluluk_anket_oylari enable row level security;
 
 drop policy if exists "topluluk konulari public okur" on public.topluluk_konulari;
 create policy "topluluk konulari public okur"
@@ -260,6 +279,35 @@ with check (auth.uid() = kullanici_id or public.is_admin_user());
 drop policy if exists "topluluk yer imleri sahibi siler" on public.topluluk_yer_imleri;
 create policy "topluluk yer imleri sahibi siler"
 on public.topluluk_yer_imleri
+for delete
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk anket oylari sahibi okur" on public.topluluk_anket_oylari;
+create policy "topluluk anket oylari sahibi okur"
+on public.topluluk_anket_oylari
+for select
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk anket oylari sahibi ekler" on public.topluluk_anket_oylari;
+create policy "topluluk anket oylari sahibi ekler"
+on public.topluluk_anket_oylari
+for insert
+to authenticated
+with check (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk anket oylari sahibi gunceller" on public.topluluk_anket_oylari;
+create policy "topluluk anket oylari sahibi gunceller"
+on public.topluluk_anket_oylari
+for update
+to authenticated
+using (auth.uid() = kullanici_id or public.is_admin_user())
+with check (auth.uid() = kullanici_id or public.is_admin_user());
+
+drop policy if exists "topluluk anket oylari sahibi siler" on public.topluluk_anket_oylari;
+create policy "topluluk anket oylari sahibi siler"
+on public.topluluk_anket_oylari
 for delete
 to authenticated
 using (auth.uid() = kullanici_id or public.is_admin_user());

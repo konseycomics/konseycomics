@@ -32,6 +32,8 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [profil, setProfil] = useState(null)
   const [baslik, setBaslik] = useState('')
   const [icerik, setIcerik] = useState('')
+  const [anketAcik, setAnketAcik] = useState(false)
+  const [anketSecenekleri, setAnketSecenekleri] = useState(['', ''])
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [begeniKonuIdleri, setBegeniKonuIdleri] = useState([])
@@ -140,7 +142,13 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token || ''}`,
       },
-      body: JSON.stringify({ baslik, icerik, kategori: 'Genel Sohbet', etiketler: [] }),
+      body: JSON.stringify({
+        baslik,
+        icerik,
+        kategori: 'Genel Sohbet',
+        etiketler: [],
+        anket: anketAcik ? { aktif: true, secenekler: anketSecenekleri } : null,
+      }),
     })
 
     const result = await response.json().catch(() => ({}))
@@ -166,8 +174,18 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     setTopics((prev) => [yeniKonu, ...prev.filter((item) => item.id !== yeniKonu.id)])
     setBaslik('')
     setIcerik('')
+    setAnketAcik(false)
+    setAnketSecenekleri(['', ''])
     setMesaj('Konun paylaşıldı.')
     setAktifTab('yeni')
+  }
+
+  function updatePollOption(index, value) {
+    setAnketSecenekleri((prev) => prev.map((item, itemIndex) => itemIndex === index ? value : item))
+  }
+
+  function addPollOption() {
+    setAnketSecenekleri((prev) => prev.length >= 4 ? prev : [...prev, ''])
   }
 
   const sekmeler = [
@@ -203,12 +221,36 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
               style={{ width: '100%', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.035)', color: '#fff', fontSize: '15px', lineHeight: 1.7, outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '14px' }}
             />
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
-              {['≣ Anket'].map((item) => (
-                <span key={item} style={{ minHeight: '38px', display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.045)', gap: '8px', fontWeight: 700 }}>
-                  {item}
-                </span>
-              ))}
+              <button
+                type="button"
+                onClick={() => setAnketAcik((prev) => !prev)}
+                style={{ minHeight: '38px', display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '999px', border: `1px solid ${anketAcik ? 'rgba(243,210,135,0.28)' : 'rgba(255,255,255,0.08)'}`, background: anketAcik ? 'rgba(243,210,135,0.1)' : 'rgba(255,255,255,0.045)', color: anketAcik ? '#f3d287' : '#b3b3ad', gap: '8px', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+              >
+                ≣ Anket
+              </button>
             </div>
+            {anketAcik ? (
+              <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
+                {anketSecenekleri.map((secenek, index) => (
+                  <input
+                    key={index}
+                    value={secenek}
+                    onChange={(event) => updatePollOption(index, event.target.value)}
+                    placeholder={`Anket seçeneği ${index + 1}`}
+                    style={{ width: '100%', minHeight: '46px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                ))}
+                {anketSecenekleri.length < 4 ? (
+                  <button
+                    type="button"
+                    onClick={addPollOption}
+                    style={{ minHeight: '40px', width: 'fit-content', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '13px', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    + Seçenek Ekle
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             {mesaj ? (
               <div style={{ marginTop: '12px', color: mesaj === 'Konun paylaşıldı.' ? '#8fda8f' : '#ffb4b4', fontSize: '13px' }}>
                 {mesaj}
@@ -280,6 +322,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       {trimPreview(seri.icerik)}
                     </div>
                   </Link>
+                  {seri.anket_aktif ? (
+                    <div style={{ marginBottom: '6px', minHeight: '34px', width: 'fit-content', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(243,210,135,0.1)', border: '1px solid rgba(243,210,135,0.22)', color: '#f3d287', fontSize: '12px', fontWeight: 800 }}>
+                      Anket Konusu
+                    </div>
+                  ) : null}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#d2d2cc', fontSize: '14px', marginTop: '20px', flexWrap: 'wrap' }}>
                     <button
                       onClick={(event) => {

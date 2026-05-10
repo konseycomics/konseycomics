@@ -211,13 +211,13 @@ export default async function ToplulukPage() {
           <div className="community-layout-v3" style={{ maxWidth: '1240px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '28px', alignItems: 'start' }}>
             <aside className="community-sidebar-v3" style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '12px' }}>
               {kurallar.map((kural) => (
-                <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))', boxShadow: '0 14px 36px rgba(0,0,0,0.16)' }}>
+                <section className="community-sidebar-card community-rule-card" key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))', boxShadow: '0 14px 36px rgba(0,0,0,0.16)' }}>
                   <div style={{ color: '#fff', fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
                   <div style={{ color: '#b8b8b2', fontSize: '13px', lineHeight: 1.7 }}>{kural.text}</div>
                 </section>
               ))}
 
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+              <section className="community-sidebar-card" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Kategoriler
                 </div>
@@ -230,7 +230,7 @@ export default async function ToplulukPage() {
                 </div>
               </section>
 
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+              <section className="community-sidebar-card" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Popüler Konular
                 </div>
@@ -302,6 +302,22 @@ export default async function ToplulukPage() {
 
             .community-sidebar-v3 {
               gap: 10px !important;
+            }
+
+            .community-sidebar-card {
+              padding: 14px !important;
+              border-radius: 16px !important;
+            }
+          }
+
+          @media (max-width: 560px) {
+            .community-sidebar-v3 {
+              display: grid !important;
+              grid-template-columns: 1fr !important;
+            }
+
+            .community-rule-card {
+              padding: 12px !important;
             }
           }
 

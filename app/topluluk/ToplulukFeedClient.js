@@ -416,7 +416,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-composer-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: 52px minmax(0, 1fr) !important;
             gap: 14px !important;
           }
 
@@ -428,6 +428,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           .community-composer-submit {
             width: 100% !important;
             align-self: stretch !important;
+            grid-column: 1 / -1 !important;
           }
 
           .community-topic-card {
@@ -466,8 +467,8 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-grid {
-            grid-template-columns: 1fr !important;
-            gap: 12px !important;
+            grid-template-columns: 44px minmax(0, 1fr) 88px !important;
+            gap: 10px !important;
           }
 
           .community-topic-avatar {
@@ -485,16 +486,21 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
           .community-topic-actions a,
           .community-topic-actions button {
-            flex: 1 1 180px;
+            flex: 0 1 auto;
             justify-content: center !important;
           }
 
           .community-topic-cta {
-            justify-content: stretch !important;
+            grid-column: auto !important;
+            min-width: 88px !important;
+            justify-content: flex-start !important;
+            align-self: start !important;
           }
 
           .community-topic-cta a {
-            width: 100% !important;
+            width: auto !important;
+            padding: 12px 10px !important;
+            border-radius: 16px !important;
           }
         }
 
@@ -502,6 +508,14 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           .community-composer {
             padding: 16px !important;
             margin-bottom: 18px !important;
+          }
+
+          .community-composer-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .community-composer-avatar {
+            display: none !important;
           }
 
           .community-composer-fields input,
@@ -518,9 +532,24 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             padding: 14px !important;
           }
 
-          .community-topic-actions {
-            display: grid !important;
+          .community-topic-grid {
             grid-template-columns: 1fr !important;
+          }
+
+          .community-topic-cta {
+            grid-column: 1 / -1 !important;
+            justify-content: flex-end !important;
+          }
+
+          .community-topic-cta a {
+            width: auto !important;
+            min-width: 96px !important;
+          }
+
+          .community-topic-actions {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
           }
         }
       `}</style>

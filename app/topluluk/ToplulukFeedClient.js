@@ -344,7 +344,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                   </div>
                   <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
                     <div className="community-topic-title" style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
-                      {seri.baslik}
+                      {seri.spoiler && !spoilerVisibleTopicIds.includes(seri.id) ? 'Spoilerlı Konu' : seri.baslik}
                     </div>
                   </Link>
                   {seri.spoiler && !spoilerVisibleTopicIds.includes(seri.id) ? (
@@ -353,7 +353,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                         Spoilerlı Konu
                       </div>
                       <div style={{ color: '#ddd7c4', fontSize: '14px', lineHeight: 1.7, marginBottom: '10px' }}>
-                        Bu konu spoiler içeriyor. Görmek istersen açabilirsin.
+                        Başlık ve içerik spoiler içeriyor. Görmek istersen açabilirsin.
                       </div>
                       <button
                         type="button"

@@ -486,7 +486,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             </div>
 
             <h1 style={{ margin: '0 0 12px', color: '#fff', fontSize: 'clamp(26px, 3vw, 40px)', lineHeight: 1.05, fontFamily: 'var(--font-display)' }}>
-              {topic?.baslik}
+              {topic?.spoiler && !topicSpoilerVisible ? 'Spoilerlı Konu' : topic?.baslik}
             </h1>
 
             {topic?.spoiler && !topicSpoilerVisible ? (
@@ -495,7 +495,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
                   Spoilerlı Konu
                 </div>
                 <div style={{ color: '#ddd7c4', fontSize: '14px', lineHeight: 1.75, marginBottom: '10px' }}>
-                  Bu konu spoiler içeriyor. Açmak istersen içeriği gösterebilirsin.
+                  Başlık ve içerik spoiler içeriyor. Açmak istersen tamamını gösterebilirsin.
                 </div>
                 <button
                   onClick={() => setTopicSpoilerVisible(true)}

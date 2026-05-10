@@ -32,11 +32,13 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
   const [profil, setProfil] = useState(null)
   const [baslik, setBaslik] = useState('')
   const [icerik, setIcerik] = useState('')
+  const [spoilerKonu, setSpoilerKonu] = useState(false)
   const [anketAcik, setAnketAcik] = useState(false)
   const [anketSecenekleri, setAnketSecenekleri] = useState(['', ''])
   const [yukleniyor, setYukleniyor] = useState(false)
   const [mesaj, setMesaj] = useState('')
   const [begeniKonuIdleri, setBegeniKonuIdleri] = useState([])
+  const [spoilerVisibleTopicIds, setSpoilerVisibleTopicIds] = useState([])
 
   useEffect(() => {
     let active = true
@@ -147,6 +149,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         icerik,
         kategori: 'Genel Sohbet',
         etiketler: [],
+        spoiler: spoilerKonu,
         anket: anketAcik ? { aktif: true, secenekler: anketSecenekleri } : null,
       }),
     })
@@ -174,6 +177,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     setTopics((prev) => [yeniKonu, ...prev.filter((item) => item.id !== yeniKonu.id)])
     setBaslik('')
     setIcerik('')
+    setSpoilerKonu(false)
     setAnketAcik(false)
     setAnketSecenekleri(['', ''])
     setMesaj('Konun paylaşıldı.')
@@ -190,6 +194,10 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
   function removePollOption(index) {
     setAnketSecenekleri((prev) => prev.length <= 2 ? prev : prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  function toggleSpoilerTopic(topicId) {
+    setSpoilerVisibleTopicIds((prev) => prev.includes(topicId) ? prev.filter((id) => id !== topicId) : [...prev, topicId])
   }
 
   const sekmeler = [
@@ -225,6 +233,10 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
               style={{ width: '100%', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.035)', color: '#fff', fontSize: '15px', lineHeight: 1.7, outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '14px' }}
             />
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#bdbdb7', fontSize: '13px' }}>
+                <input type="checkbox" checked={spoilerKonu} onChange={(event) => setSpoilerKonu(event.target.checked)} />
+                Bu konu spoiler içeriyor
+              </label>
               <button
                 type="button"
                 onClick={() => setAnketAcik((prev) => !prev)}
@@ -334,11 +346,53 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     <div className="community-topic-title" style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
                       {seri.baslik}
                     </div>
-                    <div className="community-topic-preview" style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
-                      {trimPreview(seri.icerik)}
-                    </div>
                   </Link>
-                  {seri.anket_aktif ? (
+                  {seri.spoiler && !spoilerVisibleTopicIds.includes(seri.id) ? (
+                    <div style={{ padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(243,210,135,0.22)', background: 'rgba(243,210,135,0.08)', marginBottom: '12px' }}>
+                      <div style={{ color: '#f3d287', fontSize: '13px', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        Spoilerlı Konu
+                      </div>
+                      <div style={{ color: '#ddd7c4', fontSize: '14px', lineHeight: 1.7, marginBottom: '10px' }}>
+                        Bu konu spoiler içeriyor. Görmek istersen açabilirsin.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          toggleSpoilerTopic(seri.id)
+                        }}
+                        style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                      >
+                        Göster
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {seri.spoiler ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                          <div style={{ color: '#f3d287', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                            Spoilerlı Konu
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              toggleSpoilerTopic(seri.id)
+                            }}
+                            style={{ minHeight: '34px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '12px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                          >
+                            Kapat
+                          </button>
+                        </div>
+                      ) : null}
+                      <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
+                        <div className="community-topic-preview" style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
+                          {trimPreview(seri.icerik)}
+                        </div>
+                      </Link>
+                    </>
+                  )}
+                  {seri.anket_aktif && (!seri.spoiler || spoilerVisibleTopicIds.includes(seri.id)) ? (
                     <div style={{ marginBottom: '8px' }}>
                       <div style={{ minHeight: '34px', width: 'fit-content', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(243,210,135,0.1)', border: '1px solid rgba(243,210,135,0.22)', color: '#f3d287', fontSize: '12px', fontWeight: 800, marginBottom: '10px' }}>
                         Anket Konusu

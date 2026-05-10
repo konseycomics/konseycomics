@@ -206,6 +206,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   const [pollResults, setPollResults] = useState(topic?.anket_sonuclari || [])
   const [pollTotalVotes, setPollTotalVotes] = useState(Number(topic?.anket_toplam_oy || 0))
   const [pollSelection, setPollSelection] = useState(null)
+  const [topicSpoilerVisible, setTopicSpoilerVisible] = useState(!topic?.spoiler)
 
   useEffect(() => {
     let active = true
@@ -221,7 +222,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
         const requests = [
           supabase
             .from('public_profiller')
-            .select('id, kullanici_adi, avatar_url')
+            .select('id, kullanici_adi, avatar_url, rol')
             .eq('id', user.id)
             .maybeSingle(),
           supabase
@@ -290,6 +291,39 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
 
     setBegendim(result.active)
     setLikeCount((prev) => Math.max(0, prev + (result.active ? 1 : -1)))
+  }
+
+  async function manageTopic(action) {
+    if (!sessionUser) {
+      setMessage('Bu işlem için giriş yapman gerekiyor.')
+      return
+    }
+
+    const confirmed = window.confirm(
+      action === 'hide'
+        ? 'Bu konuyu topluluk akışından gizlemek istiyor musun?'
+        : 'Bu konuyu silmek istiyor musun? Bu işlem görünümden kaldırır.'
+    )
+
+    if (!confirmed) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/topics/manage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ konuId: topic.id, action }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setMessage(result?.error || 'Konu işlemi tamamlanamadı.')
+      return
+    }
+
+    window.location.href = '/topluluk'
   }
 
   async function submitReply({ icerik, spoiler: replySpoiler, parentYanitId = null }) {
@@ -378,6 +412,8 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   }
 
   const avatarLetter = topic?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
+  const isOwner = Boolean(sessionUser?.id && sessionUser.id === topic?.profil?.id)
+  const isAdmin = ['admin', 'yonetici'].includes(String(profile?.rol || '').toLowerCase())
   const replyTree = useMemo(() => {
     const byParent = new Map()
     for (const reply of replies) {
@@ -442,15 +478,52 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
               ) : null}
               <span style={{ color: '#9f9f98', fontSize: '12px' }}>{formatDateTime(topic?.created_at)}</span>
               <span style={{ color: '#8f8f89', fontSize: '12px' }}>• {topic?.kategori || 'Genel Sohbet'}</span>
+              {topic?.spoiler ? (
+                <span style={{ color: '#f3d287', fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                  Spoilerlı Konu
+                </span>
+              ) : null}
             </div>
 
             <h1 style={{ margin: '0 0 12px', color: '#fff', fontSize: 'clamp(26px, 3vw, 40px)', lineHeight: 1.05, fontFamily: 'var(--font-display)' }}>
               {topic?.baslik}
             </h1>
 
-            <div style={{ color: '#d0d0ca', fontSize: '15px', lineHeight: 1.85, marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
-              {topic?.icerik_tam || topic?.icerik}
-            </div>
+            {topic?.spoiler && !topicSpoilerVisible ? (
+              <div style={{ padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(243,210,135,0.22)', background: 'rgba(243,210,135,0.08)', marginBottom: '16px' }}>
+                <div style={{ color: '#f3d287', fontSize: '13px', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Spoilerlı Konu
+                </div>
+                <div style={{ color: '#ddd7c4', fontSize: '14px', lineHeight: 1.75, marginBottom: '10px' }}>
+                  Bu konu spoiler içeriyor. Açmak istersen içeriği gösterebilirsin.
+                </div>
+                <button
+                  onClick={() => setTopicSpoilerVisible(true)}
+                  style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  Göster
+                </button>
+              </div>
+            ) : (
+              <div>
+                {topic?.spoiler ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ color: '#f3d287', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                      Spoilerlı Konu
+                    </div>
+                    <button
+                      onClick={() => setTopicSpoilerVisible(false)}
+                      style={{ minHeight: '34px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '12px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                    >
+                      Kapat
+                    </button>
+                  </div>
+                ) : null}
+                <div style={{ color: '#d0d0ca', fontSize: '15px', lineHeight: 1.85, marginBottom: '16px', whiteSpace: 'pre-wrap' }}>
+                  {topic?.icerik_tam || topic?.icerik}
+                </div>
+              </div>
+            )}
 
             {(topic?.etiketler || []).length > 0 ? (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -472,10 +545,30 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
               </button>
               <span>⌕ {Number(topic?.goruntulenme_sayisi || 0)} görüntülenme</span>
             </div>
+            {(isOwner || isAdmin) ? (
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '16px' }}>
+                {isOwner ? (
+                  <button
+                    onClick={() => manageTopic('delete')}
+                    style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,120,120,0.2)', background: 'rgba(255,120,120,0.08)', color: '#ffb2b2', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    Konuyu Sil
+                  </button>
+                ) : null}
+                {isAdmin ? (
+                  <button
+                    onClick={() => manageTopic('hide')}
+                    style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    Konuyu Gizle
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
 
-        {topic?.anket_aktif && Array.isArray(topic?.anket_sonuclari) ? (
+        {topic?.anket_aktif && Array.isArray(topic?.anket_sonuclari) && (!topic?.spoiler || topicSpoilerVisible) ? (
           <section style={{ marginTop: '20px', padding: '18px', borderRadius: '18px', border: '1px solid rgba(243,210,135,0.18)', background: 'rgba(243,210,135,0.06)' }}>
             <div style={{ color: '#f3d287', fontSize: '12px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '8px' }}>
               Anket

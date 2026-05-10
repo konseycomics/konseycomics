@@ -13,6 +13,7 @@ create table if not exists public.topluluk_konulari (
   icerik text not null,
   kategori text not null default 'Genel Sohbet',
   etiketler text[] not null default '{}',
+  spoiler boolean not null default false,
   anket_aktif boolean not null default false,
   anket_sorusu text,
   anket_secenekleri jsonb not null default '[]'::jsonb,
@@ -28,6 +29,9 @@ create table if not exists public.topluluk_konulari (
 
 alter table if exists public.topluluk_konulari
   add column if not exists anket_aktif boolean not null default false;
+
+alter table if exists public.topluluk_konulari
+  add column if not exists spoiler boolean not null default false;
 
 alter table if exists public.topluluk_konulari
   add column if not exists anket_sorusu text;

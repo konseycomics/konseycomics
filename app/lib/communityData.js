@@ -40,6 +40,7 @@ function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
     href: `${hrefBase}/${row.slug}`,
     baslik: row.baslik,
     icerik: truncate(row.icerik, 240),
+    spoiler: Boolean(row.spoiler),
     kategori: row.kategori || 'Genel Sohbet',
     etiketler: Array.isArray(row.etiketler) ? row.etiketler : [],
     created_at: row.created_at,
@@ -81,7 +82,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 
   ;({ data: topicRows, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('aktif', true)
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
@@ -174,7 +175,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   ;({ data: topicRow, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
     .eq('slug', slug)
     .eq('aktif', true)
     .maybeSingle())

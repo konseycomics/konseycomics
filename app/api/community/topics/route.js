@@ -63,7 +63,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { baslik, icerik, kategori, etiketler, anket } = await req.json()
+    const { baslik, icerik, kategori, etiketler, anket, spoiler } = await req.json()
     const cleanTitle = String(baslik || '').trim()
     const cleanBody = String(icerik || '').trim()
 
@@ -100,6 +100,7 @@ export async function POST(req) {
         icerik: cleanBody,
         kategori: String(kategori || 'Genel Sohbet').trim() || 'Genel Sohbet',
         etiketler: safeTags,
+        spoiler: Boolean(spoiler),
         anket_aktif: pollEnabled,
         anket_sorusu: pollEnabled ? cleanTitle : null,
         anket_secenekleri: pollEnabled ? pollOptions : [],

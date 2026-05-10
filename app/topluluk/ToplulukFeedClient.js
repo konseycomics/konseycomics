@@ -342,14 +342,32 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                         Anket Konusu
                       </div>
                       <div style={{ display: 'grid', gap: '8px', maxWidth: '560px' }}>
-                        {(seri.anket_secenekleri || []).slice(0, 4).map((secenek, secenekIndex) => (
+                        {((seri.anket_sonuclari && seri.anket_sonuclari.length > 0)
+                          ? seri.anket_sonuclari
+                          : (seri.anket_secenekleri || []).map((secenek, secenekIndex) => ({
+                              index: secenekIndex,
+                              label: String(secenek || ''),
+                              oy: 0,
+                              yuzde: 0,
+                            }))
+                        ).slice(0, 4).map((secenek) => (
                           <div
-                            key={`${seri.id}-poll-${secenekIndex}`}
-                            style={{ minHeight: '40px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.035)', color: '#e1e1db', fontSize: '13px', fontWeight: 600 }}
+                            key={`${seri.id}-poll-${secenek.index}`}
+                            style={{ padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.035)' }}
                           >
-                            {String(secenek || '')}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ color: '#e1e1db', fontSize: '13px', fontWeight: 700 }}>{secenek.label}</span>
+                              <span style={{ color: '#d6d6d0', fontSize: '12px', fontWeight: 700 }}>%{Number(secenek.yuzde || 0)}</span>
+                            </div>
+                            <div style={{ height: '6px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: '7px' }}>
+                              <div style={{ width: `${Number(secenek.yuzde || 0)}%`, height: '100%', background: 'linear-gradient(90deg, rgba(243,210,135,0.92), rgba(255,255,255,0.45))' }} />
+                            </div>
+                            <div style={{ color: '#a9a9a3', fontSize: '11px' }}>{Number(secenek.oy || 0)} oy</div>
                           </div>
                         ))}
+                        <div style={{ color: '#b8b8b2', fontSize: '12px', marginTop: '2px' }}>
+                          Toplam oy: {Number(seri.anket_toplam_oy || 0)}
+                        </div>
                       </div>
                     </div>
                   ) : null}

@@ -117,10 +117,51 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
     : [{ data: [] }, { data: [] }]
 
   const profileMap = mapProfiles(profileRows, titleRows)
+  const topicIds = (topicRows || []).map((row) => row.id).filter(Boolean)
+  const pollStatsMap = new Map()
+
+  const pollTopicRows = (topicRows || []).filter((row) => row.anket_aktif && Array.isArray(row.anket_secenekleri) && row.anket_secenekleri.length > 0)
+
+  if (topicIds.length > 0 && pollTopicRows.length > 0) {
+    const { data: voteRows } = await admin
+      .from('topluluk_anket_oylari')
+      .select('konu_id, secenek_index')
+      .in('konu_id', topicIds)
+
+    const voteCountMap = new Map()
+
+    for (const row of voteRows || []) {
+      const key = `${row.konu_id}:${row.secenek_index}`
+      voteCountMap.set(key, (voteCountMap.get(key) || 0) + 1)
+      pollStatsMap.set(row.konu_id, {
+        toplamOy: Number(pollStatsMap.get(row.konu_id)?.toplamOy || 0) + 1,
+        sonuclar: pollStatsMap.get(row.konu_id)?.sonuclar || [],
+      })
+    }
+
+    for (const topicRow of pollTopicRows) {
+      const toplamOy = Number(pollStatsMap.get(topicRow.id)?.toplamOy || 0)
+      const sonuclar = (topicRow.anket_secenekleri || []).map((option, index) => {
+        const oy = Number(voteCountMap.get(`${topicRow.id}:${index}`) || 0)
+        return {
+          index,
+          label: String(option || ''),
+          oy,
+          yuzde: toplamOy > 0 ? Math.round((oy / toplamOy) * 100) : 0,
+        }
+      })
+
+      pollStatsMap.set(topicRow.id, { toplamOy, sonuclar })
+    }
+  }
 
   return {
     available: true,
-    topics: (topicRows || []).map((row) => formatTopicRow(row, profileMap.get(row.kullanici_id))),
+    topics: (topicRows || []).map((row) => formatTopicRow({
+      ...row,
+      anket_toplam_oy: pollStatsMap.get(row.id)?.toplamOy || 0,
+      anket_sonuclari: pollStatsMap.get(row.id)?.sonuclar || [],
+    }, profileMap.get(row.kullanici_id))),
   }
 }
 

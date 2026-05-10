@@ -178,30 +178,33 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
   return (
     <>
-      <div id="konu-olustur" style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', marginBottom: '22px', scrollMarginTop: '120px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
-          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>
+      <div id="konu-olustur" style={{ padding: '28px', borderRadius: '26px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))', boxShadow: '0 18px 50px rgba(0,0,0,0.22)', marginBottom: '24px', scrollMarginTop: '120px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr) auto', gap: '16px', alignItems: 'start' }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
             {profil?.avatar_url
               ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (profil?.kullanici_adi?.[0]?.toUpperCase() || 'K')}
           </div>
           <div style={{ minWidth: 0 }}>
+            <div style={{ color: '#8f8f89', fontSize: '11px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '10px' }}>
+              Konsey Sosyal Akışı
+            </div>
             <input
               value={baslik}
               onChange={(e) => setBaslik(e.target.value)}
               placeholder="Konu başlığı"
-              style={{ width: '100%', minHeight: '50px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '16px', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
+              style={{ width: '100%', minHeight: '56px', padding: '0 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.035)', color: '#fff', fontSize: '17px', fontWeight: 600, outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
             />
             <textarea
               value={icerik}
               onChange={(e) => setIcerik(e.target.value)}
               placeholder="Ne hakkında konuşmak istersin?"
-              rows={4}
-              style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '15px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '12px' }}
+              rows={5}
+              style={{ width: '100%', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.035)', color: '#fff', fontSize: '15px', lineHeight: 1.7, outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '14px' }}
             />
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
               {['≣ Anket'].map((item) => (
-                <span key={item} style={{ minHeight: '34px', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', gap: '8px' }}>
+                <span key={item} style={{ minHeight: '38px', display: 'inline-flex', alignItems: 'center', padding: '0 14px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.045)', gap: '8px', fontWeight: 700 }}>
                   {item}
                 </span>
               ))}
@@ -215,7 +218,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           <button
             onClick={konuOlustur}
             disabled={yukleniyor}
-            style={{ minHeight: '50px', padding: '0 18px', borderRadius: '14px', border: 'none', background: '#fff', color: '#111', fontSize: '15px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center' }}
+            style={{ minHeight: '56px', padding: '0 22px', borderRadius: '16px', border: 'none', background: '#fff', color: '#111', fontSize: '15px', fontWeight: 900, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center', boxShadow: '0 16px 30px rgba(255,255,255,0.08)' }}
           >
             {yukleniyor ? 'Paylaşılıyor' : 'Paylaş'}
           </button>
@@ -246,7 +249,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         ))}
       </div>
 
-      <div id="son-aktiviteler" style={{ display: 'grid', gap: '14px' }}>
+      <div id="son-aktiviteler" style={{ display: 'grid', gap: '16px' }}>
         {gorunenKonular.length === 0 ? (
           <div style={{ padding: '22px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#b8b8b2', fontSize: '14px' }}>
             Bu filtrede henüz konu yok. İlk konuyu sen açabilirsin.
@@ -255,7 +258,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             <article
               key={`${seri.source}-${seri.id}`}
               onClick={() => router.push(seri.href || `/topluluk/konu/${seri.slug}`)}
-              style={{ padding: '20px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))', cursor: 'pointer', transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease' }}
+              style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))', cursor: 'pointer', transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}
             >
               <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
                 <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -264,26 +267,26 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{seri.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                    <span style={{ color: '#fff', fontSize: '15px', fontWeight: 700 }}>{seri.profil?.kullanici_adi || 'Konsey Üyesi'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800 }}>{seri.profil?.kullanici_adi || 'Konsey Üyesi'}</span>
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                   </div>
                   <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
-                    <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800, lineHeight: 1.35, marginBottom: '8px' }}>
+                    <div style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
                       {seri.baslik}
                     </div>
-                    <div style={{ color: '#c2c2bc', fontSize: '14px', lineHeight: 1.75, marginBottom: '12px' }}>
+                    <div style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
                       {trimPreview(seri.icerik)}
                     </div>
                   </Link>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#d2d2cc', fontSize: '14px', marginTop: '18px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#d2d2cc', fontSize: '14px', marginTop: '20px', flexWrap: 'wrap' }}>
                     <button
                       onClick={(event) => {
                         event.stopPropagation()
                         toggleReaction(seri.id, 'like')
                       }}
-                      style={{ minHeight: '46px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.14)' : 'rgba(255,255,255,0.045)', border: `1px solid ${begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.32)' : 'rgba(255,255,255,0.1)'}`, color: begeniKonuIdleri.includes(seri.id) ? '#ffb2b5' : '#ffffff', fontSize: '14px', cursor: 'pointer', borderRadius: '14px', fontFamily: 'inherit', fontWeight: 800, boxShadow: begeniKonuIdleri.includes(seri.id) ? '0 10px 28px rgba(255,112,118,0.12)' : 'none' }}
+                      style={{ minHeight: '48px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.15)' : 'rgba(255,255,255,0.055)', border: `1px solid ${begeniKonuIdleri.includes(seri.id) ? 'rgba(255,112,118,0.34)' : 'rgba(255,255,255,0.12)'}`, color: begeniKonuIdleri.includes(seri.id) ? '#ffb2b5' : '#ffffff', fontSize: '14px', cursor: 'pointer', borderRadius: '16px', fontFamily: 'inherit', fontWeight: 800, boxShadow: begeniKonuIdleri.includes(seri.id) ? '0 10px 28px rgba(255,112,118,0.14)' : '0 8px 22px rgba(0,0,0,0.16)' }}
                     >
                       <span style={{ fontSize: '16px' }}>{begeniKonuIdleri.includes(seri.id) ? '♥' : '♡'}</span>
                       <span>{Number(seri.begeni_sayisi || 0)} beğeni</span>
@@ -293,7 +296,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       onClick={(event) => event.stopPropagation()}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}
                     >
-                      <span style={{ minHeight: '46px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', fontSize: '14px', borderRadius: '14px', fontWeight: 800 }}>
+                      <span style={{ minHeight: '48px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff', fontSize: '14px', borderRadius: '16px', fontWeight: 800, boxShadow: '0 8px 22px rgba(0,0,0,0.16)' }}>
                         <span style={{ fontSize: '16px' }}>◔</span>
                         <span>{Number(seri.yanit_sayisi || 0)} yorum</span>
                       </span>
@@ -302,9 +305,9 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                 </div>
                 <div style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
                   <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
-                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '14px 12px', borderRadius: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center', textDecoration: 'none' }}>
+                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '16px 12px', borderRadius: '18px', background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', textDecoration: 'none', boxShadow: '0 10px 28px rgba(0,0,0,0.18)' }}>
                     <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
-                    <div style={{ color: '#a7a7a1', fontSize: '10px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '4px' }}>yorumu aç</div>
+                    <div style={{ color: '#d4d4ce', fontSize: '11px', letterSpacing: '0.7px', textTransform: 'uppercase', marginTop: '6px', fontWeight: 800 }}>Konuyu Aç</div>
                   </Link>
                 </div>
               </div>

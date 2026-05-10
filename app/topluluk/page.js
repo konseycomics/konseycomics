@@ -208,43 +208,43 @@ export default async function ToplulukPage() {
       <Navbar />
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '28px', paddingBottom: '34px' }}>
-          <div className="community-layout-v3" style={{ maxWidth: '1240px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '26px', alignItems: 'start' }}>
-            <aside style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '14px' }}>
+          <div className="community-layout-v3" style={{ maxWidth: '1240px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '28px', alignItems: 'start' }}>
+            <aside style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '12px' }}>
               {kurallar.map((kural) => (
-                <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+                <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))', boxShadow: '0 14px 36px rgba(0,0,0,0.16)' }}>
                   <div style={{ color: '#fff', fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
                   <div style={{ color: '#b8b8b2', fontSize: '13px', lineHeight: 1.7 }}>{kural.text}</div>
                 </section>
               ))}
 
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Kategoriler
                 </div>
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {kategoriListesi.map((kategori) => (
-                    <div key={kategori} style={{ minHeight: '42px', display: 'flex', alignItems: 'center', padding: '0 12px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
+                    <div key={kategori} style={{ minHeight: '44px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', color: '#d9d9d3', fontSize: '14px', fontWeight: 600 }}>
                       {kategori}
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+              <section style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <div style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Popüler Konular
                 </div>
                 <div style={{ display: 'grid', gap: '12px' }}>
                   {populerKonular.map((konu) => (
                     <Link key={konu.id} href={konu.href || `/topluluk/konu/${konu.slug}`} style={{ textDecoration: 'none' }}>
-                      <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ padding: '14px', borderRadius: '14px', background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <div style={{ color: '#fff', fontSize: '14px', fontWeight: 700, lineHeight: 1.4, marginBottom: '4px' }}>{konu.baslik}</div>
                         <div style={{ color: '#a9a9a3', fontSize: '12px' }}>{Number(konu.yanit_sayisi || 0)} yorum</div>
                       </div>
                     </Link>
                   ))}
                 </div>
-                <Link href="/topluluk" style={{ marginTop: '14px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                <Link href="/topluluk" style={{ marginTop: '14px', minHeight: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: '13px', fontWeight: 800, textDecoration: 'none', background: 'rgba(255,255,255,0.025)' }}>
                   Tümünü Gör
                 </Link>
               </section>

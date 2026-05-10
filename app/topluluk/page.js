@@ -209,7 +209,7 @@ export default async function ToplulukPage() {
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '28px', paddingBottom: '34px' }}>
           <div className="community-layout-v3" style={{ maxWidth: '1240px', margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: '28px', alignItems: 'start' }}>
-            <aside style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '12px' }}>
+            <aside className="community-sidebar-v3" style={{ position: 'sticky', top: '106px', alignSelf: 'start', display: 'grid', gap: '12px' }}>
               {kurallar.map((kural) => (
                 <section key={kural.title} style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025))', boxShadow: '0 14px 36px rgba(0,0,0,0.16)' }}>
                   <div style={{ color: '#fff', fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>{kural.title}</div>
@@ -250,8 +250,8 @@ export default async function ToplulukPage() {
               </section>
             </aside>
 
-            <section>
-              <div style={{ marginBottom: '26px', textAlign: 'center' }}>
+            <section className="community-main-v3">
+              <div className="community-hero-v3" style={{ marginBottom: '26px', textAlign: 'center' }}>
                 <div style={{ color: '#9f9f98', fontSize: '11px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '10px' }}>
                   Konsey Sosyal
                 </div>
@@ -273,11 +273,47 @@ export default async function ToplulukPage() {
             .community-layout-v3 {
               grid-template-columns: 1fr !important;
             }
+
+            .community-sidebar-v3 {
+              position: static !important;
+              top: auto !important;
+              order: 2 !important;
+            }
+
+            .community-main-v3 {
+              order: 1 !important;
+            }
           }
 
           @media (max-width: 900px) {
             .community-layout-v3 {
               gap: 18px !important;
+            }
+
+            .community-hero-v3 {
+              margin-bottom: 18px !important;
+            }
+          }
+
+          @media (max-width: 720px) {
+            .community-layout-v3 {
+              gap: 16px !important;
+            }
+
+            .community-sidebar-v3 {
+              gap: 10px !important;
+            }
+          }
+
+          @media (max-width: 640px) {
+            .community-hero-v3 {
+              text-align: left !important;
+            }
+          }
+
+          @media (max-width: 520px) {
+            .community-layout-v3 {
+              gap: 14px !important;
             }
           }
         `}</style>

@@ -200,14 +200,14 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
   return (
     <>
-      <div id="konu-olustur" style={{ padding: '28px', borderRadius: '26px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))', boxShadow: '0 18px 50px rgba(0,0,0,0.22)', marginBottom: '24px', scrollMarginTop: '120px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr) auto', gap: '16px', alignItems: 'start' }}>
-          <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+      <div id="konu-olustur" className="community-composer" style={{ padding: '28px', borderRadius: '26px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))', boxShadow: '0 18px 50px rgba(0,0,0,0.22)', marginBottom: '24px', scrollMarginTop: '120px' }}>
+        <div className="community-composer-grid" style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr) auto', gap: '16px', alignItems: 'start' }}>
+          <div className="community-composer-avatar" style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
             {profil?.avatar_url
               ? <img src={profil.avatar_url} alt={profil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (profil?.kullanici_adi?.[0]?.toUpperCase() || 'K')}
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div className="community-composer-fields" style={{ minWidth: 0 }}>
             <div style={{ color: '#8f8f89', fontSize: '11px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '10px' }}>
               Konsey Sosyal Akışı
             </div>
@@ -236,7 +236,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             {anketAcik ? (
               <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
                 {anketSecenekleri.map((secenek, index) => (
-                  <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '10px', alignItems: 'center' }}>
+                  <div key={index} className="community-poll-option-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '10px', alignItems: 'center' }}>
                     <input
                       value={secenek}
                       onChange={(event) => updatePollOption(index, event.target.value)}
@@ -272,6 +272,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             ) : null}
           </div>
           <button
+            className="community-composer-submit"
             onClick={konuOlustur}
             disabled={yukleniyor}
             style={{ minHeight: '56px', padding: '0 22px', borderRadius: '16px', border: 'none', background: '#fff', color: '#111', fontSize: '15px', fontWeight: 900, fontFamily: 'inherit', cursor: 'pointer', alignSelf: 'center', boxShadow: '0 16px 30px rgba(255,255,255,0.08)' }}
@@ -281,7 +282,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
+      <div className="community-tabs" style={{ display: 'flex', gap: '22px', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: '14px', paddingBottom: '10px', color: '#b3b3ad', fontSize: '14px', overflowX: 'auto' }}>
         {sekmeler.map((sekme) => (
           <button
             key={sekme.id}
@@ -312,17 +313,18 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           </div>
         ) : gorunenKonular.map((seri, index) => (
             <article
+              className="community-topic-card"
               key={`${seri.source}-${seri.id}`}
               onClick={() => router.push(seri.href || `/topluluk/konu/${seri.slug}`)}
               style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))', cursor: 'pointer', transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="community-topic-grid" style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr) auto', gap: '14px', alignItems: 'start' }}>
+                <div className="community-topic-avatar" style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {seri.profil?.avatar_url
                     ? <img src={seri.profil.avatar_url} alt={seri.profil.kullanici_adi || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{seri.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
                 </div>
-                <div style={{ minWidth: 0 }}>
+                <div className="community-topic-main" style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                     <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800 }}>{seri.profil?.kullanici_adi || 'Konsey Üyesi'}</span>
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
@@ -371,7 +373,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       </div>
                     </div>
                   ) : null}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#d2d2cc', fontSize: '14px', marginTop: '20px', flexWrap: 'wrap' }}>
+                  <div className="community-topic-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#d2d2cc', fontSize: '14px', marginTop: '20px', flexWrap: 'wrap' }}>
                     <button
                       onClick={(event) => {
                         event.stopPropagation()
@@ -394,7 +396,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     </Link>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
+                <div className="community-topic-cta" style={{ display: 'grid', gap: '10px', minWidth: '110px' }}>
                   <div style={{ color: '#8f8f89', fontSize: '18px', textAlign: 'right' }}>⋯</div>
                   <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ padding: '16px 12px', borderRadius: '18px', background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03))', border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', textDecoration: 'none', boxShadow: '0 10px 28px rgba(0,0,0,0.18)' }}>
                     <div style={{ color: '#fff', fontFamily: 'var(--font-display)', fontSize: '34px', lineHeight: 0.9 }}>{Number(seri.yanit_sayisi || 0)}</div>
@@ -405,6 +407,123 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             </article>
         ))}
       </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .community-composer {
+            padding: 22px !important;
+            border-radius: 22px !important;
+          }
+
+          .community-composer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .community-composer-avatar {
+            width: 52px !important;
+            height: 52px !important;
+          }
+
+          .community-composer-submit {
+            width: 100% !important;
+            align-self: stretch !important;
+          }
+
+          .community-topic-card {
+            padding: 18px !important;
+          }
+
+          .community-topic-grid {
+            grid-template-columns: 48px minmax(0, 1fr) !important;
+          }
+
+          .community-topic-cta {
+            grid-column: 1 / -1 !important;
+            min-width: 0 !important;
+            display: flex !important;
+            justify-content: flex-end !important;
+          }
+        }
+
+        @media (max-width: 720px) {
+          .community-composer {
+            padding: 18px !important;
+          }
+
+          .community-poll-option-row {
+            grid-template-columns: 1fr !important;
+          }
+
+          .community-tabs {
+            gap: 16px !important;
+            font-size: 13px !important;
+          }
+
+          .community-topic-card {
+            padding: 16px !important;
+            border-radius: 18px !important;
+          }
+
+          .community-topic-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+
+          .community-topic-avatar {
+            width: 44px !important;
+            height: 44px !important;
+          }
+
+          .community-topic-main {
+            min-width: 0 !important;
+          }
+
+          .community-topic-actions {
+            gap: 10px !important;
+          }
+
+          .community-topic-actions a,
+          .community-topic-actions button {
+            flex: 1 1 180px;
+            justify-content: center !important;
+          }
+
+          .community-topic-cta {
+            justify-content: stretch !important;
+          }
+
+          .community-topic-cta a {
+            width: 100% !important;
+          }
+        }
+
+        @media (max-width: 520px) {
+          .community-composer {
+            padding: 16px !important;
+            margin-bottom: 18px !important;
+          }
+
+          .community-composer-fields input,
+          .community-composer-fields textarea {
+            font-size: 14px !important;
+          }
+
+          .community-tabs {
+            margin-bottom: 10px !important;
+            padding-bottom: 8px !important;
+          }
+
+          .community-topic-card {
+            padding: 14px !important;
+          }
+
+          .community-topic-actions {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

@@ -39,12 +39,16 @@ create table if not exists public.topluluk_yanitlari (
   id uuid primary key default gen_random_uuid(),
   konu_id uuid not null references public.topluluk_konulari(id) on delete cascade,
   kullanici_id uuid not null references public.profiller(id) on delete cascade,
+  parent_yanit_id uuid references public.topluluk_yanitlari(id) on delete cascade,
   icerik text not null,
   spoiler boolean not null default false,
   aktif boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.topluluk_yanitlari
+  add column if not exists parent_yanit_id uuid references public.topluluk_yanitlari(id) on delete cascade;
 
 create table if not exists public.topluluk_begenileri (
   id uuid primary key default gen_random_uuid(),
@@ -82,6 +86,9 @@ create index if not exists idx_topluluk_yanitlari_konu
 
 create index if not exists idx_topluluk_yanitlari_kullanici
   on public.topluluk_yanitlari (kullanici_id, created_at desc);
+
+create index if not exists idx_topluluk_yanitlari_parent
+  on public.topluluk_yanitlari (parent_yanit_id, created_at asc);
 
 create index if not exists idx_topluluk_begenileri_kullanici
   on public.topluluk_begenileri (kullanici_id, created_at desc);

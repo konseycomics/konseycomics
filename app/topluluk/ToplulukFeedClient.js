@@ -188,6 +188,10 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     setAnketSecenekleri((prev) => prev.length >= 4 ? prev : [...prev, ''])
   }
 
+  function removePollOption(index) {
+    setAnketSecenekleri((prev) => prev.length <= 2 ? prev : prev.filter((_, itemIndex) => itemIndex !== index))
+  }
+
   const sekmeler = [
     { id: 'tumu', label: 'Tümü' },
     { id: 'yeni', label: 'En Son' },
@@ -232,13 +236,23 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             {anketAcik ? (
               <div style={{ display: 'grid', gap: '10px', marginTop: '14px' }}>
                 {anketSecenekleri.map((secenek, index) => (
-                  <input
-                    key={index}
-                    value={secenek}
-                    onChange={(event) => updatePollOption(index, event.target.value)}
-                    placeholder={`Anket seçeneği ${index + 1}`}
-                    style={{ width: '100%', minHeight: '46px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      value={secenek}
+                      onChange={(event) => updatePollOption(index, event.target.value)}
+                      placeholder={`Anket seçeneği ${index + 1}`}
+                      style={{ width: '100%', minHeight: '46px', padding: '0 16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    {anketSecenekleri.length > 2 ? (
+                      <button
+                        type="button"
+                        onClick={() => removePollOption(index)}
+                        style={{ minHeight: '46px', padding: '0 14px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#ffb8b8', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                      >
+                        Sil
+                      </button>
+                    ) : null}
+                  </div>
                 ))}
                 {anketSecenekleri.length < 4 ? (
                   <button
@@ -323,8 +337,20 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     </div>
                   </Link>
                   {seri.anket_aktif ? (
-                    <div style={{ marginBottom: '6px', minHeight: '34px', width: 'fit-content', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(243,210,135,0.1)', border: '1px solid rgba(243,210,135,0.22)', color: '#f3d287', fontSize: '12px', fontWeight: 800 }}>
-                      Anket Konusu
+                    <div style={{ marginBottom: '8px' }}>
+                      <div style={{ minHeight: '34px', width: 'fit-content', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(243,210,135,0.1)', border: '1px solid rgba(243,210,135,0.22)', color: '#f3d287', fontSize: '12px', fontWeight: 800, marginBottom: '10px' }}>
+                        Anket Konusu
+                      </div>
+                      <div style={{ display: 'grid', gap: '8px', maxWidth: '560px' }}>
+                        {(seri.anket_secenekleri || []).slice(0, 4).map((secenek, secenekIndex) => (
+                          <div
+                            key={`${seri.id}-poll-${secenekIndex}`}
+                            style={{ minHeight: '40px', display: 'flex', alignItems: 'center', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.035)', color: '#e1e1db', fontSize: '13px', fontWeight: 600 }}
+                          >
+                            {String(secenek || '')}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#d2d2cc', fontSize: '14px', marginTop: '20px', flexWrap: 'wrap' }}>

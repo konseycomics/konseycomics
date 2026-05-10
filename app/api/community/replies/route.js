@@ -29,7 +29,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { konuId, icerik, spoiler } = await req.json()
+    const { konuId, icerik, spoiler, parentYanitId } = await req.json()
     const cleanBody = String(icerik || '').trim()
 
     if (!konuId) {
@@ -53,6 +53,22 @@ export async function POST(req) {
       .eq('id', konuId)
       .maybeSingle()
 
+    let parentReplyRow = null
+    if (parentYanitId) {
+      const { data: parentReply } = await adminClient
+        .from('topluluk_yanitlari')
+        .select('id, konu_id, kullanici_id')
+        .eq('id', parentYanitId)
+        .eq('aktif', true)
+        .maybeSingle()
+
+      if (!parentReply?.id || parentReply.konu_id !== konuId) {
+        return NextResponse.json({ error: 'Yanıtlanacak yorum bulunamadı.' }, { status: 400 })
+      }
+
+      parentReplyRow = parentReply
+    }
+
     const { data: inserted, error: insertError } = await adminClient
       .from('topluluk_yanitlari')
       .insert({
@@ -60,8 +76,9 @@ export async function POST(req) {
         kullanici_id: userData.user.id,
         icerik: cleanBody,
         spoiler: Boolean(spoiler),
+        parent_yanit_id: parentReplyRow?.id || null,
       })
-      .select('id, konu_id, icerik, spoiler, created_at')
+      .select('id, konu_id, parent_yanit_id, icerik, spoiler, created_at')
       .single()
 
     if (insertError) {
@@ -80,6 +97,20 @@ export async function POST(req) {
         tip: 'topluluk',
         baslik: 'Konuna yeni yanıt geldi',
         mesaj: `${topicRow.baslik} konuna yeni bir yanıt bırakıldı.`,
+        okundu: false,
+      })
+    }
+
+    if (
+      parentReplyRow?.kullanici_id &&
+      parentReplyRow.kullanici_id !== userData.user.id &&
+      parentReplyRow.kullanici_id !== topicRow?.kullanici_id
+    ) {
+      await adminClient.from('bildirimler').insert({
+        alici_id: parentReplyRow.kullanici_id,
+        tip: 'topluluk',
+        baslik: 'Yanıtına cevap geldi',
+        mesaj: `${topicRow?.baslik || 'Topluluk konusu'} içinde yanıtına cevap yazıldı.`,
         okundu: false,
       })
     }

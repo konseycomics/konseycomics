@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 function formatDateTime(value) {
@@ -14,9 +14,52 @@ function formatDateTime(value) {
   })
 }
 
-function ReplyCard({ reply }) {
+function ReplyCard({
+  reply,
+  childReplies = [],
+  sessionUser,
+  onReplySubmit,
+  depth = 0,
+}) {
   const avatarLetter = reply?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
   const [spoilerVisible, setSpoilerVisible] = useState(!reply?.spoiler)
+  const [isReplying, setIsReplying] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [spoiler, setSpoiler] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
+
+  async function submitNestedReply() {
+    if (!sessionUser) {
+      setMessage('Yanıta yanıt vermek için giriş yapman gerekiyor.')
+      return
+    }
+
+    if (replyText.trim().length < 2) {
+      setMessage('Yanıt çok kısa.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setMessage('')
+
+    const ok = await onReplySubmit({
+      icerik: replyText,
+      spoiler,
+      parentYanitId: reply.id,
+    })
+
+    setIsSubmitting(false)
+
+    if (!ok) {
+      setMessage('Yanıt gönderilemedi.')
+      return
+    }
+
+    setReplyText('')
+    setSpoiler(false)
+    setIsReplying(false)
+  }
 
   return (
     <article
@@ -25,6 +68,7 @@ function ReplyCard({ reply }) {
         borderRadius: '18px',
         border: '1px solid rgba(255,255,255,0.08)',
         background: 'rgba(255,255,255,0.03)',
+        marginLeft: depth > 0 ? `${Math.min(depth, 3) * 18}px` : 0,
       }}
     >
       <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(0, 1fr)', gap: '14px', alignItems: 'start' }}>
@@ -65,22 +109,86 @@ function ReplyCard({ reply }) {
           {reply?.spoiler && !spoilerVisible ? (
             <div style={{ padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(243,210,135,0.22)', background: 'rgba(243,210,135,0.08)' }}>
               <div style={{ color: '#f3d287', fontSize: '13px', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                Spoiler İçeriyor
+                Spoilerlı Yorum
               </div>
-              <button
-                onClick={() => setSpoilerVisible(true)}
-                style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
-              >
-                Spoileri Göster
-              </button>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setSpoilerVisible(true)}
+                  style={{ minHeight: '38px', padding: '0 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  Göster
+                </button>
+              </div>
             </div>
           ) : (
-            <div style={{ color: '#d4d4ce', fontSize: '14px', lineHeight: 1.75 }}>
-              {reply.icerik}
+            <div>
+              {reply?.spoiler ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ color: '#f3d287', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                    Spoilerlı Yorum
+                  </div>
+                  <button
+                    onClick={() => setSpoilerVisible(false)}
+                    style={{ minHeight: '34px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '12px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+                  >
+                    Kapat
+                  </button>
+                </div>
+              ) : null}
+              <div style={{ color: '#d4d4ce', fontSize: '14px', lineHeight: 1.75 }}>
+                {reply.icerik}
+              </div>
             </div>
           )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setIsReplying((prev) => !prev)}
+              style={{ minHeight: '34px', padding: '0 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', background: isReplying ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '12px', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}
+            >
+              {isReplying ? 'Vazgeç' : 'Yanıtla'}
+            </button>
+          </div>
+          {isReplying ? (
+            <div style={{ marginTop: '14px', padding: '14px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.025)' }}>
+              <textarea
+                value={replyText}
+                onChange={(event) => setReplyText(event.target.value)}
+                placeholder="Bu yanıta cevabını yaz..."
+                rows={3}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: '14px', lineHeight: 1.7, resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#bdbdb7', fontSize: '12px' }}>
+                  <input type="checkbox" checked={spoiler} onChange={(event) => setSpoiler(event.target.checked)} />
+                  Spoiler içeriyor
+                </label>
+                <button
+                  onClick={submitNestedReply}
+                  disabled={isSubmitting}
+                  style={{ minHeight: '38px', padding: '0 16px', borderRadius: '12px', border: 'none', background: '#fff', color: '#111', fontSize: '13px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  {isSubmitting ? 'Gönderiliyor' : 'Yanıtı Gönder'}
+                </button>
+              </div>
+              {message ? <div style={{ marginTop: '10px', color: '#ffb4b4', fontSize: '12px' }}>{message}</div> : null}
+            </div>
+          ) : null}
         </div>
       </div>
+      {childReplies.length > 0 ? (
+        <div style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
+          {childReplies.map((childReply) => (
+            <ReplyCard
+              key={childReply.id}
+              reply={childReply}
+              childReplies={childReply.children || []}
+              sessionUser={sessionUser}
+              onReplySubmit={onReplySubmit}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      ) : null}
     </article>
   )
 }
@@ -94,7 +202,6 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [begendim, setBegendim] = useState(false)
-  const [yerImledim, setYerImledim] = useState(false)
   const [likeCount, setLikeCount] = useState(Number(topic?.begeni_sayisi || 0))
   const [pollResults, setPollResults] = useState(topic?.anket_sonuclari || [])
   const [pollTotalVotes, setPollTotalVotes] = useState(Number(topic?.anket_toplam_oy || 0))
@@ -123,12 +230,6 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             .eq('kullanici_id', user.id)
             .eq('konu_id', topic.id)
             .maybeSingle(),
-          supabase
-            .from('topluluk_yer_imleri')
-            .select('id')
-            .eq('kullanici_id', user.id)
-            .eq('konu_id', topic.id)
-            .maybeSingle(),
         ]
 
         if (topic?.anket_aktif) {
@@ -142,12 +243,11 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
           )
         }
 
-        const [profileResult, likedResult, bookmarkedResult, votedResult] = await Promise.all(requests)
+        const [profileResult, likedResult, votedResult] = await Promise.all(requests)
 
         if (!active) return
         setProfile(profileResult?.data || null)
         setBegendim(Boolean(likedResult?.data?.id))
-        setYerImledim(Boolean(bookmarkedResult?.data?.id))
         setPollSelection(votedResult?.data?.secenek_index ?? null)
       } else {
         setProfile(null)
@@ -166,7 +266,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
     }
   }, [])
 
-  async function toggleReaction(type) {
+  async function toggleLike() {
     if (!sessionUser) {
       setMessage('Bu etkileşim için giriş yapman gerekiyor.')
       return
@@ -179,7 +279,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token || ''}`,
       },
-      body: JSON.stringify({ konuId: topic.id, type }),
+      body: JSON.stringify({ konuId: topic.id, type: 'like' }),
     })
 
     const result = await response.json().catch(() => ({}))
@@ -188,13 +288,34 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
       return
     }
 
-    if (type === 'like') {
-      setBegendim(result.active)
-      setLikeCount((prev) => Math.max(0, prev + (result.active ? 1 : -1)))
-      return
+    setBegendim(result.active)
+    setLikeCount((prev) => Math.max(0, prev + (result.active ? 1 : -1)))
+  }
+
+  async function submitReply({ icerik, spoiler: replySpoiler, parentYanitId = null }) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/community/replies', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+      },
+      body: JSON.stringify({
+        konuId: topic.id,
+        icerik,
+        spoiler: replySpoiler,
+        parentYanitId,
+      }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setMessage(result?.error || 'Yanıt gönderilemedi.')
+      return false
     }
 
-    setYerImledim(result.active)
+    setReplies((prev) => [...prev, result.reply])
+    return true
   }
 
   async function handleReplySubmit() {
@@ -211,29 +332,16 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
     setIsSubmitting(true)
     setMessage('')
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const response = await fetch('/api/community/replies', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token || ''}`,
-      },
-      body: JSON.stringify({
-        konuId: topic.id,
-        icerik: replyText,
-        spoiler,
-      }),
+    const ok = await submitReply({
+      icerik: replyText,
+      spoiler,
+      parentYanitId: null,
     })
 
-    const result = await response.json().catch(() => ({}))
     setIsSubmitting(false)
 
-    if (!response.ok) {
-      setMessage(result?.error || 'Yanıt gönderilemedi.')
-      return
-    }
+    if (!ok) return
 
-    setReplies((prev) => [...prev, result.reply])
     setReplyText('')
     setSpoiler(false)
     setMessage('Yanıtın paylaşıldı.')
@@ -270,6 +378,23 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
   }
 
   const avatarLetter = topic?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
+  const replyTree = useMemo(() => {
+    const byParent = new Map()
+    for (const reply of replies) {
+      const parentId = reply.parent_yanit_id || 'root'
+      if (!byParent.has(parentId)) byParent.set(parentId, [])
+      byParent.get(parentId).push({ ...reply, children: [] })
+    }
+
+    function attach(parentId = 'root') {
+      return (byParent.get(parentId) || []).map((reply) => ({
+        ...reply,
+        children: attach(reply.id),
+      }))
+    }
+
+    return attach('root')
+  }, [replies])
 
   return (
     <>
@@ -340,16 +465,10 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', color: '#c8c8c1', fontSize: '13px' }}>
               <span>◔ {Number(topic?.yanit_sayisi || replies.length)} yorum</span>
               <button
-                onClick={() => toggleReaction('like')}
+                onClick={toggleLike}
                 style={{ background: 'transparent', border: 'none', padding: 0, color: begendim ? '#ff9ea1' : '#c8c8c1', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
               >
                 {begendim ? '♥' : '♡'} {likeCount} beğeni
-              </button>
-              <button
-                onClick={() => toggleReaction('bookmark')}
-                style={{ background: 'transparent', border: 'none', padding: 0, color: yerImledim ? '#f3d287' : '#c8c8c1', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
-              >
-                {yerImledim ? '▣' : '▢'} yer imi
               </button>
               <span>⌕ {Number(topic?.goruntulenme_sayisi || 0)} görüntülenme</span>
             </div>
@@ -468,7 +587,15 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
             Bu konuya ilk yanıtı sen bırakabilirsin.
           </div>
         ) : (
-          replies.map((reply) => <ReplyCard key={reply.id} reply={reply} />)
+          replyTree.map((reply) => (
+            <ReplyCard
+              key={reply.id}
+              reply={reply}
+              childReplies={reply.children || []}
+              sessionUser={sessionUser}
+              onReplySubmit={submitReply}
+            />
+          ))
         )}
       </section>
     </>

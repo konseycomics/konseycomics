@@ -58,6 +58,18 @@ function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
   }
 }
 
+function formatReplyRow(row, profil) {
+  return {
+    id: row.id,
+    konu_id: row.konu_id,
+    parent_yanit_id: row.parent_yanit_id || null,
+    icerik: row.icerik,
+    spoiler: Boolean(row.spoiler),
+    created_at: row.created_at,
+    profil: profil || null,
+  }
+}
+
 export async function getCommunityTopics({ limit = 12 } = {}) {
   const admin = createSupabaseAdminClient()
   if (!admin) {
@@ -144,7 +156,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   const { data: replyRows } = await admin
     .from('topluluk_yanitlari')
-    .select('id, konu_id, kullanici_id, icerik, spoiler, created_at')
+    .select('id, konu_id, parent_yanit_id, kullanici_id, icerik, spoiler, created_at')
     .eq('konu_id', topicRow.id)
     .eq('aktif', true)
     .order('created_at', { ascending: true })
@@ -197,14 +209,7 @@ export async function getCommunityTopicBySlug(slug) {
       }, profileMap.get(topicRow.kullanici_id)),
       icerik_tam: topicRow.icerik,
     },
-    replies: (replyRows || []).map((row) => ({
-      id: row.id,
-      konu_id: row.konu_id,
-      icerik: row.icerik,
-      spoiler: Boolean(row.spoiler),
-      created_at: row.created_at,
-      profil: profileMap.get(row.kullanici_id) || null,
-    })),
+    replies: (replyRows || []).map((row) => formatReplyRow(row, profileMap.get(row.kullanici_id))),
   }
 }
 

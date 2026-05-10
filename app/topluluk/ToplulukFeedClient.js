@@ -385,14 +385,13 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                       <span>{Number(seri.begeni_sayisi || 0)} beğeni</span>
                     </button>
                     <Link
+                      className="community-topic-action-link"
                       href={seri.href || `/topluluk/konu/${seri.slug}`}
                       onClick={(event) => event.stopPropagation()}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d2d2cc', textDecoration: 'none' }}
+                      style={{ minHeight: '48px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff', fontSize: '14px', borderRadius: '16px', fontWeight: 800, boxShadow: '0 8px 22px rgba(0,0,0,0.16)', textDecoration: 'none', boxSizing: 'border-box' }}
                     >
-                      <span style={{ minHeight: '48px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff', fontSize: '14px', borderRadius: '16px', fontWeight: 800, boxShadow: '0 8px 22px rgba(0,0,0,0.16)' }}>
-                        <span style={{ fontSize: '16px' }}>◔</span>
-                        <span>{Number(seri.yanit_sayisi || 0)} yorum</span>
-                      </span>
+                      <span style={{ fontSize: '16px' }}>◔</span>
+                      <span>{Number(seri.yanit_sayisi || 0)} yorum</span>
                     </Link>
                   </div>
                 </div>
@@ -467,6 +466,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-actions {
+            width: 100% !important;
             gap: 10px !important;
           }
 
@@ -543,8 +543,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           .community-topic-actions button {
             width: 100% !important;
             min-height: 46px !important;
+            display: inline-flex !important;
+            align-items: center !important;
             justify-content: center !important;
             padding: 0 12px !important;
+            box-sizing: border-box !important;
           }
 
         }
@@ -568,11 +571,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-actions {
-            grid-template-columns: 1fr !important;
-          }
-
-          .community-topic-cta-link {
-            padding: 0 14px !important;
+            grid-template-columns: 1fr 1fr !important;
           }
         }
       `}</style>

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { ACCENT, ADMIN_BG, BD, BP, BS, CARD, CARD_INNER, CokluResimYukle, I, LB, Msg, PANEL_BG, PANEL_BORDER, PURPLE, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE, AramaSecim, AramaSecimTek, PANEL_BG_STRONG } from './ui'
-import { KonseySayfasi, KullanicilarSayfasi, YorumlarSayfasi } from './sections/community'
+import { KonseySayfasi, KullanicilarSayfasi, PlanetSayfasi, YorumlarSayfasi } from './sections/community'
 import { SayfalarSayfasi, SosyalMedyaSayfasi } from './sections/vitrin'
 
 function BarChart({ data, renk = '#111', yukseklik = 160 }) {
@@ -164,6 +164,7 @@ export default function Admin() {
       { key: 'kullanicilar', label: 'Kullanicilar', icon: '◎' },
       { key: 'yorumlar', label: 'Yorumlar', icon: '◍' },
       { key: 'konsey', label: 'Konsey Ekibi', icon: '◆' },
+      { key: 'planet', label: 'Konsey Planet', icon: '✺' },
       { key: 'unvanlar', label: 'Unvanlar', icon: '✪' },
     ] },
     { title: 'Vitrin', items: [
@@ -241,6 +242,7 @@ export default function Admin() {
           {aktif === 'turler' && <TurlerSayfasi />}
           {aktif === 'kullanicilar' && <KullanicilarSayfasi />}
           {aktif === 'yorumlar' && <YorumlarSayfasi />}
+          {aktif === 'planet' && <PlanetSayfasi />}
           {aktif === 'unvanlar' && <UnvanlarSayfasi />}
           {aktif === 'anasayfa' && <AnaSayfaSayfasi />}
           {aktif === 'sayfalar' && <SayfalarSayfasi />}

@@ -3,6 +3,19 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { AramaSecimTek, BS, BP, BD, CARD_INNER, I, LB, Msg, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE } from '../ui'
 
+function slugOlustur(value='') {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/ç/g, 'c')
+    .replace(/ğ/g, 'g')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ş/g, 's')
+    .replace(/ü/g, 'u')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export function KonseySayfasi() {
   const [ekip, setEkip] = useState([])
   const [mod, setMod] = useState('liste')
@@ -209,6 +222,150 @@ export function YorumlarSayfasi() {
           {filtreli.length===0&&<div style={{ padding:'40px',textAlign:'center',color:TEXT_SUBTLE }}>Yorum bulunamadı</div>}
         </div>
       </Surface>
+    </div>
+  )
+}
+
+export function PlanetSayfasi() {
+  const bos = { baslik:'', slug:'', ozet:'', icerik:'', kapak_url:'', tip:'manset', one_cikan:false, yayinlandi:true }
+  const [yazilar, setYazilar] = useState([])
+  const [form, setForm] = useState(bos)
+  const [mod, setMod] = useState('liste')
+  const [duzenleId, setDuzenleId] = useState(null)
+  const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [kapakOnizleme, setKapakOnizleme] = useState(null)
+
+  useEffect(() => { fetchHepsi() }, [])
+
+  async function fetchHepsi() {
+    const { data } = await supabase.from('konsey_planet_yazilari').select('*').order('one_cikan', { ascending: false }).order('created_at', { ascending: false })
+    setYazilar(data || [])
+  }
+
+  async function kaydet() {
+    if (!form.baslik || !form.icerik) {
+      setMsg('❌ Başlık ve içerik zorunlu.')
+      return
+    }
+    setYukleniyor(true)
+    const payload = {
+      ...form,
+      slug: slugOlustur(form.slug || form.baslik),
+    }
+    const { data: sessionData } = await supabase.auth.getSession()
+    const currentUserId = sessionData?.session?.user?.id || null
+    if (!duzenleId) payload.created_by = currentUserId
+
+    if (duzenleId) await supabase.from('konsey_planet_yazilari').update(payload).eq('id', duzenleId)
+    else await supabase.from('konsey_planet_yazilari').insert([payload])
+
+    setMsg(duzenleId ? '✅ Planet yazısı güncellendi.' : '✅ Planet yazısı eklendi.')
+    setForm(bos)
+    setDuzenleId(null)
+    setKapakOnizleme(null)
+    setMod('liste')
+    setYukleniyor(false)
+    fetchHepsi()
+  }
+
+  async function sil(id) {
+    if (!confirm('Bu Planet yazısını silmek istediğine emin misin?')) return
+    await supabase.from('konsey_planet_yazilari').delete().eq('id', id)
+    fetchHepsi()
+    setMsg('✅ Planet yazısı silindi.')
+  }
+
+  if (mod === 'form') {
+    return (
+      <div style={{ maxWidth:'860px' }}>
+        <SectionTitle eyebrow="Topluluk" title={duzenleId ? 'Planet Yazisini Duzenle' : 'Yeni Planet Yazisi'} description="Konsey Planet manşetlerini, duyurularini ve editoryal notlarini tek yerden yonet." action={<button onClick={() => { setMod('liste'); setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMsg('') }} style={BS}>Listeye Don</button>} />
+        <Msg text={msg} />
+        <Surface style={{ padding:'24px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'140px minmax(0, 1fr)', gap:'18px', marginBottom:'14px', alignItems:'start' }}>
+            <ResimYukle onizleme={kapakOnizleme} onChange={(url,prev)=>{ setForm(f=>({...f, kapak_url:url })); setKapakOnizleme(prev) }} bucket="kapaklar" width="140px" height="190px" />
+            <div style={{ display:'grid', gap:'12px' }}>
+              <div>
+                <div style={LB}>Baslik</div>
+                <input value={form.baslik} onChange={e=>setForm(f=>({ ...f, baslik:e.target.value, slug: f.slug || slugOlustur(e.target.value) }))} style={I} placeholder="Konsey Planet manşeti" />
+              </div>
+              <div>
+                <div style={LB}>Slug</div>
+                <input value={form.slug} onChange={e=>setForm(f=>({ ...f, slug: slugOlustur(e.target.value) }))} style={I} placeholder="konsey-planet-manseti" />
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+                <div>
+                  <div style={LB}>Tip</div>
+                  <select value={form.tip} onChange={e=>setForm(f=>({ ...f, tip:e.target.value }))} style={S}>
+                    <option value="manset">Manşet</option>
+                    <option value="duyuru">Duyuru</option>
+                    <option value="editor">Editör Yazısı</option>
+                    <option value="secki">Topluluktan Seçki</option>
+                  </select>
+                </div>
+                <div style={{ display:'flex', gap:'18px', flexWrap:'wrap', alignItems:'end' }}>
+                  <label style={{ display:'flex', alignItems:'center', gap:'8px', fontSize:'13px', color:'#fff' }}>
+                    <input type="checkbox" checked={form.one_cikan} onChange={e=>setForm(f=>({ ...f, one_cikan:e.target.checked }))} />
+                    Öne çıkan manşet
+                  </label>
+                  <label style={{ display:'flex', alignItems:'center', gap:'8px', fontSize:'13px', color:'#fff' }}>
+                    <input type="checkbox" checked={form.yayinlandi} onChange={e=>setForm(f=>({ ...f, yayinlandi:e.target.checked }))} />
+                    Yayında
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom:'12px' }}>
+            <div style={LB}>Ozet</div>
+            <textarea value={form.ozet} onChange={e=>setForm(f=>({ ...f, ozet:e.target.value }))} style={{ ...I, minHeight:'88px', resize:'vertical' }} placeholder="Kartlarda ve manşette görünecek kısa özet." />
+          </div>
+
+          <div style={{ marginBottom:'18px' }}>
+            <div style={LB}>Icerik</div>
+            <textarea value={form.icerik} onChange={e=>setForm(f=>({ ...f, icerik:e.target.value }))} style={{ ...I, minHeight:'240px', resize:'vertical' }} placeholder="Planet yazısının tam içeriği..." />
+          </div>
+
+          <div style={{ display:'flex', gap:'10px' }}>
+            <button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor ? 'Kaydediliyor...' : 'Kaydet'}</button>
+            <button onClick={() => { setMod('liste'); setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMsg('') }} style={BS}>Iptal</button>
+          </div>
+        </Surface>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Topluluk" title="Konsey Planet" description="Sadece yönetici ekibinin girdiği resmi manşet, duyuru ve editöryal yayın akışını yönet." action={<button onClick={()=>setMod('form')} style={BP}>Yeni Planet Yazisi</button>} />
+      <Msg text={msg} />
+      <div style={{ display:'grid', gap:'12px' }}>
+        {yazilar.map((item) => (
+          <Surface key={item.id}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:'16px', flexWrap:'wrap' }}>
+              <div style={{ minWidth:0, flex:'1 1 420px' }}>
+                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'10px' }}>
+                  <span style={{ padding:'4px 10px', borderRadius:'999px', background:'rgba(243,210,135,0.14)', color:'#f3d287', fontSize:'10px', fontWeight:800, letterSpacing:'1px', textTransform:'uppercase' }}>{item.tip}</span>
+                  <span style={{ padding:'4px 10px', borderRadius:'999px', background:item.yayinlandi ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.08)', color:item.yayinlandi ? '#a7f3d0' : TEXT_SUBTLE, fontSize:'10px', fontWeight:800, letterSpacing:'1px', textTransform:'uppercase' }}>{item.yayinlandi ? 'yayında' : 'taslak'}</span>
+                  {item.one_cikan ? <span style={{ padding:'4px 10px', borderRadius:'999px', background:'rgba(255,255,255,0.08)', color:'#fff', fontSize:'10px', fontWeight:800, letterSpacing:'1px', textTransform:'uppercase' }}>öne çıkan</span> : null}
+                </div>
+                <div style={{ fontSize:'22px', fontWeight:800, color:'#fff', marginBottom:'8px' }}>{item.baslik}</div>
+                <div style={{ fontSize:'12px', color:TEXT_SUBTLE, marginBottom:'10px' }}>{item.slug}</div>
+                <div style={{ fontSize:'14px', color:TEXT_SOFT, lineHeight:1.7, marginBottom:'10px' }}>{item.ozet || 'Özet girilmedi.'}</div>
+                <div style={{ fontSize:'12px', color:TEXT_SUBTLE }}>
+                  {new Date(item.created_at).toLocaleDateString('tr-TR')} · {item.kapak_url ? 'kapak var' : 'kapak yok'}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:'8px', alignItems:'flex-start', flexWrap:'wrap' }}>
+                <button onClick={() => { setForm({ ...bos, ...item }); setKapakOnizleme(item.kapak_url || null); setDuzenleId(item.id); setMod('form') }} style={BS}>Duzenle</button>
+                <button onClick={() => sil(item.id)} style={BD}>Sil</button>
+              </div>
+            </div>
+          </Surface>
+        ))}
+        {yazilar.length===0 && <Surface><div style={{ color:TEXT_SUBTLE, fontSize:'13px' }}>Henüz Konsey Planet yazısı yok.</div></Surface>}
+      </div>
     </div>
   )
 }

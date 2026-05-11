@@ -4,7 +4,8 @@ import Footer from '../components/Footer'
 import { buildMetadata, createSeoDescription, createSupabaseServerClient } from '../lib/seo'
 import { getLeaderboards } from '../lib/leaderboardData'
 import { getCommunityTopics } from '../lib/communityData'
-import ToplulukFeedClient from './ToplulukFeedClient'
+import { buildPlanetView, getPlanetPosts } from '../lib/planetData'
+import ToplulukHubClient from './ToplulukHubClient'
 import { unstable_noStore as noStore } from 'next/cache'
 
 function formatDate(value) {
@@ -144,10 +145,10 @@ export async function generateMetadata() {
     title: 'Topluluk | KonseyComics',
     description: createSeoDescription(
       '',
-      'KonseyComics topluluğunda en çok konuşulan serileri, son yorumları ve haftanın aktif okuyucularını keşfet.'
+      'Konsey Planet manşetleri ile topluluk akışını aynı yerde keşfet. Resmi duyurular, editör notları ve okur tartışmaları KonseyComics topluluk alanında.'
     ),
     path: '/topluluk',
-    keywords: ['KonseyComics topluluk', 'çizgi roman yorumları', 'seri tartışmaları', 'okur topluluğu'],
+    keywords: ['KonseyComics topluluk', 'Konsey Planet', 'çizgi roman yorumları', 'seri tartışmaları', 'okur topluluğu'],
   })
 }
 
@@ -158,6 +159,8 @@ export default async function ToplulukPage() {
     aktifOkuyucular,
   } = await getCommunityData()
   const { topics: gerçekKonular } = await getCommunityTopics({ limit: 12 })
+  const planetPosts = await getPlanetPosts({ limit: 10 })
+  const planetView = buildPlanetView(planetPosts)
 
   const feedTopics = gerçekKonular
   const kurallar = [
@@ -247,7 +250,7 @@ export default async function ToplulukPage() {
                 </p>
               </div>
 
-              <ToplulukFeedClient initialTopics={feedTopics} />
+              <ToplulukHubClient planetView={planetView} feedTopics={feedTopics} />
             </section>
           </div>
         </section>

@@ -52,7 +52,7 @@ export default async function ToplulukPage() {
   const spotlights = planetView.spotlight.slice(0, 4)
   const latestNews = planetView.all.slice(0, 3)
   const editorials = planetView.editorials.slice(0, 3)
-  const announcements = planetView.announcements.slice(0, 3)
+  const announcements = planetView.bulletins.slice(0, 3)
   const communityPoll = feedTopics.find((topic) => topic.anket_aktif) || null
 
   const categories = [

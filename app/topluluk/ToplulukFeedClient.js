@@ -206,6 +206,22 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
     { id: 'populer', label: 'Popüler' },
   ]
 
+  function getPollPreviewRows(topic) {
+    const rows = ((topic.anket_sonuclari && topic.anket_sonuclari.length > 0)
+      ? topic.anket_sonuclari
+      : (topic.anket_secenekleri || []).map((secenek, secenekIndex) => ({
+          index: secenekIndex,
+          label: String(secenek || ''),
+          oy: 0,
+          yuzde: 0,
+        })))
+
+    return {
+      rows: rows.slice(0, 3),
+      hiddenCount: Math.max(0, rows.length - 3),
+    }
+  }
+
   return (
     <>
       <div id="konu-olustur" className="community-composer" style={{ padding: '28px', borderRadius: '26px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))', boxShadow: '0 18px 50px rgba(0,0,0,0.22)', marginBottom: '24px', scrollMarginTop: '120px' }}>
@@ -229,7 +245,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
               value={icerik}
               onChange={(e) => setIcerik(e.target.value)}
               placeholder="Ne hakkında konuşmak istersin?"
-              rows={5}
+              rows={4}
               style={{ width: '100%', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.035)', color: '#fff', fontSize: '15px', lineHeight: 1.7, outline: 'none', resize: 'vertical', boxSizing: 'border-box', marginBottom: '14px' }}
             />
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', color: '#b3b3ad', fontSize: '13px', marginTop: '4px' }}>
@@ -337,7 +353,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', fontWeight: 800 }}>{seri.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'}</div>}
                 </div>
                 <div className="community-topic-main" style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <div className="community-topic-meta" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                     <span style={{ color: '#fff', fontSize: '15px', fontWeight: 800 }}>{seri.profil?.kullanici_adi || 'Konsey Üyesi'}</span>
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
@@ -393,23 +409,15 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     </>
                   )}
                   {seri.anket_aktif && (!seri.spoiler || spoilerVisibleTopicIds.includes(seri.id)) ? (
-                    <div style={{ marginBottom: '8px' }}>
+                    <div style={{ marginBottom: '6px' }}>
                       <div style={{ minHeight: '34px', width: 'fit-content', display: 'inline-flex', alignItems: 'center', padding: '0 12px', borderRadius: '999px', background: 'rgba(243,210,135,0.1)', border: '1px solid rgba(243,210,135,0.22)', color: '#f3d287', fontSize: '12px', fontWeight: 800, marginBottom: '10px' }}>
                         Anket Konusu
                       </div>
                       <div style={{ display: 'grid', gap: '8px', maxWidth: '560px' }}>
-                        {((seri.anket_sonuclari && seri.anket_sonuclari.length > 0)
-                          ? seri.anket_sonuclari
-                          : (seri.anket_secenekleri || []).map((secenek, secenekIndex) => ({
-                              index: secenekIndex,
-                              label: String(secenek || ''),
-                              oy: 0,
-                              yuzde: 0,
-                            }))
-                        ).slice(0, 4).map((secenek) => (
+                        {getPollPreviewRows(seri).rows.map((secenek) => (
                           <div
                             key={`${seri.id}-poll-${secenek.index}`}
-                            style={{ padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.035)' }}
+                            style={{ padding: '10px 12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.035)' }}
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
                               <span style={{ color: '#e1e1db', fontSize: '13px', fontWeight: 700 }}>{secenek.label}</span>
@@ -421,6 +429,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                             <div style={{ color: '#a9a9a3', fontSize: '11px' }}>{Number(secenek.oy || 0)} oy</div>
                           </div>
                         ))}
+                        {getPollPreviewRows(seri).hiddenCount > 0 ? (
+                          <div style={{ color: '#9f9f99', fontSize: '11px', fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                            +{getPollPreviewRows(seri).hiddenCount} seçenek daha
+                          </div>
+                        ) : null}
                         <div style={{ color: '#b8b8b2', fontSize: '12px', marginTop: '2px' }}>
                           Toplam oy: {Number(seri.anket_toplam_oy || 0)}
                         </div>
@@ -534,9 +547,9 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
         @media (max-width: 640px) {
           .community-composer {
-            padding: 16px !important;
+            padding: 14px !important;
             margin-bottom: 18px !important;
-            border-radius: 20px !important;
+            border-radius: 18px !important;
           }
 
           .community-composer-grid {
@@ -553,9 +566,13 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             font-size: 14px !important;
           }
 
+          .community-composer-fields textarea {
+            min-height: 108px !important;
+          }
+
           .community-composer-submit {
             width: 100% !important;
-            min-height: 52px !important;
+            min-height: 48px !important;
             border-radius: 14px !important;
           }
 
@@ -566,8 +583,8 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-card {
-            padding: 14px !important;
-            border-radius: 18px !important;
+            padding: 13px !important;
+            border-radius: 16px !important;
           }
 
           .community-topic-grid {
@@ -576,32 +593,33 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-topic-title {
-            font-size: 18px !important;
-            line-height: 1.3 !important;
+            font-size: 17px !important;
+            line-height: 1.25 !important;
           }
 
           .community-topic-preview {
-            font-size: 14px !important;
-            line-height: 1.65 !important;
-            margin-bottom: 10px !important;
+            font-size: 13px !important;
+            line-height: 1.55 !important;
+            margin-bottom: 8px !important;
           }
 
           .community-topic-actions {
             display: grid !important;
             grid-template-columns: 1fr 1fr !important;
             gap: 8px !important;
-            margin-top: 16px !important;
+            margin-top: 12px !important;
           }
 
           .community-topic-actions a,
           .community-topic-actions button {
             width: 100% !important;
-            min-height: 46px !important;
+            min-height: 42px !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: 0 12px !important;
+            padding: 0 10px !important;
             box-sizing: border-box !important;
+            font-size: 13px !important;
           }
 
         }
@@ -612,11 +630,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
           }
 
           .community-composer-fields textarea {
-            min-height: 132px !important;
+            min-height: 96px !important;
           }
 
           .community-topic-card {
-            padding: 13px !important;
+            padding: 12px !important;
           }
 
           .community-tabs {
@@ -626,6 +644,11 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
 
           .community-topic-actions {
             grid-template-columns: 1fr 1fr !important;
+          }
+
+          .community-topic-meta {
+            gap: 8px !important;
+            margin-bottom: 6px !important;
           }
         }
       `}</style>

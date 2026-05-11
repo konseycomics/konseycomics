@@ -201,7 +201,7 @@ export default async function ToplulukPage() {
                 </section>
               ))}
 
-              <details className="community-sidebar-card community-sidebar-group" open style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+              <details className="community-sidebar-card community-sidebar-group" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <summary className="community-sidebar-summary" style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px', listStyle: 'none', cursor: 'pointer' }}>
                   Kategoriler
                 </summary>
@@ -214,7 +214,7 @@ export default async function ToplulukPage() {
                 </div>
               </details>
 
-              <details className="community-sidebar-card community-sidebar-group" open style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
+              <details className="community-sidebar-card community-sidebar-group" style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.025))' }}>
                 <summary className="community-sidebar-summary" style={{ color: '#fff', fontSize: '12px', fontWeight: 800, letterSpacing: '0.9px', textTransform: 'uppercase', marginBottom: '12px', listStyle: 'none', cursor: 'pointer' }}>
                   Popüler Konular
                 </summary>
@@ -301,15 +301,15 @@ export default async function ToplulukPage() {
             }
 
             .community-hero-title {
-              font-size: 52px !important;
+              font-size: 42px !important;
               line-height: 0.94 !important;
             }
 
             .community-hero-copy {
               margin: 10px 0 0 !important;
               max-width: none !important;
-              font-size: 14px !important;
-              line-height: 1.65 !important;
+              font-size: 13px !important;
+              line-height: 1.55 !important;
             }
 
             .community-category-list {
@@ -351,6 +351,10 @@ export default async function ToplulukPage() {
 
             .community-sidebar-group > *:not(summary) {
               padding: 0 14px 14px !important;
+            }
+
+            .community-sidebar-group:not([open]) > *:not(summary) {
+              display: none !important;
             }
           }
 

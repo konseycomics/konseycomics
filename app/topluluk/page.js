@@ -51,6 +51,7 @@ export default async function ToplulukPage() {
   const planetView = buildPlanetView(planetPosts)
   const featured = planetView.featured || planetView.all[0] || null
   const spotlight = (planetView.spotlight.length > 0 ? planetView.spotlight : planetView.all.slice(1)).slice(0, 4)
+  const latestNews = planetView.all.slice(0, 3)
   const pollTopic = topics.find((topic) => topic.anket_aktif && (topic.anket_sonuclari || []).length > 0) || null
   const feedCards = [...topics]
     .sort((a, b) => ((b.begeni_sayisi || 0) + (b.yanit_sayisi || 0)) - ((a.begeni_sayisi || 0) + (a.yanit_sayisi || 0)))

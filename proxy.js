@@ -14,9 +14,13 @@ function maintenanceResponse() {
     <style>
       :root {
         color-scheme: dark;
-        --text: #f6f4ee;
-        --gold: #d7a73a;
-        --line: rgba(246, 244, 238, 0.14);
+        --bg: #000;
+        --panel: rgba(255, 255, 255, 0.035);
+        --panel-strong: rgba(255, 255, 255, 0.075);
+        --text: #f5f5f3;
+        --muted: #b8b8b2;
+        --gold: #f0b232;
+        --line: rgba(255, 255, 255, 0.11);
       }
 
       * {
@@ -28,7 +32,7 @@ function maintenanceResponse() {
         width: 100%;
         min-height: 100%;
         margin: 0;
-        background: #000;
+        background: var(--bg);
         color: var(--text);
         font-family: Arial, Helvetica, sans-serif;
       }
@@ -43,12 +47,13 @@ function maintenanceResponse() {
       body::before {
         content: "";
         position: fixed;
-        inset: -35%;
+        inset: 0;
         background:
-          radial-gradient(circle at 50% 50%, rgba(215, 167, 58, 0.18), transparent 20%),
-          conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent, rgba(215, 167, 58, 0.11), transparent);
-        opacity: 0.68;
-        animation: slowSpin 22s linear infinite;
+          radial-gradient(circle at 50% 38%, rgba(240, 178, 50, 0.16), transparent 28%),
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 40%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 42%);
+        opacity: 0.95;
+        animation: ambience 7s ease-in-out infinite alternate;
       }
 
       body::after {
@@ -56,149 +61,158 @@ function maintenanceResponse() {
         position: fixed;
         inset: 0;
         background:
-          linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent),
-          repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.025) 1px, transparent 1px, transparent 8px);
-        mix-blend-mode: screen;
-        opacity: 0.32;
-        transform: translateX(-120%);
-        animation: sweep 4.8s ease-in-out infinite;
+          radial-gradient(circle at center, transparent 0 42%, rgba(0, 0, 0, 0.86) 78%),
+          repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 8px);
+        pointer-events: none;
       }
 
       main {
         position: relative;
         z-index: 1;
-        width: min(92vw, 900px);
-        padding: 40px 24px;
+        width: min(92vw, 860px);
+        padding: 42px 22px;
         text-align: center;
       }
 
-      .mark {
-        position: relative;
-        display: grid;
-        place-items: center;
-        width: 74px;
-        height: 74px;
+      .logo {
+        display: block;
+        width: min(270px, 64vw);
+        height: auto;
         margin: 0 auto 34px;
-        border: 1px solid var(--line);
-        border-radius: 50%;
-        animation: float 3.2s ease-in-out infinite;
+        filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.9));
+        animation: enter 760ms cubic-bezier(0.16, 1, 0.3, 1) both;
       }
 
-      .mark::after {
+      .signal {
+        position: relative;
+        width: min(100%, 540px);
+        height: 1px;
+        margin: 0 auto 30px;
+        background: linear-gradient(90deg, transparent, rgba(240, 178, 50, 0.55), transparent);
+        overflow: hidden;
+        animation: enter 760ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+      }
+
+      .signal::after {
         content: "";
         position: absolute;
-        inset: 12px;
-        border: 1px solid rgba(215, 167, 58, 0.42);
-        border-radius: 50%;
-        animation: ring 2.4s ease-in-out infinite;
+        top: 0;
+        left: -18%;
+        width: 18%;
+        height: 100%;
+        background: var(--text);
+        box-shadow: 0 0 22px rgba(245, 242, 234, 0.82);
+        animation: trace 3.6s ease-in-out infinite;
       }
 
-      .mark::before {
-        content: "";
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--gold);
-        box-shadow: 0 0 34px rgba(215, 167, 58, 0.95);
-        animation: pulse 1.8s ease-in-out infinite;
+      .eyebrow {
+        margin: 0 0 16px;
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        animation: enter 760ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
       }
 
       h1 {
-        position: relative;
         margin: 0;
-        font-size: clamp(42px, 9vw, 112px);
-        line-height: 0.94;
+        font-size: clamp(42px, 8.2vw, 96px);
+        line-height: 0.88;
         letter-spacing: 0;
-        word-spacing: 0.12em;
         text-transform: uppercase;
         text-wrap: balance;
         font-weight: 950;
-        text-shadow:
-          0 0 28px rgba(255, 255, 255, 0.16),
-          0 18px 70px rgba(0, 0, 0, 0.9);
-        animation: titleIn 900ms cubic-bezier(0.16, 1, 0.3, 1) both, flicker 6s ease-in-out 1s infinite;
+        text-shadow: 0 18px 70px rgba(0, 0, 0, 0.92);
+        animation: enter 820ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
       }
 
-      h1 .glitch {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        opacity: 0;
+      .social {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 44px;
+        margin-top: 32px;
+        padding: 0 18px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        animation: enter 760ms cubic-bezier(0.16, 1, 0.3, 1) 340ms both;
+        transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
       }
 
-      h1 .glitch-a {
-        color: rgba(215, 167, 58, 0.5);
-        transform: translate(-2px, 0);
-        animation: glitchA 4.7s steps(1, end) infinite;
+      .social:hover {
+        border-color: rgba(240, 178, 50, 0.48);
+        background: rgba(217, 170, 61, 0.1);
+        transform: translateY(-2px);
       }
 
-      h1 .glitch-b {
-        color: rgba(255, 255, 255, 0.42);
-        transform: translate(2px, 0);
-        animation: glitchB 5.2s steps(1, end) infinite;
+      .social svg {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
       }
 
-      @keyframes slowSpin {
-        to { transform: rotate(360deg); }
+      .social span {
+        color: var(--gold);
       }
 
-      @keyframes sweep {
-        0%, 48% { transform: translateX(-120%); }
-        64%, 100% { transform: translateX(120%); }
-      }
-
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-      }
-
-      @keyframes ring {
-        0%, 100% { transform: scale(0.86); opacity: 0.5; }
-        50% { transform: scale(1.22); opacity: 0.95; }
-      }
-
-      @keyframes pulse {
-        0%, 100% {
-          transform: scale(0.82);
-          opacity: 0.45;
-        }
-        50% {
+      @keyframes ambience {
+        from {
+          opacity: 0.76;
           transform: scale(1);
+        }
+        to {
           opacity: 1;
+          transform: scale(1.04);
         }
       }
 
-      @keyframes titleIn {
+      @keyframes trace {
+        0%, 30% { left: -18%; opacity: 0; }
+        42% { opacity: 1; }
+        70%, 100% { left: 100%; opacity: 0; }
+      }
+
+      @keyframes enter {
         from {
           opacity: 0;
-          filter: blur(16px);
-          transform: translateY(18px) scale(0.98);
+          filter: blur(10px);
+          transform: translateY(14px);
         }
         to {
           opacity: 1;
           filter: blur(0);
-          transform: translateY(0) scale(1);
+          transform: translateY(0);
         }
       }
 
-      @keyframes flicker {
-        0%, 88%, 100% { opacity: 1; }
-        89% { opacity: 0.78; }
-        90% { opacity: 1; }
-        92% { opacity: 0.88; }
-        93% { opacity: 1; }
-      }
+      @media (max-width: 560px) {
+        main {
+          width: 100%;
+          padding: 34px 20px;
+        }
 
-      @keyframes glitchA {
-        0%, 92%, 100% { opacity: 0; clip-path: inset(0 0 0 0); }
-        93% { opacity: 0.85; clip-path: inset(12% 0 64% 0); }
-        94% { opacity: 0; }
-      }
+        .logo {
+          width: min(230px, 70vw);
+          margin-bottom: 28px;
+        }
 
-      @keyframes glitchB {
-        0%, 84%, 100% { opacity: 0; clip-path: inset(0 0 0 0); }
-        85% { opacity: 0.72; clip-path: inset(62% 0 18% 0); }
-        86% { opacity: 0; }
+        h1 {
+          font-size: clamp(42px, 15vw, 76px);
+        }
+
+        .social {
+          min-height: 48px;
+          padding: 0 16px;
+          font-size: 12px;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -213,12 +227,18 @@ function maintenanceResponse() {
   </head>
   <body>
     <main aria-label="Bakim bildirimi">
-      <div class="mark" aria-hidden="true"></div>
-      <h1>
-        <span>KONSEY ÇOK KISA SÜRELİĞİNE BAKIMDA</span>
-        <span class="glitch glitch-a" aria-hidden="true">KONSEY ÇOK KISA SÜRELİĞİNE BAKIMDA</span>
-        <span class="glitch glitch-b" aria-hidden="true">KONSEY ÇOK KISA SÜRELİĞİNE BAKIMDA</span>
-      </h1>
+      <img class="logo" src="/demo/logo.png" alt="Konsey Comics" />
+      <div class="signal" aria-hidden="true"></div>
+      <p class="eyebrow">Çok kısa süreliğine</p>
+      <h1>Bakımdayız</h1>
+      <a class="social" href="https://www.instagram.com/konseycomics" rel="noopener noreferrer" target="_blank" aria-label="KonseyComics Instagram hesabini ac">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="5.5" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor"/>
+        </svg>
+        Instagram <span>@konseycomics</span>
+      </a>
     </main>
   </body>
 </html>`, {
@@ -279,5 +299,5 @@ export async function proxy(req) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|demo/logo.png).*)'],
 }

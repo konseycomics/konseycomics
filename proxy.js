@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-const MAINTENANCE_ENABLED = process.env.MAINTENANCE_MODE !== 'false'
+const MAINTENANCE_ENABLED = process.env.MAINTENANCE_MODE === 'true'
 
 function maintenanceResponse() {
   return new NextResponse(`<!doctype html>

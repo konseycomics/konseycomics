@@ -27,6 +27,7 @@
 .agents/
 supabase/.temp/
 skills-lock.json
+.media-migration/
 
 # debug
 npm-debug.log*

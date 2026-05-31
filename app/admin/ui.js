@@ -45,42 +45,81 @@ export function Msg({ text }) {
   return <div style={{ background: err ? '#fff0f0' : '#f0fdf4', border: `1px solid ${err ? '#fecaca' : '#bbf7d0'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: err ? '#dc2626' : '#166534' }}>{text}</div>
 }
 
+async function uploadAdminImage(file, { bucket, prefix }) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('Oturum bulunamadı.')
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('bucket', bucket)
+  formData.append('prefix', prefix)
+
+  const res = await fetch('/api/media/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: formData,
+  })
+
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(payload.error || 'Görsel yüklenemedi.')
+  return payload.url
+}
+
 export function ResimYukle({ onizleme, onChange, bucket = 'kapaklar', width = '100px', height = '133px' }) {
+  const [yukleniyor, setYukleniyor] = useState(false)
+
   async function handle(e) {
     const file = e.target.files[0]
     if (!file) return
     const preview = URL.createObjectURL(file)
-    const path = `resim-${Date.now()}.${file.name.split('.').pop()}`
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-    if (!error) {
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-      onChange(data.publicUrl, preview)
+    setYukleniyor(true)
+    try {
+      const url = await uploadAdminImage(file, { bucket, prefix: 'resim' })
+      onChange(url, preview)
+    } catch (error) {
+      alert(error.message || 'Görsel yüklenemedi.')
+      URL.revokeObjectURL(preview)
+    } finally {
+      setYukleniyor(false)
+      e.target.value = ''
     }
   }
 
   return (
     <label style={{ width, height, border: '1px dashed rgba(255,255,255,0.18)', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: PANEL_BG_STRONG, flexShrink: 0 }}>
-      {onizleme ? <img src={onizleme} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '28px', color: TEXT_SUBTLE }}>+</span>}
-      <input type="file" accept="image/*" onChange={handle} style={{ display: 'none' }} />
+      {yukleniyor ? (
+        <span style={{ fontSize: '12px', color: TEXT_SUBTLE, fontWeight: 700 }}>Yükleniyor</span>
+      ) : onizleme ? (
+        <img src={onizleme} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <span style={{ fontSize: '28px', color: TEXT_SUBTLE }}>+</span>
+      )}
+      <input type="file" accept="image/*" onChange={handle} disabled={yukleniyor} style={{ display: 'none' }} />
     </label>
   )
 }
 
 export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' }) {
+  const [yukleniyor, setYukleniyor] = useState(false)
+
   async function handle(e) {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    const yuklenenler = await Promise.all(files.map(async (file) => {
-      const path = `sayfa-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${file.name.split('.').pop()}`
-      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-      if (error) return null
-      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-      return data.publicUrl
-    }))
-
-    onChange([...(gorseller || []), ...yuklenenler.filter(Boolean)])
-    e.target.value = ''
+    setYukleniyor(true)
+    try {
+      const yuklenenler = await Promise.all(files.map((file) => (
+        uploadAdminImage(file, { bucket, prefix: 'sayfa' })
+      )))
+      onChange([...(gorseller || []), ...yuklenenler.filter(Boolean)])
+    } catch (error) {
+      alert(error.message || 'Görseller yüklenemedi.')
+    } finally {
+      setYukleniyor(false)
+      e.target.value = ''
+    }
   }
 
   function kaldir(index) {
@@ -100,8 +139,8 @@ export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' 
   return (
     <div>
       <label style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'10px 16px', border:'1px dashed rgba(255,255,255,0.18)', borderRadius:'12px', cursor:'pointer', background:PANEL_BG_STRONG, fontSize:'13px', fontWeight:600, color:'#fff' }}>
-        + Sayfa Gorselleri Yukle
-        <input type="file" accept="image/*" multiple onChange={handle} style={{ display:'none' }} />
+        {yukleniyor ? 'Yukleniyor...' : '+ Sayfa Gorselleri Yukle'}
+        <input type="file" accept="image/*" multiple onChange={handle} disabled={yukleniyor} style={{ display:'none' }} />
       </label>
       <div style={{ fontSize:'12px', color:TEXT_SUBTLE, lineHeight:1.6, marginTop:'10px', marginBottom:'12px' }}>
         Gorselleri yukleme sirasi okuyucudaki okuma sirasi olur. Sonradan asagi yukari tasiyabilirsin.

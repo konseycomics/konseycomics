@@ -27,6 +27,28 @@ function buildBannerMeta(src, x, y, z) {
   return `${src}#x=${Math.round(x)}&y=${Math.round(y)}&z=${z.toFixed(2)}`
 }
 
+async function uploadProfileImage(file, prefix) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('Oturum bulunamadı.')
+
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('bucket', 'avatarlar')
+  formData.append('prefix', prefix)
+
+  const res = await fetch('/api/media/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: formData,
+  })
+
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(payload.error || 'Görsel yüklenemedi.')
+  return payload.url
+}
+
 function formatRol(rol) {
   if (!rol) return 'Okuyucu'
   return String(rol)
@@ -382,14 +404,16 @@ export default function ProfilDuzenle() {
   async function handleKaydetBlob(blob) {
     setModalSrc(null)
     setAvatarYukleniyor(true)
+    setHata('')
     const onizleme = URL.createObjectURL(blob)
     setAvatarOnizleme(onizleme)
 
-    const path = `avatar-${profil.id}-${Date.now()}.jpg`
-    const { error } = await supabase.storage.from('avatarlar').upload(path, blob, { contentType: 'image/jpeg', upsert: true })
-    if (!error) {
-      const { data } = supabase.storage.from('avatarlar').getPublicUrl(path)
-      setForm(f => ({ ...f, avatar_url: data.publicUrl }))
+    try {
+      const url = await uploadProfileImage(blob, 'avatar')
+      setForm(f => ({ ...f, avatar_url: url }))
+    } catch (error) {
+      setHata(error.message || 'Avatar yüklenemedi.')
+      URL.revokeObjectURL(onizleme)
     }
     setAvatarYukleniyor(false)
   }
@@ -399,26 +423,19 @@ export default function ProfilDuzenle() {
     if (!file || !profil?.id) return
 
     setBannerYukleniyor(true)
+    setHata('')
     const onizleme = URL.createObjectURL(file)
     setBannerOnizleme(onizleme)
 
-    const ext = file.name.split('.').pop() || 'jpg'
-    const path = `banner-${profil.id}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('avatarlar').upload(path, file, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-    })
-
-    if (error) {
-      setHata(error.message)
-      setBannerYukleniyor(false)
-      return
+    try {
+      const url = await uploadProfileImage(file, 'banner')
+      setForm(f => ({ ...f, banner_url: url }))
+      setBannerPozisyon({ x: 50, y: 50 })
+      setBannerZoom(1.12)
+    } catch (error) {
+      setHata(error.message || 'Banner yüklenemedi.')
+      URL.revokeObjectURL(onizleme)
     }
-
-    const { data } = supabase.storage.from('avatarlar').getPublicUrl(path)
-    setForm(f => ({ ...f, banner_url: data.publicUrl }))
-    setBannerPozisyon({ x: 50, y: 50 })
-    setBannerZoom(1.12)
     setBannerYukleniyor(false)
   }
 

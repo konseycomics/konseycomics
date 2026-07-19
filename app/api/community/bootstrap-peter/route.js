@@ -66,16 +66,22 @@ Sana ait olmayan çalışmalarda sanatçıyı ve kaynağı belirt. Görsellerde 
 ]
 
 export async function POST(req) {
+  let stage = 'authorize'
   try {
     if (!authorized(req)) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+    stage = 'environment'
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const service = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !service) throw new Error('Supabase environment variables are missing.')
+    if (req.headers.get('x-setup-diagnose') === '1') return NextResponse.json({ ok: true, stage: 'environment', hasUrl: Boolean(url), hasService: Boolean(service), version: 'bootstrap-v2' })
+    stage = 'client'
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } })
 
+    stage = 'profile_lookup'
     let { data: profile } = await admin.from('profiller').select('id, kullanici_adi').eq('kullanici_adi', 'peter_parker').maybeSingle()
     let userId = profile?.id
     if (!userId) {
+      stage = 'auth_create'
       const authResponse = await fetch(`${url}/auth/v1/admin/users`, {
         method: 'POST',
         headers: { apikey: service, Authorization: `Bearer ${service}`, 'Content-Type': 'application/json' },
@@ -91,6 +97,7 @@ export async function POST(req) {
       userId = created.id
     }
 
+    stage = 'profile_upsert'
     const { error: profileError } = await admin.from('profiller').upsert({
       id: userId,
       kullanici_adi: 'peter_parker',
@@ -99,10 +106,12 @@ export async function POST(req) {
     }, { onConflict: 'id' })
     if (profileError) throw profileError
 
+    stage = 'team_upsert'
     const { data: existingTeam } = await admin.from('ekip').select('id').eq('profil_id', userId).maybeSingle()
     if (existingTeam?.id) await admin.from('ekip').update({ isim: 'Peter Parker', unvan: 'Topluluk Yöneticisi' }).eq('id', existingTeam.id)
     else await admin.from('ekip').insert({ isim: 'Peter Parker', unvan: 'Topluluk Yöneticisi', profil_id: userId })
 
+    stage = 'forums_lookup'
     const { data: forums, error: forumError } = await admin.from('topluluk_forumlari').select('id, slug')
     if (forumError) throw forumError
     const forumMap = new Map((forums || []).map((forum) => [forum.slug, forum.id]))
@@ -118,10 +127,11 @@ export async function POST(req) {
       aktif: true,
       spoiler: false,
     }))
+    stage = 'topics_upsert'
     const { error: topicError } = await admin.from('topluluk_konulari').upsert(rows, { onConflict: 'slug' })
     if (topicError) throw topicError
     return NextResponse.json({ ok: true, userId, topics: rows.map((row) => row.slug) })
   } catch (error) {
-    return NextResponse.json({ error: error?.message || 'Bootstrap failed.' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Bootstrap failed.', stage }, { status: 500 })
   }
 }

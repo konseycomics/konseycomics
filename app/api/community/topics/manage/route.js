@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getForumBySlug } from '../../../../lib/forumConfig'
 
 function getClients() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -29,8 +30,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { konuId, action } = await req.json()
-    if (!konuId || !['delete', 'hide'].includes(action)) {
+    const { konuId, action, forumSlug } = await req.json()
+    const allowedActions = ['delete', 'hide', 'pin', 'unpin', 'lock', 'unlock', 'move']
+    if (!konuId || !allowedActions.includes(action)) {
       return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
     }
 
@@ -61,19 +63,34 @@ export async function POST(req) {
     }
 
     const isOwner = topicRow.kullanici_id === userId
-    const isAdmin = ['admin', 'yonetici'].includes(String(profileRow?.rol || '').toLowerCase())
+    const isAdmin = ['admin', 'yonetici', 'moderator'].includes(String(profileRow?.rol || '').toLowerCase())
 
     if (action === 'delete' && !isOwner && !isAdmin) {
       return NextResponse.json({ error: 'Bu konuyu silme yetkin yok.' }, { status: 403 })
     }
 
-    if (action === 'hide' && !isAdmin) {
-      return NextResponse.json({ error: 'Bu konuyu gizleme yetkin yok.' }, { status: 403 })
+    if (action !== 'delete' && !isAdmin) {
+      return NextResponse.json({ error: 'Bu moderasyon işlemi için yetkin yok.' }, { status: 403 })
+    }
+
+    const updatePayload = { updated_at: new Date().toISOString() }
+    if (action === 'delete' || action === 'hide') updatePayload.aktif = false
+    if (action === 'pin') updatePayload.sabitlendi = true
+    if (action === 'unpin') updatePayload.sabitlendi = false
+    if (action === 'lock') updatePayload.kilitli = true
+    if (action === 'unlock') updatePayload.kilitli = false
+    if (action === 'move') {
+      const forum = getForumBySlug(forumSlug)
+      if (!forum) return NextResponse.json({ error: 'Hedef forum bulunamadı.' }, { status: 400 })
+      const { data: forumRow } = await adminClient.from('topluluk_forumlari').select('id').eq('slug', forum.slug).maybeSingle()
+      if (!forumRow?.id) return NextResponse.json({ error: 'Forum veritabanında bulunamadı.' }, { status: 400 })
+      updatePayload.forum_id = forumRow.id
+      updatePayload.kategori = forum.category
     }
 
     const { error: updateError } = await adminClient
       .from('topluluk_konulari')
-      .update({ aktif: false, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', konuId)
 
     if (updateError) {
@@ -83,7 +100,7 @@ export async function POST(req) {
     return NextResponse.json({
       ok: true,
       action,
-      hidden: true,
+      hidden: Boolean(updatePayload.aktif === false),
     })
   } catch (error) {
     return NextResponse.json({ error: error?.message || 'Topic manage failed.' }, { status: 500 })

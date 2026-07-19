@@ -49,6 +49,9 @@ function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
     begeni_sayisi: Number(row.begeni_sayisi || 0),
     goruntulenme_sayisi: Number(row.goruntulenme_sayisi || 0),
     sabitlendi: Boolean(row.sabitlendi),
+    kilitli: Boolean(row.kilitli),
+    one_cikan: Boolean(row.one_cikan),
+    forum_id: row.forum_id || null,
     anket_aktif: Boolean(row.anket_aktif),
     anket_sorusu: row.anket_sorusu || '',
     anket_secenekleri: pollOptions,
@@ -82,7 +85,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 
   ;({ data: topicRows, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id')
     .eq('aktif', true)
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
@@ -175,7 +178,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   ;({ data: topicRow, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id')
     .eq('slug', slug)
     .eq('aktif', true)
     .maybeSingle())

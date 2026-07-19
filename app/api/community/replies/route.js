@@ -47,11 +47,27 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { data: topicRow } = await adminClient
+    let { data: topicRow, error: topicError } = await adminClient
       .from('topluluk_konulari')
-      .select('id, kullanici_id, baslik')
+      .select('id, kullanici_id, baslik, kilitli')
       .eq('id', konuId)
       .maybeSingle()
+
+    if (topicError?.code === '42703') {
+      ;({ data: topicRow } = await adminClient
+        .from('topluluk_konulari')
+        .select('id, kullanici_id, baslik')
+        .eq('id', konuId)
+        .maybeSingle())
+    }
+
+    if (!topicRow?.id) return NextResponse.json({ error: 'Konu bulunamadı.' }, { status: 404 })
+    if (topicRow.kilitli) {
+      const { data: requesterProfile } = await adminClient.from('public_profiller').select('rol').eq('id', userData.user.id).maybeSingle()
+      if (!['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())) {
+        return NextResponse.json({ error: 'Bu konu yeni yanıtlara kapatılmış.' }, { status: 423 })
+      }
+    }
 
     let parentReplyRow = null
     if (parentYanitId) {
@@ -114,6 +130,28 @@ export async function POST(req) {
         okundu: false,
       })
     }
+
+    const excludedRecipients = new Set([
+      userData.user.id,
+      topicRow?.kullanici_id,
+      parentReplyRow?.kullanici_id,
+    ].filter(Boolean))
+    const { data: subscriptionRows } = await adminClient
+      .from('topluluk_abonelikleri')
+      .select('kullanici_id')
+      .eq('konu_id', konuId)
+
+    const notificationRows = (subscriptionRows || [])
+      .filter((row) => !excludedRecipients.has(row.kullanici_id))
+      .map((row) => ({
+        alici_id: row.kullanici_id,
+        tip: 'topluluk',
+        baslik: 'Takip ettiğin konuya yeni yanıt',
+        mesaj: `${topicRow?.baslik || 'Topluluk konusu'} içinde yeni bir yanıt paylaşıldı.`,
+        okundu: false,
+      }))
+
+    if (notificationRows.length > 0) await adminClient.from('bildirimler').insert(notificationRows)
 
     return NextResponse.json({
       ok: true,

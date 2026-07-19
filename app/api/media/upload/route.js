@@ -5,7 +5,7 @@ import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
-const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site'])
+const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site', 'forum'])
 const USER_AVATAR_PREFIXES = new Set(['avatar', 'banner'])
 
 function getClients() {
@@ -61,6 +61,7 @@ function optimizeSettings(storageKey) {
   if (bucket === 'avatarlar' && filename?.startsWith('banner-')) return { width: 1600, quality: 78 }
   if (bucket === 'bolum-kapaklari') return { width: 900, quality: 78 }
   if (bucket === 'site') return { width: 1920, quality: 80 }
+  if (bucket === 'forum') return { width: 1600, quality: 78 }
   if (bucket === 'kapaklar' && filename?.startsWith('sayfa-')) return { width: 1600, quality: 78 }
   if (bucket === 'kapaklar') return { width: 1100, quality: 80 }
   return { width: 1400, quality: 78 }
@@ -159,13 +160,17 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Geçersiz bucket.' }, { status: 400 })
     }
 
-    const isUserAvatarUpload = bucket === 'avatarlar' && USER_AVATAR_PREFIXES.has(prefix)
-    if (!requester.isAdmin && !isUserAvatarUpload) {
+    const isUserUpload = (bucket === 'avatarlar' && USER_AVATAR_PREFIXES.has(prefix)) || bucket === 'forum'
+    if (!requester.isAdmin && !isUserUpload) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 
     if (!String(file.type || '').startsWith('image/')) {
       return NextResponse.json({ error: 'Sadece görsel yüklenebilir.' }, { status: 400 })
+    }
+
+    if (Number(file.size || 0) > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Görsel en fazla 10 MB olabilir.' }, { status: 400 })
     }
 
     const original = Buffer.from(await file.arrayBuffer())

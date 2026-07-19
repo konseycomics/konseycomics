@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
-import ToplulukKonuDetayClient from '../../ToplulukKonuDetayClient'
+import ForumTopicClient from '../../ForumTopicClient'
 import { buildMetadata, createSeoDescription } from '../../../lib/seo'
 import { getCommunityTopicBySlug, incrementCommunityTopicView } from '../../../lib/communityData'
+import '../../forum.css'
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params
@@ -59,10 +60,10 @@ export default async function ToplulukKonuDetayPage({ params }) {
   return (
     <>
       <Navbar />
-      <main style={{ background: '#050505', minHeight: '100vh' }}>
-        <section className="site-shell" style={{ paddingTop: '28px', paddingBottom: '40px' }}>
-          <div style={{ maxWidth: '980px', margin: '0 auto' }}>
-            <ToplulukKonuDetayClient topic={topicWithFreshView} initialReplies={replies} />
+      <main className="forum-page">
+        <section className="site-section forum-page-inner">
+          <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+            <ForumTopicClient topic={topicWithFreshView} initialReplies={replies} />
           </div>
         </section>
       </main>

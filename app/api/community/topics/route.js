@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { slugifyTopicTitle } from '../../../lib/communityData'
+import { getForumBySlug, getForumForCategory } from '../../../lib/forumConfig'
 
 function getClients() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -63,7 +64,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
     }
 
-    const { baslik, icerik, kategori, etiketler, anket, spoiler } = await req.json()
+    const { baslik, icerik, kategori, forumSlug, etiketler, anket, spoiler } = await req.json()
     const cleanTitle = String(baslik || '').trim()
     const cleanBody = String(icerik || '').trim()
 
@@ -83,6 +84,7 @@ export async function POST(req) {
     }
 
     const slug = await buildUniqueSlug(adminClient, cleanTitle)
+    const selectedForum = getForumBySlug(forumSlug) || getForumForCategory(kategori)
     const safeTags = normalizeTags(etiketler)
     const pollEnabled = Boolean(anket?.aktif)
     const pollOptions = normalizePollOptions(anket?.secenekler)
@@ -91,22 +93,50 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Anket için en az 2 seçenek girmelisin.' }, { status: 400 })
     }
 
-    const { data: inserted, error: insertError } = await adminClient
+    const { data: requesterProfile } = await adminClient
+      .from('public_profiller')
+      .select('id, rol')
+      .eq('id', userData.user.id)
+      .maybeSingle()
+    const isStaff = ['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())
+    if (selectedForum?.slug === 'duyurular' && !isStaff) {
+      return NextResponse.json({ error: 'Duyurular forumunda yalnızca yönetim konu açabilir.' }, { status: 403 })
+    }
+
+    const { data: forumRow } = await adminClient
+      .from('topluluk_forumlari')
+      .select('id, slug')
+      .eq('slug', selectedForum.slug)
+      .maybeSingle()
+
+    const insertPayload = {
+      kullanici_id: userData.user.id,
+      slug,
+      baslik: cleanTitle,
+      icerik: cleanBody,
+      kategori: selectedForum.category,
+      etiketler: safeTags,
+      spoiler: Boolean(spoiler),
+      anket_aktif: pollEnabled,
+      anket_sorusu: pollEnabled ? cleanTitle : null,
+      anket_secenekleri: pollEnabled ? pollOptions : [],
+    }
+    if (forumRow?.id) insertPayload.forum_id = forumRow.id
+
+    let { data: inserted, error: insertError } = await adminClient
       .from('topluluk_konulari')
-      .insert({
-        kullanici_id: userData.user.id,
-        slug,
-        baslik: cleanTitle,
-        icerik: cleanBody,
-        kategori: String(kategori || 'Genel Sohbet').trim() || 'Genel Sohbet',
-        etiketler: safeTags,
-        spoiler: Boolean(spoiler),
-        anket_aktif: pollEnabled,
-        anket_sorusu: pollEnabled ? cleanTitle : null,
-        anket_secenekleri: pollEnabled ? pollOptions : [],
-      })
+      .insert(insertPayload)
       .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi')
       .single()
+
+    if (insertError?.code === '42703' && insertPayload.forum_id) {
+      delete insertPayload.forum_id
+      ;({ data: inserted, error: insertError } = await adminClient
+        .from('topluluk_konulari')
+        .insert(insertPayload)
+        .select('id, slug, baslik, icerik, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi')
+        .single())
+    }
 
     if (insertError) {
       return NextResponse.json({ error: insertError.message }, { status: 400 })

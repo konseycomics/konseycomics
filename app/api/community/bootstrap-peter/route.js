@@ -76,14 +76,19 @@ export async function POST(req) {
     let { data: profile } = await admin.from('profiller').select('id, kullanici_adi').eq('kullanici_adi', 'peter_parker').maybeSingle()
     let userId = profile?.id
     if (!userId) {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email: 'peter.parker@konseycomics.com',
-        password: `${randomUUID()}Aa7!${randomUUID()}`,
-        email_confirm: true,
-        user_metadata: { kullanici_adi: 'peter_parker', display_name: 'Peter Parker' },
+      const authResponse = await fetch(`${url}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: { apikey: service, Authorization: `Bearer ${service}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'peter.parker@konseycomics.com',
+          password: `${randomUUID()}Aa7!${randomUUID()}`,
+          email_confirm: true,
+          user_metadata: { kullanici_adi: 'peter_parker', display_name: 'Peter Parker' },
+        }),
       })
-      if (createError) throw createError
-      userId = created.user.id
+      const created = await authResponse.json().catch(() => ({}))
+      if (!authResponse.ok || !created?.id) throw new Error(created?.msg || created?.message || `Auth user creation failed (${authResponse.status}).`)
+      userId = created.id
     }
 
     const { error: profileError } = await admin.from('profiller').upsert({

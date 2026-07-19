@@ -160,7 +160,7 @@ export async function POST(req) {
           alici_id: userData.user.id,
           tip: 'topluluk',
           baslik: 'Konun paylaşıldı',
-          mesaj: `${cleanTitle} konusu topluluk akışına eklendi.`,
+          mesaj: `${cleanTitle} konusu forum akışına eklendi.`,
           okundu: false,
         }),
     ])
@@ -171,7 +171,7 @@ export async function POST(req) {
       ok: true,
       topic: {
         ...inserted,
-        href: `/topluluk/konu/${inserted.slug}`,
+        href: `/forum/konu/${inserted.slug}`,
         profil: profil || null,
         source: 'topic',
       },

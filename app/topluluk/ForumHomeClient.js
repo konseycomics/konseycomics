@@ -246,7 +246,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
     <div className="forum-home">
       <header className="forum-header">
         <div>
-          <div className="forum-eyebrow"><span /> KONSEY TOPLULUĞU</div>
+          <div className="forum-eyebrow"><span /> KONSEY FORUMU</div>
           <h1>Konsey Forum</h1>
           <p>Okuduklarımızı konuştuğumuz, teorileri büyüttüğümüz ve yeni dünyalar keşfettiğimiz yer.</p>
           <div className="forum-header-stats">
@@ -328,10 +328,10 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
               <h2>{group.group}</h2>
               {group.group === 'Konsey' ? (
                 <div className="forum-row forum-planet-inline">
-                  <Link className="forum-icon gold" href={planetPosts[0]?.href || '/topluluk'} aria-label="Konsey Planet'i aç">
+                  <Link className="forum-icon gold" href={planetPosts[0]?.href || '/forum'} aria-label="Konsey Planet'i aç">
                     <Bell size={21} />
                   </Link>
-                  <Link className="forum-description" href={planetPosts[0]?.href || '/topluluk'}>
+                  <Link className="forum-description" href={planetPosts[0]?.href || '/forum'}>
                     <strong>Konsey Planet</strong>
                     <span>Konsey ekibinden haberler, yazılar ve son gelişmeler.</span>
                   </Link>
@@ -348,13 +348,13 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
                 const latest = rows[0]
                 const replyCount = rows.reduce((sum, topic) => sum + Number(topic.yanit_sayisi || 0), 0)
                 const Icon = FORUM_ICONS[forum.icon] || FolderOpen
-                const latestHref = latest?.href || (latest?.slug ? `/topluluk/konu/${latest.slug}` : '')
+                const latestHref = latest?.href || (latest?.slug ? `/forum/konu/${latest.slug}` : '')
                 return (
                   <div className="forum-row" key={forum.slug}>
-                    <Link className={`forum-icon ${forum.tone}`} href={`/topluluk/forum/${forum.slug}`} aria-label={`${forum.name} forumunu aç`}>
+                    <Link className={`forum-icon ${forum.tone}`} href={`/forum/${forum.slug}`} aria-label={`${forum.name} forumunu aç`}>
                       <Icon size={21} />
                     </Link>
-                    <Link className="forum-description" href={`/topluluk/forum/${forum.slug}`}>
+                    <Link className="forum-description" href={`/forum/${forum.slug}`}>
                       <strong>{forum.name}</strong>
                       <span>{forum.description}</span>
                     </Link>
@@ -393,7 +393,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
                     {topic.spoiler ? <span>Spoiler</span> : null}
                     {topic.anket_aktif ? <span>Anket</span> : null}
                   </div>
-                  <Link href={topic.href || `/topluluk/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
+                  <Link href={topic.href || `/forum/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
                   <span>{topic.profil?.kullanici_adi || 'Konsey Üyesi'} · {topic.kategori || 'Genel Sohbet'} <TeamMark profile={topic.profil} /></span>
                 </div>
                 <div className="forum-topic-stat"><strong>{Number(topic.yanit_sayisi || 0)}</strong><span>yanıt</span></div>
@@ -418,7 +418,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
             <div className="forum-side-title"><Flame size={17} /> Gündemde</div>
             <div className="forum-side-list">
               {popularTopics.map((topic, index) => (
-                <Link href={topic.href || `/topluluk/konu/${topic.slug}`} key={topic.id}>
+                <Link href={topic.href || `/forum/konu/${topic.slug}`} key={topic.id}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
                   <div><strong>{topic.baslik}</strong><small>{Number(topic.yanit_sayisi || 0)} yanıt · {topic.kategori}</small></div>
                 </Link>

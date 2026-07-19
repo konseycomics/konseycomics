@@ -69,6 +69,35 @@ const nextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/kategori/manga',
+        destination: '/seriler',
+        permanent: true,
+      },
+      {
+        source: '/kategori/webtoon',
+        destination: '/seriler',
+        permanent: true,
+      },
+      {
+        source: '/topluluk/forum/:slug',
+        destination: '/forum/:slug',
+        permanent: true,
+      },
+      {
+        source: '/forum/forum/:slug',
+        destination: '/forum/:slug',
+        permanent: true,
+      },
+      {
+        source: '/topluluk/:path*',
+        destination: '/forum/:path*',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

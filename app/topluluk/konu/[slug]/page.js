@@ -14,17 +14,17 @@ export async function generateMetadata({ params }) {
   if (!topic) {
     return buildMetadata({
       title: 'Konu Bulunamadı | KonseyComics',
-      description: 'Aradığın topluluk konusu bulunamadı.',
-      path: `/topluluk/konu/${slug}`,
-      keywords: ['KonseyComics topluluk', 'konu bulunamadı'],
+      description: 'Aradığın forum konusu bulunamadı.',
+      path: `/forum/konu/${slug}`,
+      keywords: ['Konsey Forum', 'konu bulunamadı'],
     })
   }
 
   return buildMetadata({
-    title: `${topic.baslik} | Topluluk | KonseyComics`,
-    description: createSeoDescription(topic.icerik_tam || topic.icerik, 'KonseyComics topluluk tartışmaları ve okur yanıtları.'),
-    path: `/topluluk/konu/${slug}`,
-    keywords: ['KonseyComics topluluk', topic.kategori, ...(topic.etiketler || [])].filter(Boolean),
+    title: `${topic.baslik} | Forum | KonseyComics`,
+    description: createSeoDescription(topic.icerik_tam || topic.icerik, 'Konsey Forum tartışmaları ve okur yanıtları.'),
+    path: `/forum/konu/${slug}`,
+    keywords: ['Konsey Forum', topic.kategori, ...(topic.etiketler || [])].filter(Boolean),
   })
 }
 
@@ -40,7 +40,7 @@ export default async function ToplulukKonuDetayPage({ params }) {
         <main style={{ background: '#050505', minHeight: '100vh' }}>
           <section className="site-shell" style={{ paddingTop: '44px', paddingBottom: '44px' }}>
             <div style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: '#fff' }}>
-              Topluluk veritabanı henüz kurulmamış görünüyor. Supabase SQL dosyasını çalıştırdıktan sonra bu alan aktif olacak.
+              Forum veritabanı henüz kurulmamış görünüyor. Supabase SQL dosyasını çalıştırdıktan sonra bu alan aktif olacak.
             </div>
           </section>
         </main>

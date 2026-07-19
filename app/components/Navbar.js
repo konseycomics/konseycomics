@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
 import { Users } from 'lucide-react'
+import ForumLaunchNotice from './ForumLaunchNotice'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -13,7 +14,7 @@ export default function Navbar() {
   const [profil, setProfil] = useState(null)
   const router = useRouter()
   const pathname = usePathname()
-  const toplulukModu = pathname.startsWith('/topluluk')
+  const forumModu = pathname.startsWith('/forum')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,15 +48,15 @@ export default function Navbar() {
   const linkler = [
     { label: 'Seriler', href: '/seriler' },
     { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
-    { label: 'Manga', href: '/kategori/manga' },
-    { label: 'Webtoon', href: '/kategori/webtoon' },
     { label: 'Hakkımızda', href: '/hakkimizda' },
     { label: 'İletişim', href: '/iletisim' },
   ]
 
   return (
     <>
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: '#000', borderBottom: '1px solid #121212' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      <ForumLaunchNotice />
+      <nav style={{ background: '#000', borderBottom: '1px solid #121212' }}>
         <div className="site-shell" style={{ height: '90px', display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>
             <Image src="/demo/logo.png" alt="Konsey Comics" width={164} height={60} priority style={{ height: '60px', width: 'auto', display: 'block' }} />
@@ -73,7 +74,7 @@ export default function Navbar() {
           </ul>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
-          <Link href="/topluluk" className="desktop-only" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', border: `1px solid ${toplulukModu ? '#e0b74c' : '#59491f'}`, borderRadius: '8px', background: toplulukModu ? '#e0b74c' : '#18140b', color: toplulukModu ? '#0b0b0b' : '#e0b74c', fontSize: '13px', fontWeight: 800, textDecoration: 'none', boxShadow: '0 8px 24px rgba(224,183,76,.10)' }}><Users size={16} /> Topluluk</Link>
+          <Link href="/forum" className="desktop-only" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', border: `1px solid ${forumModu ? '#e0b74c' : '#59491f'}`, borderRadius: '8px', background: forumModu ? '#e0b74c' : '#18140b', color: forumModu ? '#0b0b0b' : '#e0b74c', fontSize: '13px', fontWeight: 800, textDecoration: 'none', boxShadow: '0 8px 24px rgba(224,183,76,.10)' }}><Users size={16} /> Foruma Git</Link>
           {kullanici && profil ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="desktop-only">
               {(profil.rol === 'admin' || profil.rol === 'yonetici') && (
@@ -114,15 +115,16 @@ export default function Navbar() {
         </div>
         </div>
       </nav>
+      </header>
 
       {menuOpen && (
-        <div id="mobile-navigation" style={{ position: 'fixed', top: '90px', left: 0, right: 0, background: '#000', borderBottom: '1px solid #121212', padding: '12px 0', zIndex: 99, maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
+        <div id="mobile-navigation" style={{ position: 'fixed', top: '124px', left: 0, right: 0, background: '#000', borderBottom: '1px solid #121212', padding: '12px 0', zIndex: 99, maxHeight: 'calc(100vh - 124px)', overflowY: 'auto' }}>
           {linkler.map(item => (
             <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '12px 24px', fontSize: '15px', fontWeight: 500, color: '#f5f5f3', textDecoration: 'none', borderBottom: '1px solid #121212' }}>
               {item.label}
             </Link>
           ))}
-          <Link href="/topluluk" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '12px 24px 4px', padding: '12px', background: '#e0b74c', color: '#0b0b0b', borderRadius: '8px', fontSize: '14px', fontWeight: 900, textDecoration: 'none' }}><Users size={17} /> Topluluk</Link>
+          <Link href="/forum" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '12px 24px 4px', padding: '12px', background: '#e0b74c', color: '#0b0b0b', borderRadius: '8px', fontSize: '14px', fontWeight: 900, textDecoration: 'none' }}><Users size={17} /> Foruma Git</Link>
           <div style={{ padding: '12px 24px' }}>
             {kullanici && profil ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

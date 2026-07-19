@@ -9,10 +9,10 @@ import './forum.css'
 
 export async function generateMetadata() {
   return buildMetadata({
-    title: 'Konsey Forum | Çizgi Roman, Manga ve Webtoon Topluluğu',
-    description: createSeoDescription('', 'Çizgi roman, manga ve webtoon okurlarının konu açtığı, teorilerini paylaştığı ve birlikte tartıştığı KonseyComics forumu.'),
-    path: '/topluluk',
-    keywords: ['çizgi roman forumu', 'manga forumu', 'webtoon forumu', 'KonseyComics topluluk'],
+    title: 'Konsey Forum | Çizgi Roman Topluluğu',
+    description: createSeoDescription('', 'Çizgi roman okurlarının konu açtığı, teorilerini paylaştığı ve birlikte tartıştığı KonseyComics forumu.'),
+    path: '/forum',
+    keywords: ['çizgi roman forumu', 'Konsey Forum', 'KonseyComics forum'],
   })
 }
 

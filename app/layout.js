@@ -31,11 +31,11 @@ const SITE_URL = normalizeSiteUrl(
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'KonseyComics – Türkçe Çizgi Roman & Manga Okuma Platformu',
+    default: 'KonseyComics – Türkçe Çizgi Roman Okuma Platformu',
     template: '%s | KonseyComics',
   },
-  description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu. Marvel, DC, bağımsız seriler ve daha fazlası.',
-  keywords: ['çizgi roman', 'manga', 'webtoon', 'türkçe', 'okuma', 'marvel', 'dc', 'konseycomics'],
+  description: 'Türkçe çizgi roman okuma platformu. Marvel, DC, bağımsız seriler ve Konsey Forum tek yerde.',
+  keywords: ['çizgi roman', 'çizgi roman forumu', 'türkçe', 'okuma', 'marvel', 'dc', 'konseycomics'],
   authors: [{ name: 'KonseyComics' }],
   creator: 'KonseyComics',
   openGraph: {
@@ -43,14 +43,14 @@ export const metadata = {
     locale: 'tr_TR',
     url: SITE_URL,
     siteName: 'KonseyComics',
-    title: 'KonseyComics – Türkçe Çizgi Roman & Manga Okuma Platformu',
-    description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu. Marvel, DC, bağımsız seriler ve daha fazlası.',
+    title: 'KonseyComics – Türkçe Çizgi Roman Okuma Platformu',
+    description: 'Türkçe çizgi roman arşivi ve Konsey Forum.',
     images: [{ url: '/konseycomics.jpg', width: 883, height: 883, alt: 'KonseyComics' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'KonseyComics – Türkçe Çizgi Roman & Manga',
-    description: 'Türkçe çizgi roman, manga ve webtoon okuma platformu.',
+    title: 'KonseyComics – Türkçe Çizgi Roman',
+    description: 'Türkçe çizgi roman arşivi ve Konsey Forum.',
     images: ['/konseycomics.jpg'],
   },
   robots: {

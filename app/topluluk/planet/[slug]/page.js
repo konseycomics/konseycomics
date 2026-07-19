@@ -23,7 +23,7 @@ export async function generateMetadata({ params }) {
     return buildMetadata({
       title: 'Konsey Planet | Konu Bulunamadı',
       description: 'Aradığın Konsey Planet yazısı bulunamadı.',
-      path: `/topluluk/planet/${slug}`,
+      path: `/forum/planet/${slug}`,
       keywords: ['Konsey Planet', 'konu bulunamadı'],
     })
   }
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }) {
   return buildMetadata({
     title: `${post.baslik} | Konsey Planet | KonseyComics`,
     description: createSeoDescription(post.ozet || post.icerik, 'Konsey Planet manşetleri, duyuruları ve editör notları.'),
-    path: `/topluluk/planet/${slug}`,
+    path: `/forum/planet/${slug}`,
     keywords: ['Konsey Planet', post.tip, ...(post.baslik ? [post.baslik] : [])].filter(Boolean),
   })
 }
@@ -48,7 +48,7 @@ export default async function KonseyPlanetDetayPage({ params }) {
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '34px', paddingBottom: '40px' }}>
           <div style={{ maxWidth: '980px', margin: '0 auto' }}>
-            <Link href="/topluluk" style={{ color: '#b7b7b0', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', gap: '8px', alignItems: 'center', marginBottom: '18px' }}>
+            <Link href="/forum" style={{ color: '#b7b7b0', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', gap: '8px', alignItems: 'center', marginBottom: '18px' }}>
               ← Topluluğa dön
             </Link>
 

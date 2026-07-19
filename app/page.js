@@ -1,13 +1,14 @@
 import HomeClient from './page-client'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
 import { getLeaderboards } from './lib/leaderboardData'
+import { getCommunityTopics } from './lib/communityData'
 import { unstable_noStore as noStore } from 'next/cache'
 
 async function getHomePageData() {
   noStore()
   const supabase = createSupabaseServerClient()
 
-  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik] = await Promise.all([
+  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik, forumData] = await Promise.all([
     supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
     supabase
       .from('bolumler')
@@ -16,6 +17,7 @@ async function getHomePageData() {
       .limit(10),
     supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']),
     getLeaderboards(),
+    getCommunityTopics({ limit: 16 }),
   ])
 
   const siteAyarlari = {}
@@ -23,11 +25,16 @@ async function getHomePageData() {
     siteAyarlari[item.anahtar] = item.deger
   })
 
+  const gizliKategoriler = new Set(['manga', 'webtoon'])
+  const gorunenSeriler = (seriler || []).filter((seri) => !gizliKategoriler.has(String(seri.kategoriler?.isim || seri.kategori || '').toLocaleLowerCase('tr-TR')))
+  const gorunenSeriIdleri = new Set(gorunenSeriler.map((seri) => String(seri.id)))
+
   return {
-    seriler: seriler || [],
-    bolumler: bolumler || [],
+    seriler: gorunenSeriler,
+    bolumler: (bolumler || []).filter((bolum) => gorunenSeriIdleri.has(String(bolum.seri_id))),
     siteAyarlari,
     liderlik,
+    forumTopics: forumData.topics || [],
   }
 }
 
@@ -36,7 +43,7 @@ export async function generateMetadata() {
   const title = siteAyarlari.meta_baslik || 'Türkçe Çizgi Roman Oku | KonseyComics'
   const description = createSeoDescription(
     siteAyarlari.meta_aciklama,
-    'Türkçe çizgi roman oku, manga ve webtoon arşivini keşfet. Marvel, DC ve bağımsız serileri KonseyComics üzerinde tek yerde bul.'
+    'Türkçe çizgi roman arşivini keşfet. Marvel, DC ve bağımsız serileri KonseyComics üzerinde tek yerde bul.'
   )
   const extraKeywords = String(siteAyarlari.anahtar_kelimeler || '')
     .split(',')
@@ -52,8 +59,7 @@ export async function generateMetadata() {
       'çizgi roman oku',
       'türkçe çizgi roman oku',
       'çizgi roman arşivi',
-      'manga oku',
-      'webtoon oku',
+      'çizgi roman forumu',
       'KonseyComics',
       ...extraKeywords,
     ],
@@ -69,7 +75,7 @@ export default async function HomePage() {
     url: absoluteUrl('/'),
     description: createSeoDescription(
       initialData.siteAyarlari.meta_aciklama,
-      'Türkçe çizgi roman oku, manga ve webtoon arşivini keşfet.'
+      'Türkçe çizgi roman oku, arşivi keşfet ve Konsey Forum tartışmalarına katıl.'
     ),
     potentialAction: {
       '@type': 'SearchAction',

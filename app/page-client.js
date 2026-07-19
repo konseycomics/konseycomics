@@ -8,6 +8,7 @@ import Footer from './components/Footer'
 import Link from 'next/link'
 import { isRecentlyAddedSeries } from './lib/seriesBadges'
 import { supabase } from './lib/supabase'
+import { ArrowRight, Eye, MessageSquare, Pin, Users } from 'lucide-react'
 
 const SERI_TURLERI = [
   {
@@ -39,62 +40,6 @@ const SERI_TURLERI = [
     image: '/demo/indie.jpg',
     href: '/seriler?filtre=Bağımsız',
     large: false,
-  },
-  {
-    key: 'Manga',
-    title: 'Manga',
-    subtitle: 'Yüksek tempo, ikonik karakterler ve ustalıklı paneller',
-    accent: '#22c55e',
-    glow: 'radial-gradient(circle at top center, rgba(34,197,94,0.42), transparent 60%)',
-    image: '/demo/manga2.jpg',
-    href: '/seriler?filtre=Manga',
-    large: false,
-  },
-  {
-    key: 'Webtoon',
-    title: 'Webtoon',
-    subtitle: 'Mobil odaklı dikey akışta yeni nesil seriler',
-    accent: '#a855f7',
-    glow: 'radial-gradient(circle at top right, rgba(168,85,247,0.42), transparent 62%)',
-    image: '/demo/webtoon2.jpg',
-    href: '/seriler?filtre=Webtoon',
-    large: false,
-  },
-]
-
-const KATEGORI_KARTLARI = [
-  {
-    key: 'cizgi-roman',
-    title: 'Çizgi Roman',
-    subtitle: 'Klasikler, süper kahramanlar ve modern evrenler',
-    accent: '#f59e0b',
-    glow: 'radial-gradient(circle at top left, rgba(245,158,11,0.4), transparent 62%)',
-    image: '/demo/cizgi-roman.jpg',
-    href: '/kategori/cizgi-roman',
-    large: true,
-    matchers: ['Marvel', 'DC', 'Bağımsız', 'Çizgi Roman', 'Cizgi Roman'],
-  },
-  {
-    key: 'manga',
-    title: 'Manga',
-    subtitle: 'Japon hikaye anlatımının yüksek tempolu dünyası',
-    accent: '#22c55e',
-    glow: 'radial-gradient(circle at top center, rgba(34,197,94,0.38), transparent 60%)',
-    image: '/demo/manga.jpg',
-    href: '/kategori/manga',
-    large: false,
-    matchers: ['Manga'],
-  },
-  {
-    key: 'webtoon',
-    title: 'Webtoon',
-    subtitle: 'Dikey akışta yeni nesil dijital okuma deneyimi',
-    accent: '#a855f7',
-    glow: 'radial-gradient(circle at top right, rgba(168,85,247,0.42), transparent 62%)',
-    image: '/demo/webtoon.jpg',
-    href: '/kategori/webtoon',
-    large: false,
-    matchers: ['Webtoon'],
   },
 ]
 
@@ -987,7 +932,39 @@ function MiniGorevKutusu() {
   )
 }
 
-export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {} }) {
+function HomeForumSection({ topics = [] }) {
+  const sohbetler = topics.filter((topic) => !topic.sabitlendi).slice(0, 5)
+  const gosterilenler = sohbetler.length > 0 ? sohbetler : topics.slice(0, 5)
+  const toplamYanit = topics.reduce((sum, topic) => sum + Number(topic.yanit_sayisi || 0), 0)
+
+  return (
+    <section className="home-forum-band">
+      <div className="site-section home-forum-grid">
+        <div className="home-forum-intro">
+          <span className="home-forum-kicker"><Users size={14} /> Konsey Forum</span>
+          <h2>Okudukların<br />masada kalsın.</h2>
+          <p>Teorileri konuş, yeni başlıklar aç ve Konsey okurlarıyla aynı masaya otur.</p>
+          <div className="home-forum-totals"><span><strong>{topics.length}</strong> güncel konu</span><span><strong>{toplamYanit}</strong> yanıt</span></div>
+          <Link href="/forum">Foruma Git <ArrowRight size={17} /></Link>
+        </div>
+
+        <div className="home-forum-topics">
+          <div className="home-forum-topics-head"><strong>Son konuşmalar</strong><Link href="/forum">Tümünü gör <ArrowRight size={14} /></Link></div>
+          {gosterilenler.map((topic) => (
+            <Link href={topic.href || `/forum/konu/${topic.slug}`} key={topic.id} className="home-forum-topic-row">
+              <span className="home-forum-topic-icon">{topic.sabitlendi ? <Pin size={15} /> : <MessageSquare size={15} />}</span>
+              <span className="home-forum-topic-copy"><strong>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</strong><small>{topic.profil?.kullanici_adi || 'Konsey Üyesi'} · {topic.kategori}</small></span>
+              <span className="home-forum-topic-stats"><MessageSquare size={13} /> {topic.yanit_sayisi || 0}<Eye size={13} /> {topic.goruntulenme_sayisi || 0}</span>
+            </Link>
+          ))}
+          {gosterilenler.length === 0 ? <div className="home-forum-empty">İlk konuşmayı başlatmak için forum seni bekliyor.</div> : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [] }) {
   const router = useRouter()
   const loading = false
   const [arama, setArama] = useState('')
@@ -1045,10 +1022,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
   const turKartlari = SERI_TURLERI.map(tur => ({
     ...tur,
     count: seriler.filter(seri => hasCategoryMatch(seri, [tur.key])).length,
-  }))
-  const kategoriKartlari = KATEGORI_KARTLARI.map(kategori => ({
-    ...kategori,
-    count: seriler.filter(seri => hasCategoryMatch(seri, kategori.matchers)).length,
   }))
   const onerilenSeriHavuzu = [...oneCikanlar, ...populerSeriler, ...seriler]
     .filter((seri, index, arr) => arr.findIndex(item => String(item.id) === String(seri.id)) === index)
@@ -1125,6 +1098,20 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         .series-showcase-grid > *:nth-child(1),
         .series-showcase-grid > *:nth-child(2) { grid-column: span 6; }
         .series-showcase-grid > *:nth-child(n+3) { grid-column: span 4; }
+        .home-forum-band { margin-top: var(--section-gap); border-top: 1px solid #282311; border-bottom: 1px solid #282311; background: #0a0a09; }
+        .home-forum-grid { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr); gap: 48px; align-items: center; padding-top: 48px; padding-bottom: 48px; }
+        .home-forum-intro { min-width: 0; }
+        .home-forum-kicker { display: inline-flex; align-items: center; gap: 7px; color: #e0b74c; font-size: 10px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+        .home-forum-intro h2 { margin: 12px 0 14px; color: #f2f2ed; font-family: var(--font-display); font-size: clamp(48px, 6vw, 78px); line-height: .88; letter-spacing: 0; text-transform: uppercase; }
+        .home-forum-intro p { max-width: 42ch; margin: 0; color: #a3a39d; font-size: 14px; line-height: 1.75; }
+        .home-forum-totals { display: flex; gap: 22px; margin: 22px 0; color: #777772; font-size: 11px; }.home-forum-totals strong { color: #e5e5df; font-size: 16px; }
+        .home-forum-intro > a { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; border-radius: 6px; background: #e0b74c; color: #090909; font-size: 12px; font-weight: 900; text-decoration: none; }
+        .home-forum-topics { border: 1px solid #292929; border-radius: 6px; background: #0d0d0d; overflow: hidden; }
+        .home-forum-topics-head { min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #252525; }.home-forum-topics-head strong { color: #ededE8; font-size: 12px; }.home-forum-topics-head a { display: inline-flex; align-items: center; gap: 5px; color: #a88b43; font-size: 10px; font-weight: 800; text-decoration: none; }
+        .home-forum-topic-row { min-height: 68px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid #222; color: inherit; text-decoration: none; }.home-forum-topic-row:last-child { border-bottom: 0; }.home-forum-topic-row:hover { background: #121212; }
+        .home-forum-topic-icon { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #403720; border-radius: 4px; color: #d6ad4d; }
+        .home-forum-topic-copy { min-width: 0; display: grid; gap: 5px; }.home-forum-topic-copy strong { overflow: hidden; color: #e6e6e1; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }.home-forum-topic-copy small { color: #6f6f69; font-size: 10px; }
+        .home-forum-topic-stats { display: flex; align-items: center; gap: 6px; color: #73736e; font-size: 10px; }.home-forum-empty { padding: 28px 16px; color: #777; font-size: 12px; text-align: center; }
         @media (max-width: 960px) {
           .grid-4 { grid-template-columns: repeat(3, 1fr) !important; }
           .grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
@@ -1140,6 +1127,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .leaderboard-single-grid { grid-template-columns: 1fr !important; }
           .mini-gorev-grid { grid-template-columns: 1fr !important; }
           .mini-gorev-hero { grid-template-columns: 1fr !important; }
+          .home-forum-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 640px) {
           .home-section-heading { margin-bottom: 22px !important; }
@@ -1167,6 +1155,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .leaderboard-single-grid { grid-template-columns: 1fr !important; }
           .mini-gorev-grid { grid-template-columns: 1fr !important; }
           .mini-gorev-hero { grid-template-columns: 1fr !important; }
+          .home-forum-grid { gap: 28px; padding-top: 36px; padding-bottom: 36px; }
+          .home-forum-topic-row { grid-template-columns: 34px minmax(0, 1fr); }.home-forum-topic-stats { display: none; }
         }
       `}</style>
 
@@ -1570,41 +1560,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         </section>
       )}
 
-      <section style={{ background: '#111', marginTop: 'var(--section-gap)' }}>
-        <div className="site-section home-section-heading" style={{ paddingTop: '40px', textAlign: 'center' }}>
-          <h2 style={{ margin: 0, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 'clamp(40px, 5vw, 64px)', lineHeight: 0.95, textTransform: 'uppercase' }}>
-            Kategoriler
-          </h2>
-        </div>
-
-        <div className="site-section home-categories" style={{ paddingTop: '40px', paddingBottom: '40px' }}>
-          <CategoryBlock
-            title={kategoriKartlari[0].title}
-            subtitle={kategoriKartlari[0].subtitle}
-            image={kategoriKartlari[0].image}
-            href={kategoriKartlari[0].href}
-            large={kategoriKartlari[0].large}
-            accent={kategoriKartlari[0].accent}
-            glow={kategoriKartlari[0].glow}
-            count={kategoriKartlari[0].count}
-          />
-          <div className="home-categories-right">
-            {kategoriKartlari.slice(1).map(kategori => (
-              <CategoryBlock
-                key={kategori.key}
-                title={kategori.title}
-                subtitle={kategori.subtitle}
-                image={kategori.image}
-                href={kategori.href}
-                large={kategori.large}
-                accent={kategori.accent}
-                glow={kategori.glow}
-                count={kategori.count}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeForumSection topics={forumTopics} />
 
       {!loading && (
         <LiderlikTablosu liderlik={liderlik} />

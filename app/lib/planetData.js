@@ -25,7 +25,7 @@ function formatPlanetRow(row) {
   return {
     ...row,
     slug,
-    href: `/topluluk/planet/${slug}`,
+    href: `/forum/planet/${slug}`,
     preview: trimText(row.ozet || row.icerik, 220),
     fullPreview: trimText(row.icerik, 420),
   }

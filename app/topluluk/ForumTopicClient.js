@@ -22,7 +22,7 @@ function UserPanel({ profile, label }) {
         {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={74} height={74} unoptimized /> : letter}
       </div>
       {profile?.system_slug
-        ? <Link className="forum-system-profile-link" href={`/topluluk/uye/${profile.system_slug}`}>{profile.kullanici_adi}</Link>
+        ? <Link className="forum-system-profile-link" href={`/forum/uye/${profile.system_slug}`}>{profile.kullanici_adi}</Link>
         : <strong>{profile?.kullanici_adi || 'Konsey Üyesi'}</strong>}
       {profile?.ekip_uyesi ? <div className="forum-team-badges"><span>KONSEY EKİBİ</span><span>{profile.ekip_rolu || 'Ekip Üyesi'}</span></div> : <span className="forum-user-rank">{profile?.unvan || label || 'Okuyucu'}</span>}
       <small>Konsey üyesi</small>
@@ -199,7 +199,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
     const response = await authFetch('/api/community/topics/manage', { konuId: topic.id, action })
     const result = await response.json().catch(() => ({}))
     if (!response.ok) return setMessage(result.error || 'İşlem tamamlanamadı.')
-    if (['hide', 'delete'].includes(action)) return window.location.href = '/topluluk'
+    if (['hide', 'delete'].includes(action)) return window.location.href = '/forum'
     if (action === 'pin' || action === 'unpin') setTopicState((current) => ({ ...current, pinned: action === 'pin' }))
     if (action === 'lock' || action === 'unlock') setTopicState((current) => ({ ...current, locked: action === 'lock' }))
     setMessage('Konu ayarı güncellendi.')
@@ -213,8 +213,8 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   return (
     <div className="forum-topic-page">
       <nav className="forum-breadcrumb">
-        <Link href="/topluluk"><ArrowLeft size={15} /> Forumlar</Link>
-        <span>/</span><Link href={`/topluluk/forum/${forum.slug}`}>{forum.name}</Link>
+        <Link href="/forum"><ArrowLeft size={15} /> Forumlar</Link>
+        <span>/</span><Link href={`/forum/${forum.slug}`}>{forum.name}</Link>
       </nav>
 
       <header className="forum-topic-header">

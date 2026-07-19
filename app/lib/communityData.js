@@ -56,7 +56,7 @@ function mapSystemProfiles(rows) {
   }]))
 }
 
-function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
+function formatTopicRow(row, profil, hrefBase = '/forum/konu') {
   const pollOptions = Array.isArray(row.anket_secenekleri) ? row.anket_secenekleri : []
   return {
     id: row.id,
@@ -112,6 +112,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
     .from('topluluk_konulari')
     .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id, sistem_profil_id')
     .eq('aktif', true)
+    .neq('kategori', 'Manga ve Webtoon')
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
     .limit(limit))
@@ -121,6 +122,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
       .from('topluluk_konulari')
       .select('id, slug, baslik, icerik, kategori, etiketler, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kullanici_id')
       .eq('aktif', true)
+      .neq('kategori', 'Manga ve Webtoon')
       .order('sabitlendi', { ascending: false })
       .order('son_aktivite_at', { ascending: false })
       .limit(limit))
@@ -320,6 +322,7 @@ export async function getCommunitySystemProfileBySlug(slug) {
     .select('id, slug, baslik, kategori, created_at, yanit_sayisi, goruntulenme_sayisi, sabitlendi')
     .eq('sistem_profil_id', profile.id)
     .eq('aktif', true)
+    .neq('kategori', 'Manga ve Webtoon')
     .order('sabitlendi', { ascending: false })
     .order('created_at', { ascending: false })
 

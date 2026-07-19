@@ -59,3 +59,34 @@ body, #__next {
   padding-left: var(--page-gutter);
   padding-right: var(--page-gutter);
 }
+@keyframes forumLaunchMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.forum-launch-strip {
+  width: 100%; height: 34px; display: flex; align-items: center; overflow: hidden;
+  background: #e0b74c; color: #090909; text-decoration: none;
+}
+.forum-launch-track { width: max-content; min-width: 200%; display: flex; align-items: center; justify-content: space-around; gap: 26px; white-space: nowrap; animation: forumLaunchMarquee 22s linear infinite; font-size: 11px; font-weight: 900; letter-spacing: 1.2px; }
+.forum-launch-track i { font-style: normal; opacity: .55; }
+.forum-launch-strip:hover .forum-launch-track { animation-play-state: paused; }
+.forum-launch-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.78); backdrop-filter: blur(8px); }
+.forum-launch-modal { position: relative; width: min(100%, 460px); padding: 34px; border: 1px solid #55461f; border-radius: 8px; background: #0d0d0d; box-shadow: 0 30px 90px rgba(0,0,0,.55); }
+.forum-launch-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid #2c2c2c; border-radius: 5px; background: #151515; color: #999; cursor: pointer; }
+.forum-launch-icon { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 22px; border: 1px solid #5c4a20; border-radius: 6px; background: #19150c; color: #e0b74c; }
+.forum-launch-kicker { color: #e0b74c; font-size: 10px; font-weight: 900; letter-spacing: 1.3px; text-transform: uppercase; }
+.forum-launch-modal h2 { margin: 8px 0 12px; color: #f4f4ef; font-family: var(--font-display); font-size: 52px; line-height: .95; letter-spacing: 0; text-transform: uppercase; }
+.forum-launch-modal p { margin: 0 0 24px; color: #aaa9a3; font-size: 14px; line-height: 1.7; }
+.forum-launch-modal > a { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 18px; border-radius: 6px; background: #e0b74c; color: #0a0a0a; font-size: 13px; font-weight: 900; text-decoration: none; }
+
+@media (max-width: 640px) {
+  .forum-launch-track { gap: 20px; font-size: 10px; }
+  .forum-launch-modal { padding: 28px 22px 22px; }
+  .forum-launch-modal h2 { font-size: 44px; }
+  .forum-launch-modal > a { width: 100%; box-sizing: border-box; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forum-launch-track { animation: none; transform: none; }
+}

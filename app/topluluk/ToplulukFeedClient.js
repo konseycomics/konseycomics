@@ -343,7 +343,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
             <article
               className="community-topic-card"
               key={`${seri.source}-${seri.id}`}
-              onClick={() => router.push(seri.href || `/topluluk/konu/${seri.slug}`)}
+              onClick={() => router.push(seri.href || `/forum/konu/${seri.slug}`)}
               style={{ padding: '22px', borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02))', cursor: 'pointer', transition: 'transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease', boxShadow: '0 14px 34px rgba(0,0,0,0.18)' }}
             >
               <div className="community-topic-grid" style={{ display: 'grid', gridTemplateColumns: '52px minmax(0, 1fr)', gap: '14px', alignItems: 'start' }}>
@@ -358,7 +358,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     <span style={{ color: '#a4a49e', fontSize: '12px' }}>{formatDateTime(seri.son_aktivite_at || seri.created_at)}</span>
                     {index === 0 ? <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#6fd96f', display: 'inline-block' }} /> : null}
                   </div>
-                  <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
+                  <Link href={seri.href || `/forum/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
                     <div className="community-topic-title" style={{ color: '#fff', fontSize: '22px', fontWeight: 900, lineHeight: 1.25, marginBottom: '10px' }}>
                       {seri.spoiler && !spoilerVisibleTopicIds.includes(seri.id) ? 'Spoilerlı Konu' : seri.baslik}
                     </div>
@@ -401,7 +401,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                           </button>
                         </div>
                       ) : null}
-                      <Link href={seri.href || `/topluluk/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
+                      <Link href={seri.href || `/forum/konu/${seri.slug}`} onClick={(event) => event.stopPropagation()} style={{ textDecoration: 'none', display: 'block' }}>
                         <div className="community-topic-preview" style={{ color: '#c2c2bc', fontSize: '15px', lineHeight: 1.8, marginBottom: '12px' }}>
                           {trimPreview(seri.icerik)}
                         </div>
@@ -453,7 +453,7 @@ export default function ToplulukFeedClient({ initialTopics = [] }) {
                     </button>
                     <Link
                       className="community-topic-action-link"
-                      href={seri.href || `/topluluk/konu/${seri.slug}`}
+                      href={seri.href || `/forum/konu/${seri.slug}`}
                       onClick={(event) => event.stopPropagation()}
                       style={{ minHeight: '48px', padding: '0 18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff', fontSize: '14px', borderRadius: '16px', fontWeight: 800, boxShadow: '0 8px 22px rgba(0,0,0,0.16)', textDecoration: 'none', boxSizing: 'border-box' }}
                     >

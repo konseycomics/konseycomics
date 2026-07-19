@@ -136,7 +136,7 @@ export async function POST(req) {
         alici_id: parentReplyRow.kullanici_id,
         tip: 'topluluk',
         baslik: 'Yanıtına cevap geldi',
-        mesaj: `${topicRow?.baslik || 'Topluluk konusu'} içinde yanıtına cevap yazıldı.`,
+        mesaj: `${topicRow?.baslik || 'Forum konusu'} içinde yanıtına cevap yazıldı.`,
         okundu: false,
       })
     }

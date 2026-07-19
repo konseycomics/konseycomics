@@ -301,7 +301,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
 
     const confirmed = window.confirm(
       action === 'hide'
-        ? 'Bu konuyu topluluk akışından gizlemek istiyor musun?'
+        ? 'Bu konuyu forum akışından gizlemek istiyor musun?'
         : 'Bu konuyu silmek istiyor musun? Bu işlem görünümden kaldırır.'
     )
 
@@ -323,7 +323,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
       return
     }
 
-    window.location.href = '/topluluk'
+    window.location.href = '/forum'
   }
 
   async function submitReply({ icerik, spoiler: replySpoiler, parentYanitId = null }) {
@@ -443,8 +443,8 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
           marginBottom: '18px',
         }}
       >
-        <Link href="/topluluk" style={{ color: '#b7b7b0', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', gap: '8px', alignItems: 'center', marginBottom: '18px' }}>
-          ← Topluluk akışına dön
+        <Link href="/forum" style={{ color: '#b7b7b0', textDecoration: 'none', fontSize: '13px', fontWeight: 700, display: 'inline-flex', gap: '8px', alignItems: 'center', marginBottom: '18px' }}>
+          ← Forum akışına dön
         </Link>
 
         <div style={{ display: 'grid', gridTemplateColumns: '60px minmax(0, 1fr)', gap: '16px', alignItems: 'start' }}>

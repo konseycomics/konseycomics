@@ -1,6 +1,6 @@
 'use client'
 
-const filters = ['Tümü', 'Marvel', 'DC', 'Bağımsız', 'Manga', 'Webtoon']
+const filters = ['Tümü', 'Marvel', 'DC', 'Bağımsız']
 
 export default function FilterBar({ active, setActive }) {
   return (

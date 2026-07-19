@@ -49,7 +49,7 @@ export default function ForumCategoryClient({ forum, initialTopics = [] }) {
 
   return (
     <div className="forum-category-page">
-      <nav className="forum-breadcrumb"><Link href="/topluluk"><ArrowLeft size={15} /> Forumlar</Link><span>/</span><span>{forum.name}</span></nav>
+      <nav className="forum-breadcrumb"><Link href="/forum"><ArrowLeft size={15} /> Forumlar</Link><span>/</span><span>{forum.name}</span></nav>
 
       <header className="forum-category-header">
         <div>
@@ -58,7 +58,7 @@ export default function ForumCategoryClient({ forum, initialTopics = [] }) {
           <p>{forum.description}</p>
           <div className="forum-header-stats"><span><strong>{initialTopics.length}</strong> konu</span><span><strong>{totalReplies}</strong> yanıt</span></div>
         </div>
-        <Link className="forum-primary-button" href={`/topluluk?compose=1&forum=${forum.slug}`}><PenLine size={17} /> Yeni Konu</Link>
+        <Link className="forum-primary-button" href={`/forum?compose=1&forum=${forum.slug}`}><PenLine size={17} /> Yeni Konu</Link>
       </header>
 
       <div className="forum-category-toolbar">
@@ -81,14 +81,14 @@ export default function ForumCategoryClient({ forum, initialTopics = [] }) {
             </div>
             <div className="forum-category-copy">
               <div>{topic.sabitlendi ? <Pin size={13} /> : null}{topic.spoiler ? <span>Spoiler</span> : null}{topic.anket_aktif ? <span>Anket</span> : null}</div>
-              <Link href={topic.href || `/topluluk/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
+              <Link href={topic.href || `/forum/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
               <small>{topic.profil?.kullanici_adi || 'Konsey Üyesi'}{topic.profil?.ekip_uyesi ? ` · Konsey Ekibi · ${topic.profil.ekip_rolu || 'Ekip Üyesi'}` : ''} · {formatDate(topic.created_at)}</small>
             </div>
             <div className="forum-category-stat"><MessageSquare size={14} /><strong>{Number(topic.yanit_sayisi || 0)}</strong></div>
             <div className="forum-category-stat"><Eye size={14} /><strong>{Number(topic.goruntulenme_sayisi || 0)}</strong></div>
             <div className="forum-category-date"><Clock3 size={14} />{formatDate(topic.son_aktivite_at || topic.created_at)}</div>
           </article>
-        )) : <div className="forum-empty"><MessageSquare size={24} /><strong>Henüz konu yok</strong><span>Bu forumdaki ilk tartışmayı sen başlatabilirsin.</span><Link href={`/topluluk?compose=1&forum=${forum.slug}`}><PenLine size={15} /> Yeni Konu Aç</Link></div>}
+        )) : <div className="forum-empty"><MessageSquare size={24} /><strong>Henüz konu yok</strong><span>Bu forumdaki ilk tartışmayı sen başlatabilirsin.</span><Link href={`/forum?compose=1&forum=${forum.slug}`}><PenLine size={15} /> Yeni Konu Aç</Link></div>}
       </section>
 
       {pageCount > 1 ? <nav className="forum-pagination" aria-label="Konu sayfaları">

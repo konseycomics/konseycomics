@@ -27,16 +27,6 @@ export const FORUM_SECTIONS = [
         tone: 'red',
         order: 20,
       },
-      {
-        slug: 'manga-webtoon',
-        name: 'Manga ve Webtoon',
-        category: 'Manga ve Webtoon',
-        aliases: ['Manga ve Webtoon', 'Manga', 'Webtoon'],
-        description: 'Manga serileri, webtoon bölümleri, teoriler ve okur önerileri.',
-        icon: 'book',
-        tone: 'violet',
-        order: 30,
-      },
     ],
   },
   {
@@ -55,7 +45,7 @@ export const FORUM_SECTIONS = [
     ],
   },
   {
-    group: 'Topluluk',
+    group: 'Forum',
     forums: [
       {
         slug: 'genel-sohbet',

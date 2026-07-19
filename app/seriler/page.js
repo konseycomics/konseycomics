@@ -7,7 +7,7 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { isRecentlyAddedSeries } from '../lib/seriesBadges'
 
-const EVRENLER = ['Tümü', 'Marvel', 'DC', 'Bağımsız', 'Manga', 'Webtoon']
+const EVRENLER = ['Tümü', 'Marvel', 'DC', 'Bağımsız']
 const SIRALAMALAR = [
   { key: 'yeni', label: 'En Yeni' },
   { key: 'populer', label: 'Popüler' },
@@ -48,6 +48,11 @@ function seriEvreni(seri) {
   if (kategoriAlani !== 'Tümü') return kategoriAlani
 
   return seri.kategoriler?.isim || seri.kategori || 'Arşiv'
+}
+
+function arsivdeGoster(seri) {
+  const kategori = normalizeText(seri.kategoriler?.isim || seri.kategori)
+  return kategori !== 'manga' && kategori !== 'webtoon'
 }
 
 function SeriKarti({ seri }) {
@@ -118,7 +123,7 @@ function SerilerIcerik() {
         .select('*, kategoriler(isim)')
         .order('created_at', { ascending: false })
 
-      setSeriler(data || [])
+      setSeriler((data || []).filter(arsivdeGoster))
       setLoading(false)
     }
 
@@ -560,7 +565,7 @@ function SerilerIcerik() {
                 <div className="series-kicker">Konsey Arşivi</div>
                 <h1>Çizgi Roman Oku Arşivi</h1>
                 <p>
-                  Türkçe çizgi roman oku arşivimizde Marvel, DC, bağımsız seriler, manga ve webtoon seçkilerini tek yerde keşfet.
+                  Türkçe çizgi roman arşivimizde Marvel, DC ve bağımsız serileri tek yerde keşfet.
                 </p>
               </div>
             </div>

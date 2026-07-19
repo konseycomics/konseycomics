@@ -4,9 +4,7 @@ import Image from 'next/image'
 const kesfet = [
   { label: 'Tüm Seriler', href: '/seriler' },
   { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
-  { label: 'Manga', href: '/kategori/manga' },
-  { label: 'Webtoon', href: '/kategori/webtoon' },
-  { label: 'Topluluk', href: '/topluluk' },
+  { label: 'Forum', href: '/forum' },
 ]
 
 const kurumsal = [
@@ -39,8 +37,8 @@ export default function Footer() {
             </Link>
 
             <div style={{ maxWidth: '42ch', color: '#d2d2cd', fontSize: '15px', lineHeight: 1.75 }}>
-              Türkçe çizgi roman, manga ve webtoon dünyasını tek yerde bir araya getiren dijital okuma alanı.
-              Güçlü evrenler, temiz arayüz ve arşiv hissi bir arada.
+              Türkçe çizgi roman dünyasını tek yerde bir araya getiren dijital okuma alanı.
+              Güçlü evrenler, temiz arayüz, forum kültürü ve arşiv hissi bir arada.
             </div>
           </div>
 

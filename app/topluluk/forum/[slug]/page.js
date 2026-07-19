@@ -10,11 +10,11 @@ import '../../forum.css'
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const forum = getForumBySlug(slug)
-  if (!forum) return buildMetadata({ title: 'Forum Bulunamadı', description: 'Aradığın forum bulunamadı.', path: `/topluluk/forum/${slug}` })
+  if (!forum) return buildMetadata({ title: 'Forum Bulunamadı', description: 'Aradığın forum bulunamadı.', path: `/forum/${slug}` })
   return buildMetadata({
     title: `${forum.name} Forumu`,
     description: createSeoDescription(forum.description, `${forum.name} üzerine KonseyComics tartışmaları.`),
-    path: `/topluluk/forum/${forum.slug}`,
+    path: `/forum/${forum.slug}`,
     keywords: [forum.name, 'Konsey Forum', 'çizgi roman topluluğu'],
   })
 }

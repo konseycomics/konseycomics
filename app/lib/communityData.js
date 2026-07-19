@@ -42,6 +42,20 @@ function mapProfiles(rows, titles, teamRows = []) {
   }))
 }
 
+function mapSystemProfiles(rows) {
+  return new Map((rows || []).map((row) => [row.id, {
+    id: row.id,
+    kullanici_adi: row.gorunen_ad || row.kullanici_adi,
+    avatar_url: row.avatar_url || '',
+    unvan: '',
+    rol: 'moderator',
+    ekip_uyesi: true,
+    ekip_rolu: row.ekip_rolu || 'Topluluk Yöneticisi',
+    system_slug: row.slug,
+    bio: row.bio || '',
+  }]))
+}
+
 function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
   const pollOptions = Array.isArray(row.anket_secenekleri) ? row.anket_secenekleri : []
   return {
@@ -62,6 +76,7 @@ function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
     kilitli: Boolean(row.kilitli),
     one_cikan: Boolean(row.one_cikan),
     forum_id: row.forum_id || null,
+    sistem_profil_id: row.sistem_profil_id || null,
     anket_aktif: Boolean(row.anket_aktif),
     anket_sorusu: row.anket_sorusu || '',
     anket_secenekleri: pollOptions,
@@ -95,7 +110,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 
   ;({ data: topicRows, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id, sistem_profil_id')
     .eq('aktif', true)
     .order('sabitlendi', { ascending: false })
     .order('son_aktivite_at', { ascending: false })
@@ -119,19 +134,28 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
   }
 
   const userIds = [...new Set((topicRows || []).map((row) => row.kullanici_id).filter(Boolean))]
-  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }] = userIds.length > 0
-    ? await Promise.all([
-        admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds),
-        admin
-          .from('kullanici_unvanlari')
-          .select('kullanici_id, unvan_tanimlari(isim)')
-          .in('kullanici_id', userIds)
-          .eq('one_cikarildi', true),
-        admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`),
-      ])
-    : [{ data: [] }, { data: [] }, { data: [] }]
+  const systemIds = [...new Set((topicRows || []).map((row) => row.sistem_profil_id).filter(Boolean))]
+  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }, { data: systemRows }] = await Promise.all([
+    userIds.length > 0
+      ? admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds)
+      : Promise.resolve({ data: [] }),
+    userIds.length > 0
+      ? admin
+        .from('kullanici_unvanlari')
+        .select('kullanici_id, unvan_tanimlari(isim)')
+        .in('kullanici_id', userIds)
+        .eq('one_cikarildi', true)
+      : Promise.resolve({ data: [] }),
+    userIds.length > 0
+      ? admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`)
+      : Promise.resolve({ data: [] }),
+    systemIds.length > 0
+      ? admin.from('topluluk_sistem_profilleri').select('id, slug, kullanici_adi, gorunen_ad, avatar_url, bio, ekip_rolu').in('id', systemIds)
+      : Promise.resolve({ data: [] }),
+  ])
 
   const profileMap = mapProfiles(profileRows, titleRows, teamRows)
+  const systemProfileMap = mapSystemProfiles(systemRows)
   const topicIds = (topicRows || []).map((row) => row.id).filter(Boolean)
   const pollStatsMap = new Map()
 
@@ -176,7 +200,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
       ...row,
       anket_toplam_oy: pollStatsMap.get(row.id)?.toplamOy || 0,
       anket_sonuclari: pollStatsMap.get(row.id)?.sonuclar || [],
-    }, profileMap.get(row.kullanici_id))),
+    }, systemProfileMap.get(row.sistem_profil_id) || profileMap.get(row.kullanici_id))),
   }
 }
 
@@ -189,7 +213,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   ;({ data: topicRow, error } = await admin
     .from('topluluk_konulari')
-    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id')
+    .select('id, slug, baslik, icerik, spoiler, kategori, etiketler, anket_aktif, anket_sorusu, anket_secenekleri, created_at, son_aktivite_at, yanit_sayisi, begeni_sayisi, goruntulenme_sayisi, sabitlendi, kilitli, one_cikan, forum_id, kullanici_id, sistem_profil_id')
     .eq('slug', slug)
     .eq('aktif', true)
     .maybeSingle())
@@ -255,6 +279,15 @@ export async function getCommunityTopicBySlug(slug) {
     : [{ data: [] }, { data: [] }, { data: [] }]
 
   const profileMap = mapProfiles(profileRows, titleRows, teamRows)
+  let systemProfile = null
+  if (topicRow.sistem_profil_id) {
+    const { data } = await admin
+      .from('topluluk_sistem_profilleri')
+      .select('id, slug, kullanici_adi, gorunen_ad, avatar_url, bio, ekip_rolu')
+      .eq('id', topicRow.sistem_profil_id)
+      .maybeSingle()
+    systemProfile = mapSystemProfiles(data ? [data] : []).get(topicRow.sistem_profil_id) || null
+  }
 
   return {
     available: true,
@@ -263,9 +296,37 @@ export async function getCommunityTopicBySlug(slug) {
         ...topicRow,
         anket_sonuclari: pollResults,
         anket_toplam_oy: pollTotalVotes,
-      }, profileMap.get(topicRow.kullanici_id)),
+      }, systemProfile || profileMap.get(topicRow.kullanici_id)),
       icerik_tam: topicRow.icerik,
     },
     replies: (replyRows || []).map((row) => formatReplyRow(row, profileMap.get(row.kullanici_id))),
+  }
+}
+
+export async function getCommunitySystemProfileBySlug(slug) {
+  const admin = createSupabaseAdminClient()
+  if (!admin) return null
+
+  const { data: profile, error } = await admin
+    .from('topluluk_sistem_profilleri')
+    .select('id, slug, kullanici_adi, gorunen_ad, avatar_url, bio, ekip_rolu, created_at')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (error || !profile) return null
+
+  const { data: topicRows } = await admin
+    .from('topluluk_konulari')
+    .select('id, slug, baslik, kategori, created_at, yanit_sayisi, goruntulenme_sayisi, sabitlendi')
+    .eq('sistem_profil_id', profile.id)
+    .eq('aktif', true)
+    .order('sabitlendi', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  return {
+    ...mapSystemProfiles([profile]).get(profile.id),
+    gorunen_ad: profile.gorunen_ad,
+    created_at: profile.created_at,
+    topics: topicRows || [],
   }
 }

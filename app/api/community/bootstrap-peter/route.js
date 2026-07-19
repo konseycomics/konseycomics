@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -73,43 +73,27 @@ export async function POST(req) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const service = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !service) throw new Error('Supabase environment variables are missing.')
-    if (req.headers.get('x-setup-diagnose') === '1') return NextResponse.json({ ok: true, stage: 'environment', hasUrl: Boolean(url), hasService: Boolean(service), version: 'bootstrap-v2' })
+    if (req.headers.get('x-setup-diagnose') === '1') return NextResponse.json({ ok: true, stage: 'environment', hasUrl: Boolean(url), hasService: Boolean(service), version: 'bootstrap-v3-system-profile' })
     stage = 'client'
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } })
 
-    stage = 'profile_lookup'
-    let { data: profile } = await admin.from('profiller').select('id, kullanici_adi').eq('kullanici_adi', 'peter_parker').maybeSingle()
-    let userId = profile?.id
-    if (!userId) {
-      stage = 'auth_create'
-      const authResponse = await fetch(`${url}/auth/v1/admin/users`, {
-        method: 'POST',
-        headers: { apikey: service, Authorization: `Bearer ${service}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'peter.parker@konseycomics.com',
-          password: `${randomUUID()}Aa7!${randomUUID()}`,
-          email_confirm: true,
-          user_metadata: { kullanici_adi: 'peter_parker', display_name: 'Peter Parker' },
-        }),
-      })
-      const created = await authResponse.json().catch(() => ({}))
-      if (!authResponse.ok || !created?.id) throw new Error(created?.msg || created?.message || `Auth user creation failed (${authResponse.status}).`)
-      userId = created.id
-    }
+    stage = 'system_profile_lookup'
+    const { data: systemProfile, error: systemProfileError } = await admin
+      .from('topluluk_sistem_profilleri')
+      .select('id, slug')
+      .eq('slug', 'peter-parker')
+      .single()
+    if (systemProfileError) throw systemProfileError
 
-    stage = 'profile_upsert'
-    const { error: profileError } = await admin.from('profiller').upsert({
-      id: userId,
-      kullanici_adi: 'peter_parker',
-      rol: 'moderator',
-      bio: 'Konsey Forum topluluk yöneticisi. Dost canlısı mahalle moderatörünüz.',
-    }, { onConflict: 'id' })
-    if (profileError) throw profileError
-
-    stage = 'team_upsert'
-    const { data: existingTeam } = await admin.from('ekip').select('id').eq('profil_id', userId).maybeSingle()
-    if (existingTeam?.id) await admin.from('ekip').update({ isim: 'Peter Parker', unvan: 'Topluluk Yöneticisi' }).eq('id', existingTeam.id)
-    else await admin.from('ekip').insert({ isim: 'Peter Parker', unvan: 'Topluluk Yöneticisi', profil_id: userId })
+    stage = 'technical_owner_lookup'
+    const { data: owners, error: ownerError } = await admin
+      .from('profiller')
+      .select('id, rol')
+      .in('rol', ['admin', 'yonetici'])
+      .limit(1)
+    if (ownerError) throw ownerError
+    const userId = owners?.[0]?.id
+    if (!userId) throw new Error('Sabit rehberler icin bir admin veya yonetici profili bulunamadi.')
 
     stage = 'forums_lookup'
     const { data: forums, error: forumError } = await admin.from('topluluk_forumlari').select('id, slug')
@@ -117,6 +101,7 @@ export async function POST(req) {
     const forumMap = new Map((forums || []).map((forum) => [forum.slug, forum.id]))
     const rows = GUIDES.map((guide) => ({
       kullanici_id: userId,
+      sistem_profil_id: systemProfile.id,
       forum_id: forumMap.get(guide.forum),
       slug: guide.slug,
       baslik: guide.title,
@@ -130,7 +115,7 @@ export async function POST(req) {
     stage = 'topics_upsert'
     const { error: topicError } = await admin.from('topluluk_konulari').upsert(rows, { onConflict: 'slug' })
     if (topicError) throw topicError
-    return NextResponse.json({ ok: true, userId, topics: rows.map((row) => row.slug) })
+    return NextResponse.json({ ok: true, systemProfileId: systemProfile.id, topics: rows.map((row) => row.slug) })
   } catch (error) {
     return NextResponse.json({ error: error?.message || 'Bootstrap failed.', stage }, { status: 500 })
   }

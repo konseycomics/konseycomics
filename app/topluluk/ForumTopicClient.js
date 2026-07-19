@@ -21,7 +21,9 @@ function UserPanel({ profile, label }) {
       <div className="forum-post-avatar">
         {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={74} height={74} unoptimized /> : letter}
       </div>
-      <strong>{profile?.kullanici_adi || 'Konsey Üyesi'}</strong>
+      {profile?.system_slug
+        ? <Link className="forum-system-profile-link" href={`/topluluk/uye/${profile.system_slug}`}>{profile.kullanici_adi}</Link>
+        : <strong>{profile?.kullanici_adi || 'Konsey Üyesi'}</strong>}
       {profile?.ekip_uyesi ? <div className="forum-team-badges"><span>KONSEY EKİBİ</span><span>{profile.ekip_rolu || 'Ekip Üyesi'}</span></div> : <span className="forum-user-rank">{profile?.unvan || label || 'Okuyucu'}</span>}
       <small>Konsey üyesi</small>
     </aside>

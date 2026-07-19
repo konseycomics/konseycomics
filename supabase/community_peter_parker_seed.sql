@@ -34,12 +34,13 @@ revoke all on public.topluluk_sistem_profilleri from anon, authenticated;
 grant select on public.topluluk_sistem_profilleri to anon, authenticated;
 
 insert into public.topluluk_sistem_profilleri
-  (id, slug, kullanici_adi, gorunen_ad, bio, ekip_rolu)
+  (id, slug, kullanici_adi, gorunen_ad, avatar_url, bio, ekip_rolu)
 values (
   'c3e53992-cbad-41d4-98f4-6c0045b6b33f'::uuid,
   'peter-parker',
   'Peter Parker',
   'Peter Parker',
+  'https://cdn.konseycomics.com/avatarlar/peter-parker-official-v1.webp',
   'Konsey Forum topluluk yöneticisi. Dost canlısı mahalle moderatörünüz.',
   'Topluluk Yöneticisi'
 )
@@ -47,6 +48,7 @@ on conflict (id) do update set
   slug = excluded.slug,
   kullanici_adi = excluded.kullanici_adi,
   gorunen_ad = excluded.gorunen_ad,
+  avatar_url = excluded.avatar_url,
   bio = excluded.bio,
   ekip_rolu = excluded.ekip_rolu,
   updated_at = now();

@@ -1,7 +1,7 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { buildMetadata, createSeoDescription } from '../lib/seo'
-import { getCommunityTopics } from '../lib/communityData'
+import { getCommunitySystemProfileBySlug, getCommunityTopics } from '../lib/communityData'
 import { getPlanetPosts } from '../lib/planetData'
 import { getLeaderboards } from '../lib/leaderboardData'
 import ForumHomeClient from './ForumHomeClient'
@@ -17,10 +17,11 @@ export async function generateMetadata() {
 }
 
 export default async function ToplulukPage() {
-  const [{ topics }, planetPosts, leaderboards] = await Promise.all([
+  const [{ topics }, planetPosts, leaderboards, welcomeProfile] = await Promise.all([
     getCommunityTopics({ limit: 60 }),
     getPlanetPosts({ limit: 8 }),
     getLeaderboards(null, { excludeTeam: false }),
+    getCommunitySystemProfileBySlug('peter-parker'),
   ])
 
   const activeUsers = leaderboards.gunluk.length > 0 ? leaderboards.gunluk : leaderboards.haftalik
@@ -30,7 +31,12 @@ export default async function ToplulukPage() {
       <Navbar />
       <main className="forum-page">
         <div className="site-section forum-page-inner">
-          <ForumHomeClient initialTopics={topics || []} planetPosts={planetPosts || []} activeUsers={activeUsers || []} />
+          <ForumHomeClient
+            initialTopics={topics || []}
+            planetPosts={planetPosts || []}
+            activeUsers={activeUsers || []}
+            welcomeProfile={welcomeProfile}
+          />
         </div>
       </main>
       <Footer />

@@ -71,7 +71,7 @@ function TeamMark({ profile }) {
   return profile?.ekip_uyesi ? <span className="forum-team-mark">Konsey Ekibi · {profile.ekip_rolu || 'Ekip Üyesi'}</span> : null
 }
 
-export default function ForumHomeClient({ initialTopics = [], planetPosts = [], activeUsers = [] }) {
+export default function ForumHomeClient({ initialTopics = [], planetPosts = [], activeUsers = [], welcomeProfile = null }) {
   const [topics, setTopics] = useState(initialTopics)
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -260,6 +260,25 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
           {composerOpen ? 'Formu Kapat' : 'Yeni Konu'}
         </button>
       </header>
+
+      <section className="forum-welcome-note" aria-labelledby="forum-welcome-title">
+        <Link className="forum-welcome-avatar" href="/forum/uye/peter-parker" aria-label="Peter Parker profilini aç">
+          <Avatar profile={welcomeProfile} size={64} />
+        </Link>
+        <div className="forum-welcome-copy">
+          <div className="forum-welcome-author">
+            <Link href="/forum/uye/peter-parker">{welcomeProfile?.kullanici_adi || 'Peter Parker'}</Link>
+            <span>Konsey Ekibi</span>
+            <small><Pin size={11} /> Sabit mesaj</small>
+          </div>
+          <h2 id="forum-welcome-title">Konsey Forum’a hoş geldin.</h2>
+          <p>Okuduğunu anlat, merak ettiğini sor, fikrini paylaş. Söz artık sende.</p>
+        </div>
+        <div className="forum-welcome-actions">
+          <Link href="/forum/duyurular"><BookOpen size={15} /> Forum Kuralları</Link>
+          <button type="button" onClick={() => openComposer()}><PenLine size={15} /> Konu Aç</button>
+        </div>
+      </section>
 
       <div className="forum-toolbar">
         <label className="forum-search">

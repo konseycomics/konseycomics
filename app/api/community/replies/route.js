@@ -49,7 +49,7 @@ export async function POST(req) {
 
     let { data: topicRow, error: topicError } = await adminClient
       .from('topluluk_konulari')
-      .select('id, kullanici_id, baslik, kilitli')
+      .select('id, kullanici_id, baslik, kilitli, sistem_profil_id')
       .eq('id', konuId)
       .maybeSingle()
 
@@ -62,6 +62,9 @@ export async function POST(req) {
     }
 
     if (!topicRow?.id) return NextResponse.json({ error: 'Konu bulunamadı.' }, { status: 404 })
+    if (topicRow.sistem_profil_id) {
+      return NextResponse.json({ error: 'Resmi rehber konuları yanıtlara kapalıdır.' }, { status: 423 })
+    }
     const { data: requesterProfile } = await adminClient.from('public_profiller').select('rol').eq('id', userData.user.id).maybeSingle()
     const isStaff = ['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())
     if (topicRow.kilitli) {

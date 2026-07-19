@@ -207,6 +207,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
 
   const isOwner = Boolean(user?.id && user.id === topic?.profil?.id)
   const isAdmin = ['admin', 'yonetici', 'moderator'].includes(String(profile?.rol || '').toLowerCase())
+  const isOfficialGuide = Boolean(topic.sistem_profil_id)
   const forum = getForumForCategory(topic?.kategori)
 
   return (
@@ -222,7 +223,9 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
           <h1>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</h1>
           <div><Clock3 size={14} /> {formatDate(topic.created_at)} <Eye size={14} /> {viewCount} görüntüleme</div>
         </div>
-        <button type="button" className="forum-primary-button" onClick={() => user ? document.getElementById('yanit-yaz')?.scrollIntoView({ behavior: 'smooth' }) : setAuthPrompt('konuya yanıt vermek')}><Reply size={16} /> Yanıtla</button>
+        {isOfficialGuide
+          ? <span className="forum-topic-closed-label"><Lock size={15} /> Yorumlara kapalı</span>
+          : <button type="button" className="forum-primary-button" onClick={() => user ? document.getElementById('yanit-yaz')?.scrollIntoView({ behavior: 'smooth' }) : setAuthPrompt('konuya yanıt vermek')}><Reply size={16} /> Yanıtla</button>}
       </header>
 
       <article className="forum-post original">
@@ -254,7 +257,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
               {isOwner ? <button onClick={() => manageTopic('delete')}><Trash2 size={14} /> Sil</button> : null}
               {isAdmin ? <button onClick={() => manageTopic('hide')}><ShieldAlert size={14} /> Gizle</button> : null}
               {isAdmin ? <button onClick={() => manageTopic(topicState.pinned ? 'unpin' : 'pin')}><Pin size={14} /> {topicState.pinned ? 'Sabiti kaldır' : 'Sabitle'}</button> : null}
-              {isAdmin ? <button onClick={() => manageTopic(topicState.locked ? 'unlock' : 'lock')}>{topicState.locked ? <Unlock size={14} /> : <Lock size={14} />} {topicState.locked ? 'Kilidi aç' : 'Kilitle'}</button> : null}
+              {isAdmin && !isOfficialGuide ? <button onClick={() => manageTopic(topicState.locked ? 'unlock' : 'lock')}>{topicState.locked ? <Unlock size={14} /> : <Lock size={14} />} {topicState.locked ? 'Kilidi aç' : 'Kilitle'}</button> : null}
             </span> : null}
           </div>
         </div>
@@ -280,7 +283,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
         )
       }) : <div className="forum-no-replies">Bu konuya henüz yanıt yazılmadı.</div>}
 
-      {topicState.locked && !isAdmin ? <div className="forum-topic-locked"><Lock size={17} /> Bu konu yeni yanıtlara kapatıldı.</div> : <section className="forum-reply-editor" id="yanit-yaz">
+      {(isOfficialGuide || (topicState.locked && !isAdmin)) ? <div className="forum-topic-locked"><Lock size={17} /> Bu resmi rehber yorumlara kapalıdır.</div> : <section className="forum-reply-editor" id="yanit-yaz">
         <div className="forum-section-title"><div><Send size={17} /> Yanıt yaz</div>{replyTarget ? <button onClick={() => setReplyTarget(null)}>Yanıtı iptal et</button> : null}</div>
         {replyTarget ? <div className="forum-reply-target">{replyTarget.profil?.kullanici_adi || 'Konsey Üyesi'} adlı kullanıcıya yanıt veriyorsun.</div> : null}
         <textarea value={replyText} onChange={(event) => setReplyText(event.target.value)} rows={7} placeholder="Mesajını yaz..." />

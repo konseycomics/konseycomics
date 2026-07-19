@@ -324,6 +324,7 @@ export default function ProfilSayfasi() {
                   >
                     {formatRol(profil.rol)}
                   </span>
+                  {profil.ekip_uyesi ? <><span style={{ display:'inline-flex',alignItems:'center',minHeight:'32px',padding:'0 12px',borderRadius:'999px',border:'1px solid rgba(224,183,76,.45)',background:'rgba(224,183,76,.12)',color:'#e0b74c',fontSize:'11px',fontWeight:900,letterSpacing:'.8px',textTransform:'uppercase' }}>Konsey Ekibi</span><span style={{ display:'inline-flex',alignItems:'center',minHeight:'32px',padding:'0 12px',borderRadius:'999px',border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.05)',color:'#ddd',fontSize:'11px',fontWeight:800,textTransform:'uppercase' }}>{profil.ekip_rolu || 'Ekip Üyesi'}</span></> : null}
                 </div>
 
                 {seciliUnvan?.isim && (

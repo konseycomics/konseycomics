@@ -55,6 +55,8 @@ function mapProfileToLeaderboardRow(profil, okumaSayisi = 0) {
     kullanici_adi: profil.kullanici_adi,
     avatar_url: profil.avatar_url || '',
     unvan: profil.secili_unvan || '',
+    ekip_uyesi: Boolean(profil.ekip_uyesi),
+    ekip_rolu: profil.ekip_rolu || '',
     okumaSayisi,
   }
 }
@@ -84,7 +86,7 @@ function buildLeaderboardRows(reads, profiles, startDate = null) {
   return [...siraliOkuyanlar, ...sifirOkuyanlar].slice(0, 5)
 }
 
-export async function getLeaderboards(existingAdminClient = null) {
+export async function getLeaderboards(existingAdminClient = null, { excludeTeam = true } = {}) {
   const admin = existingAdminClient || createSupabaseAdminClient()
   if (!admin) {
     return { gunluk: [], haftalik: [], tum: [] }
@@ -117,7 +119,7 @@ export async function getLeaderboards(existingAdminClient = null) {
     fetchAllRows(() =>
       admin
         .from('ekip')
-        .select('isim')
+        .select('isim, unvan, profil_id')
     ),
   ])
 
@@ -137,17 +139,20 @@ export async function getLeaderboards(existingAdminClient = null) {
     const ekipIsmi = normalizeText(uye?.isim)
     if (!ekipIsmi) continue
 
-    const eslesenProfil = profileRows.find((profil) => normalizeText(profil.kullanici_adi) === ekipIsmi)
+    const eslesenProfil = profileRows.find((profil) => uye?.profil_id && profil.id === uye.profil_id)
+      || profileRows.find((profil) => normalizeText(profil.kullanici_adi) === ekipIsmi)
       || profileRows.find((profil) => normalizeText(profil.kullanici_adi).includes(ekipIsmi))
 
     if (eslesenProfil?.id) {
       excludedProfileIds.add(eslesenProfil.id)
+      eslesenProfil.ekip_uyesi = true
+      eslesenProfil.ekip_rolu = uye.unvan || ''
     }
   }
 
   const profileMap = new Map(
     profileRows
-      .filter((profil) => !excludedProfileIds.has(profil.id))
+      .filter((profil) => !excludeTeam || !excludedProfileIds.has(profil.id))
       .map((profil) => [profil.id, profil])
   )
 

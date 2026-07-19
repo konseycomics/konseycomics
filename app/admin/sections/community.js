@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { AramaSecimTek, BS, BP, BD, CARD_INNER, I, LB, Msg, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE } from '../ui'
+import { FORUMS } from '../../lib/forumConfig'
 
 function slugOlustur(value='') {
   return String(value || '')
@@ -18,16 +19,17 @@ function slugOlustur(value='') {
 
 export function KonseySayfasi() {
   const [ekip, setEkip] = useState([])
+  const [profiller, setProfiller] = useState([])
   const [mod, setMod] = useState('liste')
   const [duzenleId, setDuzenleId] = useState(null)
   const [msg, setMsg] = useState('')
   const [yukleniyor, setYukleniyor] = useState(false)
   const [avatarOnizleme, setAvatarOnizleme] = useState(null)
-  const bos = { isim:'',unvan:'',avatar_url:'' }
+  const bos = { isim:'',unvan:'',avatar_url:'',profil_id:null }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
-  async function fetchHepsi() { const { data } = await supabase.from('ekip').select('*').order('isim'); setEkip(data||[]) }
+  async function fetchHepsi() { const [{ data }, { data: profilData }] = await Promise.all([supabase.from('ekip').select('*').order('isim'), supabase.from('public_profiller').select('id, kullanici_adi, avatar_url').order('kullanici_adi')]); setEkip(data||[]); setProfiller(profilData||[]) }
 
   async function kaydet() {
     if (!form.isim) { setMsg('❌ İsim zorunlu!'); return }
@@ -50,6 +52,7 @@ export function KonseySayfasi() {
           <div style={{ flex:1 }}>
             <div style={{ marginBottom:'12px' }}><div style={LB}>İsim</div><input value={form.isim} onChange={e=>setForm(f=>({...f,isim:e.target.value}))} style={I} /></div>
             <div><div style={LB}>Unvan</div><input value={form.unvan} onChange={e=>setForm(f=>({...f,unvan:e.target.value}))} style={I} placeholder="Çevirmen, Editör..." /></div>
+            <div style={{marginTop:'12px'}}><div style={LB}>Bağlı Kullanıcı Profili</div><select value={form.profil_id||''} onChange={e=>setForm(f=>({...f,profil_id:e.target.value||null}))} style={S}><option value="">Profil bağlanmadı</option>{profiller.map(p=><option key={p.id} value={p.id}>{p.kullanici_adi}</option>)}</select></div>
           </div>
         </div>
         <div style={{ display:'flex',gap:'10px' }}><button onClick={kaydet} disabled={yukleniyor} style={BP}>{yukleniyor?'Kaydediliyor...':'Kaydet'}</button><button onClick={()=>{setMod('liste');setForm(bos);setDuzenleId(null)}} style={BS}>İptal</button></div>
@@ -65,7 +68,7 @@ export function KonseySayfasi() {
           {ekip.map((u,i)=>(
             <div key={u.id} style={{ display:'flex',alignItems:'center',gap:'12px',padding:'12px 16px',borderBottom:i<ekip.length-1?TABLE_ROW.borderBottom:'none' }}>
               {u.avatar_url?<img src={u.avatar_url} style={{ width:'40px',height:'40px',borderRadius:'50%',objectFit:'cover' }} />:<div style={{ width:'40px',height:'40px',borderRadius:'50%',background:'rgba(255,255,255,0.05)',display:'flex',alignItems:'center',justifyContent:'center' }}>👤</div>}
-              <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{u.isim}</div><div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{u.unvan}</div></div>
+              <div style={{ flex:1 }}><div style={{ fontSize:'14px',fontWeight:500 }}>{u.isim}</div><div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{u.unvan}{u.profil_id ? ` · @${profiller.find(p=>p.id===u.profil_id)?.kullanici_adi||'profil bağlı'}` : ' · profil bağlanmadı'}</div></div>
               <button onClick={()=>{setForm({...bos,...u});setAvatarOnizleme(u.avatar_url);setDuzenleId(u.id);setMod('form')}} style={BS}>Düzenle</button>
               <button onClick={()=>sil(u.id)} style={BD}>Sil</button>
             </div>
@@ -366,6 +369,86 @@ export function PlanetSayfasi() {
         ))}
         {yazilar.length===0 && <Surface><div style={{ color:TEXT_SUBTLE, fontSize:'13px' }}>Henüz Konsey Planet yazısı yok.</div></Surface>}
       </div>
+    </div>
+  )
+}
+
+const RAPOR_NEDENLERI = {
+  spam: 'Spam veya reklam',
+  hakaret: 'Hakaret veya taciz',
+  spoiler: 'İşaretlenmemiş spoiler',
+  yanlis_bolum: 'Yanlış forum bölümü',
+  yasadisi: 'Yasa dışı içerik',
+  diger: 'Diğer',
+}
+
+export function ForumModerasyonSayfasi() {
+  const [veri, setVeri] = useState({ reports: [], topics: [], logs: [], reportTopics: [], replies: [], profiles: [] })
+  const [sekme, setSekme] = useState('raporlar')
+  const [durum, setDurum] = useState('acik')
+  const [arama, setArama] = useState('')
+  const [msg, setMsg] = useState('')
+  const [yukleniyor, setYukleniyor] = useState(true)
+
+  async function apiFetch(url, options = {}) {
+    const { data: { session } } = await supabase.auth.getSession()
+    return fetch(url, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${session?.access_token || ''}` } })
+  }
+
+  async function fetchData() {
+    setYukleniyor(true)
+    const response = await apiFetch('/api/community/moderation')
+    const result = await response.json().catch(() => ({}))
+    if (response.ok) setVeri(result)
+    else setMsg(`❌ ${result.error || 'Topluluk verileri yüklenemedi.'}`)
+    setYukleniyor(false)
+  }
+
+  useEffect(() => { fetchData() }, [])
+
+  async function moderasyon(action, payload = {}) {
+    setMsg('')
+    const response = await apiFetch('/api/community/moderation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...payload }) })
+    const result = await response.json().catch(() => ({}))
+    setMsg(response.ok ? '✅ İşlem kaydedildi.' : `❌ ${result.error || 'İşlem tamamlanamadı.'}`)
+    if (response.ok) fetchData()
+  }
+
+  async function konuIslemi(konuId, action, forumSlug) {
+    setMsg('')
+    const response = await apiFetch('/api/community/topics/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ konuId, action, forumSlug }) })
+    const result = await response.json().catch(() => ({}))
+    setMsg(response.ok ? '✅ Konu güncellendi.' : `❌ ${result.error || 'Konu güncellenemedi.'}`)
+    if (response.ok) fetchData()
+  }
+
+  const profileMap = new Map(veri.profiles.map((item) => [item.id, item]))
+  const topicMap = new Map(veri.reportTopics.map((item) => [item.id, item]))
+  const replyMap = new Map(veri.replies.map((item) => [item.id, item]))
+  const raporlar = veri.reports.filter((item) => durum === 'tumu' || item.durum === durum)
+  const konular = veri.topics.filter((item) => !arama || `${item.baslik} ${item.kategori}`.toLocaleLowerCase('tr-TR').includes(arama.toLocaleLowerCase('tr-TR')))
+
+  return (
+    <div>
+      <SectionTitle eyebrow="Topluluk" title="Forum Moderasyonu" description="Bildirimleri incele, forum konularini yonet ve tum yonetim islemlerini kayit altinda tut." />
+      <Msg text={msg} />
+      <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:'12px',marginBottom:'16px' }}>
+        {[['Açık Bildirim',veri.reports.filter(r=>r.durum==='acik').length],['İncelenen',veri.reports.filter(r=>r.durum==='inceleniyor').length],['Aktif Konu',veri.topics.filter(t=>t.aktif).length],['Gizli Konu',veri.topics.filter(t=>!t.aktif).length]].map(([label,value])=><div key={label} style={{...CARD_INNER,padding:'16px'}}><div style={LB}>{label}</div><div style={{fontFamily:"'Bebas Neue', sans-serif",fontSize:'42px',lineHeight:.95}}>{value}</div></div>)}
+      </div>
+      <div style={{ display:'flex',gap:'8px',marginBottom:'16px',flexWrap:'wrap' }}>
+        {[['raporlar','Bildirimler'],['konular','Konular'],['gecmis','İşlem Geçmişi']].map(([key,label])=><button key={key} onClick={()=>setSekme(key)} style={sekme===key?BP:BS}>{label}</button>)}
+      </div>
+      {yukleniyor ? <Surface><div style={{color:TEXT_SUBTLE}}>Yükleniyor...</div></Surface> : null}
+      {!yukleniyor && sekme === 'raporlar' ? <Surface style={{padding:'18px'}}>
+        <div style={{display:'flex',gap:'10px',marginBottom:'14px',flexWrap:'wrap'}}><select value={durum} onChange={e=>setDurum(e.target.value)} style={{...S,maxWidth:'220px'}}><option value="tumu">Tüm Durumlar</option><option value="acik">Açık</option><option value="inceleniyor">İnceleniyor</option><option value="cozuldu">Çözüldü</option><option value="reddedildi">Reddedildi</option></select></div>
+        <div style={{display:'grid',gap:'10px'}}>{raporlar.map((rapor)=>{const konu=topicMap.get(rapor.konu_id);const yanit=replyMap.get(rapor.yanit_id);const bildiren=profileMap.get(rapor.bildiren_id);return <div key={rapor.id} style={{...CARD_INNER,padding:'16px'}}>
+          <div style={{display:'flex',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',marginBottom:'10px'}}><div><span style={{color:'#f3d287',fontSize:'11px',fontWeight:800}}>{RAPOR_NEDENLERI[rapor.neden]||rapor.neden}</span><div style={{fontSize:'17px',fontWeight:800,marginTop:'5px'}}>{konu?.baslik||'Forum içeriği'}</div><div style={{fontSize:'11px',color:TEXT_SUBTLE,marginTop:'4px'}}>{bildiren?.kullanici_adi||'Üye'} · {new Date(rapor.created_at).toLocaleString('tr-TR')} · {rapor.durum}</div></div>{konu?.slug?<a href={`/topluluk/konu/${konu.slug}`} target="_blank" rel="noreferrer" style={{...BS,textDecoration:'none',display:'inline-flex',alignItems:'center'}}>İçeriğe Git</a>:null}</div>
+          {yanit?.icerik?<div style={{padding:'10px',background:'rgba(255,255,255,.04)',borderRadius:'8px',color:TEXT_SOFT,fontSize:'12px',lineHeight:1.6,marginBottom:'10px'}}>{yanit.icerik.slice(0,260)}</div>:null}{rapor.aciklama?<div style={{color:TEXT_SOFT,fontSize:'12px',marginBottom:'10px'}}>Not: {rapor.aciklama}</div>:null}
+          <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>{rapor.durum==='acik'?<button onClick={()=>moderasyon('report_review',{reportId:rapor.id})} style={BS}>İncelemeye Al</button>:null}<button onClick={()=>moderasyon('report_resolve',{reportId:rapor.id})} style={BP}>Çözüldü</button><button onClick={()=>moderasyon('report_reject',{reportId:rapor.id})} style={BS}>Reddet</button>{yanit?.id&&yanit.aktif?<button onClick={()=>moderasyon('hide_reply',{replyId:yanit.id})} style={BD}>Yanıtı Gizle</button>:null}{yanit?.id&&!yanit.aktif?<button onClick={()=>moderasyon('restore_reply',{replyId:yanit.id})} style={BS}>Yanıtı Aç</button>:null}</div>
+        </div>})}{raporlar.length===0?<div style={{padding:'30px',textAlign:'center',color:TEXT_SUBTLE}}>Bu durumda bildirim yok.</div>:null}</div>
+      </Surface> : null}
+      {!yukleniyor && sekme === 'konular' ? <Surface style={{padding:'18px'}}><input value={arama} onChange={e=>setArama(e.target.value)} placeholder="Konu veya kategori ara..." style={{...I,marginBottom:'14px'}}/><div style={{display:'grid',gap:'8px'}}>{konular.map(konu=><div key={konu.id} style={{...CARD_INNER,padding:'14px',display:'flex',alignItems:'center',gap:'12px',flexWrap:'wrap'}}><div style={{flex:'1 1 300px'}}><div style={{fontWeight:800,fontSize:'14px'}}>{konu.baslik}</div><div style={{fontSize:'11px',color:TEXT_SUBTLE,marginTop:'4px'}}>{konu.kategori} · {konu.aktif?'yayında':'gizli'} · {konu.yanit_sayisi} yanıt</div></div><a href={`/topluluk/konu/${konu.slug}`} target="_blank" rel="noreferrer" style={{...BS,textDecoration:'none'}}>Aç</a><button onClick={()=>konuIslemi(konu.id,konu.sabitlendi?'unpin':'pin')} style={BS}>{konu.sabitlendi?'Sabiti Kaldır':'Sabitle'}</button><button onClick={()=>konuIslemi(konu.id,konu.kilitli?'unlock':'lock')} style={BS}>{konu.kilitli?'Kilidi Aç':'Kilitle'}</button><select defaultValue="" onChange={e=>{if(e.target.value)konuIslemi(konu.id,'move',e.target.value)}} style={{...S,width:'170px'}}><option value="">Bölüme taşı...</option>{FORUMS.map(f=><option key={f.slug} value={f.slug}>{f.name}</option>)}</select><button onClick={()=>konuIslemi(konu.id,konu.aktif?'hide':'restore')} style={konu.aktif?BD:BP}>{konu.aktif?'Gizle':'Geri Aç'}</button></div>)}</div></Surface> : null}
+      {!yukleniyor && sekme === 'gecmis' ? <Surface style={{padding:'18px'}}><div style={{display:'grid',gap:'8px'}}>{veri.logs.map(log=><div key={log.id} style={{...CARD_INNER,padding:'13px',display:'flex',justifyContent:'space-between',gap:'12px'}}><div><strong style={{fontSize:'12px'}}>{log.eylem}</strong><div style={{fontSize:'10px',color:TEXT_SUBTLE,marginTop:'4px'}}>{profileMap.get(log.moderator_id)?.kullanici_adi||'Yönetici'}</div></div><span style={{fontSize:'10px',color:TEXT_SUBTLE}}>{new Date(log.created_at).toLocaleString('tr-TR')}</span></div>)}{veri.logs.length===0?<div style={{color:TEXT_SUBTLE}}>Henüz işlem kaydı yok.</div>:null}</div></Surface> : null}
     </div>
   )
 }

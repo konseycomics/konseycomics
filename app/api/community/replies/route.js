@@ -62,11 +62,18 @@ export async function POST(req) {
     }
 
     if (!topicRow?.id) return NextResponse.json({ error: 'Konu bulunamadı.' }, { status: 404 })
+    const { data: requesterProfile } = await adminClient.from('public_profiller').select('rol').eq('id', userData.user.id).maybeSingle()
+    const isStaff = ['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())
     if (topicRow.kilitli) {
-      const { data: requesterProfile } = await adminClient.from('public_profiller').select('rol').eq('id', userData.user.id).maybeSingle()
-      if (!['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())) {
+      if (!isStaff) {
         return NextResponse.json({ error: 'Bu konu yeni yanıtlara kapatılmış.' }, { status: 423 })
       }
+    }
+
+    if (!isStaff) {
+      const since = new Date(Date.now() - 15_000).toISOString()
+      const { count } = await adminClient.from('topluluk_yanitlari').select('id', { count: 'exact', head: true }).eq('kullanici_id', userData.user.id).gte('created_at', since)
+      if (Number(count || 0) > 0) return NextResponse.json({ error: 'Yeni bir yanıt göndermeden önce birkaç saniye beklemelisin.' }, { status: 429 })
     }
 
     let parentReplyRow = null
@@ -130,28 +137,6 @@ export async function POST(req) {
         okundu: false,
       })
     }
-
-    const excludedRecipients = new Set([
-      userData.user.id,
-      topicRow?.kullanici_id,
-      parentReplyRow?.kullanici_id,
-    ].filter(Boolean))
-    const { data: subscriptionRows } = await adminClient
-      .from('topluluk_abonelikleri')
-      .select('kullanici_id')
-      .eq('konu_id', konuId)
-
-    const notificationRows = (subscriptionRows || [])
-      .filter((row) => !excludedRecipients.has(row.kullanici_id))
-      .map((row) => ({
-        alici_id: row.kullanici_id,
-        tip: 'topluluk',
-        baslik: 'Takip ettiğin konuya yeni yanıt',
-        mesaj: `${topicRow?.baslik || 'Topluluk konusu'} içinde yeni bir yanıt paylaşıldı.`,
-        okundu: false,
-      }))
-
-    if (notificationRows.length > 0) await adminClient.from('bildirimler').insert(notificationRows)
 
     return NextResponse.json({
       ok: true,

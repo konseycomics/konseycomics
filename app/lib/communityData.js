@@ -15,21 +15,31 @@ export function slugifyTopicTitle(value) {
     .slice(0, 72)
 }
 
-function mapProfiles(rows, titles) {
+function normalizeName(value) {
+  return String(value || '').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+}
+
+function mapProfiles(rows, titles, teamRows = []) {
   const titleMap = new Map((titles || []).map((row) => [
     row.kullanici_id,
     Array.isArray(row.unvan_tanimlari) ? row.unvan_tanimlari[0]?.isim : row.unvan_tanimlari?.isim || '',
   ]))
 
-  return new Map((rows || []).map((row) => [
-    row.id,
-    {
+  const teamByProfile = new Map((teamRows || []).filter((row) => row.profil_id).map((row) => [row.profil_id, row]))
+  const teamByName = new Map((teamRows || []).map((row) => [normalizeName(row.isim), row]))
+
+  return new Map((rows || []).map((row) => {
+    const team = teamByProfile.get(row.id) || teamByName.get(normalizeName(row.kullanici_adi))
+    return [row.id, {
       id: row.id,
       kullanici_adi: row.kullanici_adi,
       avatar_url: row.avatar_url || '',
       unvan: titleMap.get(row.id) || '',
-    },
-  ]))
+      rol: row.rol || 'okuyucu',
+      ekip_uyesi: Boolean(team),
+      ekip_rolu: team?.unvan || '',
+    }]
+  }))
 }
 
 function formatTopicRow(row, profil, hrefBase = '/topluluk/konu') {
@@ -109,18 +119,19 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
   }
 
   const userIds = [...new Set((topicRows || []).map((row) => row.kullanici_id).filter(Boolean))]
-  const [{ data: profileRows }, { data: titleRows }] = userIds.length > 0
+  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }] = userIds.length > 0
     ? await Promise.all([
-        admin.from('public_profiller').select('id, kullanici_adi, avatar_url').in('id', userIds),
+        admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds),
         admin
           .from('kullanici_unvanlari')
           .select('kullanici_id, unvan_tanimlari(isim)')
           .in('kullanici_id', userIds)
           .eq('one_cikarildi', true),
+        admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`),
       ])
-    : [{ data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }]
 
-  const profileMap = mapProfiles(profileRows, titleRows)
+  const profileMap = mapProfiles(profileRows, titleRows, teamRows)
   const topicIds = (topicRows || []).map((row) => row.id).filter(Boolean)
   const pollStatsMap = new Map()
 
@@ -231,18 +242,19 @@ export async function getCommunityTopicBySlug(slug) {
 
   const userIds = [...new Set([topicRow.kullanici_id, ...(replyRows || []).map((row) => row.kullanici_id)].filter(Boolean))]
 
-  const [{ data: profileRows }, { data: titleRows }] = userIds.length > 0
+  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }] = userIds.length > 0
     ? await Promise.all([
-        admin.from('public_profiller').select('id, kullanici_adi, avatar_url').in('id', userIds),
+        admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds),
         admin
           .from('kullanici_unvanlari')
           .select('kullanici_id, unvan_tanimlari(isim)')
           .in('kullanici_id', userIds)
           .eq('one_cikarildi', true),
+        admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`),
       ])
-    : [{ data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }, { data: [] }]
 
-  const profileMap = mapProfiles(profileRows, titleRows)
+  const profileMap = mapProfiles(profileRows, titleRows, teamRows)
 
   return {
     available: true,
@@ -256,24 +268,4 @@ export async function getCommunityTopicBySlug(slug) {
     },
     replies: (replyRows || []).map((row) => formatReplyRow(row, profileMap.get(row.kullanici_id))),
   }
-}
-
-export async function incrementCommunityTopicView(topicId) {
-  const admin = createSupabaseAdminClient()
-  if (!admin || !topicId) return
-
-  const { data: row, error } = await admin
-    .from('topluluk_konulari')
-    .select('id, goruntulenme_sayisi')
-    .eq('id', topicId)
-    .maybeSingle()
-
-  if (error || !row?.id) return
-
-  await admin
-    .from('topluluk_konulari')
-    .update({
-      goruntulenme_sayisi: Number(row.goruntulenme_sayisi || 0) + 1,
-    })
-    .eq('id', row.id)
 }

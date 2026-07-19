@@ -3,7 +3,7 @@ import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import ForumTopicClient from '../../ForumTopicClient'
 import { buildMetadata, createSeoDescription } from '../../../lib/seo'
-import { getCommunityTopicBySlug, incrementCommunityTopicView } from '../../../lib/communityData'
+import { getCommunityTopicBySlug } from '../../../lib/communityData'
 import '../../forum.css'
 
 export async function generateMetadata({ params }) {
@@ -51,19 +51,13 @@ export default async function ToplulukKonuDetayPage({ params }) {
 
   if (!topic) notFound()
 
-  await incrementCommunityTopicView(topic.id)
-  const topicWithFreshView = {
-    ...topic,
-    goruntulenme_sayisi: Number(topic.goruntulenme_sayisi || 0) + 1,
-  }
-
   return (
     <>
       <Navbar />
       <main className="forum-page">
         <section className="site-section forum-page-inner">
           <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
-            <ForumTopicClient topic={topicWithFreshView} initialReplies={replies} />
+            <ForumTopicClient topic={topic} initialReplies={replies} />
           </div>
         </section>
       </main>

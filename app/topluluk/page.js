@@ -20,7 +20,7 @@ export default async function ToplulukPage() {
   const [{ topics }, planetPosts, leaderboards] = await Promise.all([
     getCommunityTopics({ limit: 60 }),
     getPlanetPosts({ limit: 8 }),
-    getLeaderboards(),
+    getLeaderboards(null, { excludeTeam: false }),
   ])
 
   const activeUsers = leaderboards.gunluk.length > 0 ? leaderboards.gunluk : leaderboards.haftalik

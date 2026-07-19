@@ -58,16 +58,28 @@ export default function GirisKayit() {
   const [hata, setHata] = useState('')
   const [mesaj, setMesaj] = useState('')
   const [captchaToken, setCaptchaToken] = useState('')
+  const [returnTo, setReturnTo] = useState('/')
   const captchaRef = useRef(null)
   const router = useRouter()
   const captchaActive = isCaptchaEnabled()
   const passwordChecks = useMemo(() => getPasswordChecks(form.sifre), [form.sifre])
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedMode = params.get('mod')
+    const requestedReturn = params.get('returnTo')
+    const timer = window.setTimeout(() => {
+      if (requestedMode === 'kayit' || requestedMode === 'giris') setMod(requestedMode)
+      if (requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')) setReturnTo(requestedReturn)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push('/')
+      if (session) router.push(returnTo)
     })
-  }, [router])
+  }, [router, returnTo])
 
   useEffect(() => {
     setHata('')
@@ -112,7 +124,7 @@ export default function GirisKayit() {
           setYukleniyor(false)
           return
         }
-        router.push('/')
+        router.push(returnTo)
         router.refresh()
       }
     }
@@ -165,7 +177,7 @@ export default function GirisKayit() {
         return
       }
       setMesaj('Kayıt başarılı! Hesabın hazır, yönlendiriliyorsun.')
-      router.push('/')
+      router.push(returnTo)
       router.refresh()
     } else {
       setMesaj('Kayıt başarılı! Güvenlik ayarına göre e-posta doğrulaması gerekebilir, lütfen gelen kutunu kontrol et.')

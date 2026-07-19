@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
+import { Users } from 'lucide-react'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -12,7 +13,7 @@ export default function Navbar() {
   const [profil, setProfil] = useState(null)
   const router = useRouter()
   const pathname = usePathname()
-  const toplulukModu = pathname === '/topluluk'
+  const toplulukModu = pathname.startsWith('/topluluk')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,19 +73,7 @@ export default function Navbar() {
           </ul>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
-          {toplulukModu && (
-            <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '4px' }}>
-              <div style={{ minWidth: '250px', height: '42px', borderRadius: '12px', border: '1px solid #222', background: '#0d0d0d', display: 'flex', alignItems: 'center', padding: '0 14px', color: '#8e8e88', fontSize: '14px' }}>
-                <span style={{ marginRight: '10px', fontSize: '16px' }}>⌕</span>
-                Ara...
-              </div>
-              {!kullanici && (
-                <button style={{ width: '42px', height: '42px', borderRadius: '12px', border: '1px solid #222', background: '#0d0d0d', color: '#f5f5f3', fontSize: '16px', cursor: 'pointer' }}>
-                  🔔
-                </button>
-              )}
-            </div>
-          )}
+          <Link href="/topluluk" className="desktop-only" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', border: `1px solid ${toplulukModu ? '#e0b74c' : '#59491f'}`, borderRadius: '8px', background: toplulukModu ? '#e0b74c' : '#18140b', color: toplulukModu ? '#0b0b0b' : '#e0b74c', fontSize: '13px', fontWeight: 800, textDecoration: 'none', boxShadow: '0 8px 24px rgba(224,183,76,.10)' }}><Users size={16} /> Topluluk</Link>
           {kullanici && profil ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="desktop-only">
               {(profil.rol === 'admin' || profil.rol === 'yonetici') && (
@@ -133,6 +122,7 @@ export default function Navbar() {
               {item.label}
             </Link>
           ))}
+          <Link href="/topluluk" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '12px 24px 4px', padding: '12px', background: '#e0b74c', color: '#0b0b0b', borderRadius: '8px', fontSize: '14px', fontWeight: 900, textDecoration: 'none' }}><Users size={17} /> Topluluk</Link>
           <div style={{ padding: '12px 24px' }}>
             {kullanici && profil ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, BarChart3, Bell, BellOff, Clock3, Eye, Flag, Heart, ImageIcon, Lock, MessageSquare, Pin, Reply, Send, ShieldAlert, Trash2, Unlock } from 'lucide-react'
+import { ArrowLeft, BarChart3, Clock3, Eye, Flag, Heart, ImageIcon, Lock, MessageSquare, Pin, Reply, Send, ShieldAlert, Trash2, Unlock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getForumForCategory } from '../lib/forumConfig'
+import ForumAuthModal from './ForumAuthModal'
+import ForumReportModal from './ForumReportModal'
 
 function formatDate(value) {
   if (!value) return ''
@@ -20,7 +22,7 @@ function UserPanel({ profile, label }) {
         {profile?.avatar_url ? <Image src={profile.avatar_url} alt="" width={74} height={74} unoptimized /> : letter}
       </div>
       <strong>{profile?.kullanici_adi || 'Konsey Üyesi'}</strong>
-      <span className="forum-user-rank">{profile?.unvan || label || 'Okuyucu'}</span>
+      {profile?.ekip_uyesi ? <div className="forum-team-badges"><span>KONSEY EKİBİ</span><span>{profile.ekip_rolu || 'Ekip Üyesi'}</span></div> : <span className="forum-user-rank">{profile?.unvan || label || 'Okuyucu'}</span>}
       <small>Konsey üyesi</small>
     </aside>
   )
@@ -70,9 +72,12 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   const [pollResults, setPollResults] = useState(topic?.anket_sonuclari || [])
   const [pollTotal, setPollTotal] = useState(Number(topic?.anket_toplam_oy || 0))
   const [pollSelection, setPollSelection] = useState(null)
-  const [subscribed, setSubscribed] = useState(false)
   const [topicState, setTopicState] = useState({ pinned: Boolean(topic.sabitlendi), locked: Boolean(topic.kilitli) })
   const [uploading, setUploading] = useState(false)
+  const [authPrompt, setAuthPrompt] = useState('')
+  const [reportTarget, setReportTarget] = useState(null)
+  const [reporting, setReporting] = useState(false)
+  const [viewCount, setViewCount] = useState(Number(topic?.goruntulenme_sayisi || 0))
 
   useEffect(() => {
     let active = true
@@ -86,20 +91,31 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
       const requests = [
         supabase.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').eq('id', currentUser.id).maybeSingle(),
         supabase.from('topluluk_begenileri').select('id').eq('kullanici_id', currentUser.id).eq('konu_id', topic.id).maybeSingle(),
-        supabase.from('topluluk_abonelikleri').select('id').eq('kullanici_id', currentUser.id).eq('konu_id', topic.id).maybeSingle(),
       ]
       if (topic.anket_aktif) requests.push(supabase.from('topluluk_anket_oylari').select('secenek_index').eq('kullanici_id', currentUser.id).eq('konu_id', topic.id).maybeSingle())
-      const [profileResult, likeResult, subscriptionResult, voteResult] = await Promise.all(requests)
+      const [profileResult, likeResult, voteResult] = await Promise.all(requests)
       if (!active) return
       setProfile(profileResult.data || null)
       setLiked(Boolean(likeResult.data?.id))
-      setSubscribed(Boolean(subscriptionResult.data?.id))
       setPollSelection(voteResult?.data?.secenek_index ?? null)
     }
     load()
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null))
     return () => { active = false; subscription.unsubscribe() }
   }, [topic.id, topic.anket_aktif])
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/community/views', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ konuId: topic.id }),
+    })
+      .then((response) => response.json())
+      .then((result) => { if (active && Number.isFinite(Number(result.count))) setViewCount(Number(result.count)) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [topic.id])
 
   async function authFetch(url, payload) {
     const { data: { session } } = await supabase.auth.getSession()
@@ -111,7 +127,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   }
 
   async function toggleLike() {
-    if (!user) return setMessage('Beğenmek için giriş yapman gerekiyor.')
+    if (!user) return setAuthPrompt('konuları beğenmek')
     const response = await authFetch('/api/community/reactions/toggle', { konuId: topic.id, type: 'like' })
     const result = await response.json().catch(() => ({}))
     if (!response.ok) return setMessage(result.error || 'İşlem tamamlanamadı.')
@@ -119,27 +135,23 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
     setLikeCount((count) => Math.max(0, count + (result.active ? 1 : -1)))
   }
 
-  async function toggleSubscription() {
-    if (!user) return setMessage('Konuyu takip etmek için giriş yapman gerekiyor.')
-    const response = await authFetch('/api/community/subscriptions/toggle', { konuId: topic.id })
-    const result = await response.json().catch(() => ({}))
-    if (!response.ok) return setMessage(result.error || 'Takip durumu değiştirilemedi.')
-    setSubscribed(result.active)
-    setMessage(result.active ? 'Bu konudaki yeni yanıtları takip ediyorsun.' : 'Konu takibi kapatıldı.')
+  function openReport(yanitId = null) {
+    if (!user) return setAuthPrompt('içerik bildirmek')
+    setReportTarget({ yanitId })
   }
 
-  async function reportContent(yanitId = null) {
-    if (!user) return setMessage('Bildirim göndermek için giriş yapman gerekiyor.')
-    const reason = window.prompt('Bildirim nedenini kısaca yaz:')
-    if (!reason?.trim()) return
-    const response = await authFetch('/api/community/reports', { konuId: topic.id, yanitId, neden: reason.trim() })
+  async function submitReport({ neden, aciklama }) {
+    setReporting(true)
+    const response = await authFetch('/api/community/reports', { konuId: topic.id, yanitId: reportTarget?.yanitId || null, neden, aciklama })
     const result = await response.json().catch(() => ({}))
+    setReporting(false)
+    if (response.ok) setReportTarget(null)
     setMessage(response.ok ? 'Bildirimin moderasyon ekibine ulaştı.' : result.error || 'Bildirim gönderilemedi.')
   }
 
   async function uploadReplyImage(file) {
     if (!file) return
-    if (!user) return setMessage('Görsel yüklemek için giriş yapman gerekiyor.')
+    if (!user) return setAuthPrompt('yanıta görsel eklemek')
     setUploading(true)
     const { data: { session } } = await supabase.auth.getSession()
     const formData = new FormData()
@@ -155,7 +167,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   }
 
   async function submitReply() {
-    if (!user) return setMessage('Yanıt yazmak için giriş yapman gerekiyor.')
+    if (!user) return setAuthPrompt('konuya yanıt vermek')
     if (replyText.trim().length < 2) return setMessage('Yanıt çok kısa kaldı.')
     setSubmitting(true)
     setMessage('')
@@ -171,7 +183,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   }
 
   async function vote(index) {
-    if (!user) return setMessage('Oy vermek için giriş yapman gerekiyor.')
+    if (!user) return setAuthPrompt('ankete oy vermek')
     const response = await authFetch('/api/community/polls/vote', { konuId: topic.id, secenekIndex: index })
     const result = await response.json().catch(() => ({}))
     if (!response.ok) return setMessage(result.error || 'Oy verilemedi.')
@@ -206,9 +218,9 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
         <div>
           <span>{topicState.pinned ? 'Sabit konu · ' : ''}{topic.kategori || 'Genel Sohbet'}{topicState.locked ? ' · Kilitli' : ''}</span>
           <h1>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</h1>
-          <div><Clock3 size={14} /> {formatDate(topic.created_at)} <Eye size={14} /> {Number(topic.goruntulenme_sayisi || 0)} görüntüleme</div>
+          <div><Clock3 size={14} /> {formatDate(topic.created_at)} <Eye size={14} /> {viewCount} görüntüleme</div>
         </div>
-        <a href="#yanit-yaz" className="forum-primary-button"><Reply size={16} /> Yanıtla</a>
+        <button type="button" className="forum-primary-button" onClick={() => user ? document.getElementById('yanit-yaz')?.scrollIntoView({ behavior: 'smooth' }) : setAuthPrompt('konuya yanıt vermek')}><Reply size={16} /> Yanıtla</button>
       </header>
 
       <article className="forum-post original">
@@ -235,8 +247,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
 
           <div className="forum-post-actions">
             <button className={liked ? 'active' : ''} onClick={toggleLike}><Heart size={15} fill={liked ? 'currentColor' : 'none'} /> {likeCount} beğeni</button>
-            <button className={subscribed ? 'active' : ''} onClick={toggleSubscription}>{subscribed ? <BellOff size={15} /> : <Bell size={15} />} {subscribed ? 'Takibi bırak' : 'Takip et'}</button>
-            <button onClick={() => reportContent()}><Flag size={14} /> Bildir</button>
+            <button onClick={() => openReport()}><Flag size={14} /> Bildir</button>
             {(isOwner || isAdmin) ? <span className="forum-post-admin-actions">
               {isOwner ? <button onClick={() => manageTopic('delete')}><Trash2 size={14} /> Sil</button> : null}
               {isAdmin ? <button onClick={() => manageTopic('hide')}><ShieldAlert size={14} /> Gizle</button> : null}
@@ -259,8 +270,8 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
               {parent ? <div className="forum-quoted-user">{parent.profil?.kullanici_adi || 'Bir kullanıcı'} adlı üyeye yanıt</div> : null}
               <SpoilerContent active={reply.spoiler}><div className="forum-post-content"><RichContent value={reply.icerik} /></div></SpoilerContent>
               <div className="forum-post-actions">
-                <button onClick={() => { setReplyTarget(reply); document.getElementById('yanit-yaz')?.scrollIntoView({ behavior: 'smooth' }) }}><Reply size={15} /> Yanıtla</button>
-                <button onClick={() => reportContent(reply.id)}><Flag size={14} /> Bildir</button>
+                <button onClick={() => { if (!user) return setAuthPrompt('mesajlara yanıt vermek'); setReplyTarget(reply); document.getElementById('yanit-yaz')?.scrollIntoView({ behavior: 'smooth' }) }}><Reply size={15} /> Yanıtla</button>
+                <button onClick={() => openReport(reply.id)}><Flag size={14} /> Bildir</button>
               </div>
             </div>
           </article>
@@ -278,6 +289,8 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
           <button onClick={submitReply} disabled={submitting}><Send size={15} /> {submitting ? 'Gönderiliyor...' : 'Yanıtı Gönder'}</button>
         </div>
       </section>}
+      <ForumAuthModal open={Boolean(authPrompt)} action={authPrompt} onClose={() => setAuthPrompt('')} />
+      <ForumReportModal open={Boolean(reportTarget)} submitting={reporting} onClose={() => setReportTarget(null)} onSubmit={submitReport} />
     </div>
   )
 }

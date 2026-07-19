@@ -103,6 +103,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Duyurular forumunda yalnızca yönetim konu açabilir.' }, { status: 403 })
     }
 
+    if (!isStaff) {
+      const since = new Date(Date.now() - 60_000).toISOString()
+      const { count } = await adminClient.from('topluluk_konulari').select('id', { count: 'exact', head: true }).eq('kullanici_id', userData.user.id).gte('created_at', since)
+      if (Number(count || 0) > 0) return NextResponse.json({ error: 'Yeni bir konu açmadan önce kısa bir süre beklemelisin.' }, { status: 429 })
+    }
+
     const { data: forumRow } = await adminClient
       .from('topluluk_forumlari')
       .select('id, slug')

@@ -6,6 +6,7 @@ const kesfet = [
   { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
   { label: 'Manga', href: '/kategori/manga' },
   { label: 'Webtoon', href: '/kategori/webtoon' },
+  { label: 'Topluluk', href: '/topluluk' },
 ]
 
 const kurumsal = [

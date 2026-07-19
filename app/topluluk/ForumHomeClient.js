@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { FORUMS, FORUM_SECTIONS, getForumBySlug, topicBelongsToForum } from '../lib/forumConfig'
+import ForumAuthModal from './ForumAuthModal'
 
 const FORUM_ICONS = {
   megaphone: Megaphone,
@@ -66,6 +67,10 @@ function Avatar({ profile, size = 38 }) {
   )
 }
 
+function TeamMark({ profile }) {
+  return profile?.ekip_uyesi ? <span className="forum-team-mark">Konsey Ekibi · {profile.ekip_rolu || 'Ekip Üyesi'}</span> : null
+}
+
 export default function ForumHomeClient({ initialTopics = [], planetPosts = [], activeUsers = [] }) {
   const [topics, setTopics] = useState(initialTopics)
   const [user, setUser] = useState(null)
@@ -84,6 +89,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [authPrompt, setAuthPrompt] = useState('')
 
   useEffect(() => {
     let active = true
@@ -156,6 +162,10 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
   const popularTopics = [...topics].sort((a, b) => topicScore(b) - topicScore(a)).slice(0, 5)
 
   function openComposer(targetCategory = 'Genel Sohbet') {
+    if (!user) {
+      setAuthPrompt('yeni konu açmak')
+      return
+    }
     setCategory(targetCategory)
     setComposerOpen(true)
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -165,7 +175,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
 
   async function uploadForumImage(file) {
     if (!file) return
-    if (!user) return setMessage('Görsel yüklemek için giriş yapman gerekiyor.')
+    if (!user) return setAuthPrompt('görsel yüklemek')
     setUploading(true)
     setMessage('Görsel hazırlanıyor...')
     const { data: { session } } = await supabase.auth.getSession()
@@ -183,7 +193,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
 
   async function createTopic() {
     if (!user) {
-      setMessage('Konu açmak için giriş yapman gerekiyor.')
+      setAuthPrompt('yeni konu açmak')
       return
     }
     if (title.trim().length < 4 || content.trim().length < 10) {
@@ -245,7 +255,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
             <span><strong>{totalReplies}</strong> yanıt</span>
           </div>
         </div>
-        <button className="forum-primary-button" type="button" onClick={() => setComposerOpen((open) => !open)}>
+        <button className="forum-primary-button" type="button" onClick={() => composerOpen ? setComposerOpen(false) : openComposer()}>
           <PenLine size={17} />
           {composerOpen ? 'Formu Kapat' : 'Yeni Konu'}
         </button>
@@ -384,7 +394,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
                     {topic.anket_aktif ? <span>Anket</span> : null}
                   </div>
                   <Link href={topic.href || `/topluluk/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
-                  <span>{topic.profil?.kullanici_adi || 'Konsey Üyesi'} · {topic.kategori || 'Genel Sohbet'}</span>
+                  <span>{topic.profil?.kullanici_adi || 'Konsey Üyesi'} · {topic.kategori || 'Genel Sohbet'} <TeamMark profile={topic.profil} /></span>
                 </div>
                 <div className="forum-topic-stat"><strong>{Number(topic.yanit_sayisi || 0)}</strong><span>yanıt</span></div>
                 <div className="forum-topic-stat"><strong>{Number(topic.goruntulenme_sayisi || 0)}</strong><span>görüntüleme</span></div>
@@ -423,7 +433,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
               {activeUsers.slice(0, 5).map((member) => (
                 <Link href={`/profil/${encodeURIComponent(member.kullanici_adi)}`} key={member.id}>
                   <Avatar profile={member} size={34} />
-                  <span><strong>{member.kullanici_adi}</strong><small>{member.unvan || 'Konsey Üyesi'}</small></span>
+                  <span><strong>{member.kullanici_adi}</strong><small>{member.ekip_uyesi ? `Konsey Ekibi · ${member.ekip_rolu || 'Ekip Üyesi'}` : member.unvan || 'Konsey Üyesi'}</small></span>
                   <i aria-label="Bugün aktif" />
                 </Link>
               ))}
@@ -441,6 +451,7 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
           </section>
         </aside>
       </div>
+      <ForumAuthModal open={Boolean(authPrompt)} action={authPrompt} onClose={() => setAuthPrompt('')} />
     </div>
   )
 }

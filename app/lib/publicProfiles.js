@@ -8,6 +8,10 @@ function mapProfiles(rows) {
   return map
 }
 
+function normalizeName(value) {
+  return String(value || '').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+}
+
 export async function getPublicProfileByUsername(kullaniciAdi) {
   const { data, error } = await supabase
     .from('public_profiller')
@@ -17,7 +21,7 @@ export async function getPublicProfileByUsername(kullaniciAdi) {
 
   if (error || !data?.id) return { data, error }
 
-  const [{ data: seciliUnvan }] = await Promise.all([
+  const [{ data: seciliUnvan }, { data: teamRows }] = await Promise.all([
     supabase
       .from('kullanici_unvanlari')
       .select('one_cikarildi, unvan_tanimlari(isim, nadirlik)')
@@ -25,9 +29,12 @@ export async function getPublicProfileByUsername(kullaniciAdi) {
       .eq('one_cikarildi', true)
       .limit(1)
       .maybeSingle(),
+    supabase.from('ekip').select('profil_id, isim, unvan'),
   ])
 
-  return { data: { ...data, secili_unvan: seciliUnvan?.unvan_tanimlari || null }, error }
+  const team = (teamRows || []).find((row) => row.profil_id === data.id) || (teamRows || []).find((row) => normalizeName(row.isim) === normalizeName(data.kullanici_adi))
+
+  return { data: { ...data, secili_unvan: seciliUnvan?.unvan_tanimlari || null, ekip_uyesi: Boolean(team), ekip_rolu: team?.unvan || '' }, error }
 }
 
 export async function getPublicProfilesByIds(ids) {
@@ -40,12 +47,13 @@ export async function getPublicProfilesByIds(ids) {
     .in('id', uniqueIds)
 
   const map = mapProfiles(data)
-  const [{ data: seciliUnvanlar }] = await Promise.all([
+  const [{ data: seciliUnvanlar }, { data: teamRows }] = await Promise.all([
     supabase
       .from('kullanici_unvanlari')
       .select('kullanici_id, one_cikarildi, unvan_tanimlari(isim, nadirlik)')
       .in('kullanici_id', uniqueIds)
       .eq('one_cikarildi', true),
+    supabase.from('ekip').select('profil_id, isim, unvan'),
   ])
 
   for (const row of seciliUnvanlar || []) {
@@ -54,6 +62,14 @@ export async function getPublicProfilesByIds(ids) {
         ...map[row.kullanici_id],
         secili_unvan: row.unvan_tanimlari || null,
       }
+    }
+  }
+
+  for (const profile of Object.values(map)) {
+    const team = (teamRows || []).find((row) => row.profil_id === profile.id) || (teamRows || []).find((row) => normalizeName(row.isim) === normalizeName(profile.kullanici_adi))
+    if (team) {
+      profile.ekip_uyesi = true
+      profile.ekip_rolu = team.unvan || ''
     }
   }
 

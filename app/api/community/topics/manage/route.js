@@ -31,7 +31,7 @@ export async function POST(req) {
     }
 
     const { konuId, action, forumSlug } = await req.json()
-    const allowedActions = ['delete', 'hide', 'pin', 'unpin', 'lock', 'unlock', 'move']
+    const allowedActions = ['delete', 'hide', 'restore', 'pin', 'unpin', 'lock', 'unlock', 'move']
     if (!konuId || !allowedActions.includes(action)) {
       return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
     }
@@ -75,6 +75,7 @@ export async function POST(req) {
 
     const updatePayload = { updated_at: new Date().toISOString() }
     if (action === 'delete' || action === 'hide') updatePayload.aktif = false
+    if (action === 'restore') updatePayload.aktif = true
     if (action === 'pin') updatePayload.sabitlendi = true
     if (action === 'unpin') updatePayload.sabitlendi = false
     if (action === 'lock') updatePayload.kilitli = true
@@ -95,6 +96,15 @@ export async function POST(req) {
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 })
+    }
+
+    if (isAdmin) {
+      await adminClient.from('topluluk_moderasyon_loglari').insert({
+        moderator_id: userId,
+        eylem: `topic_${action}`,
+        konu_id: konuId,
+        detay: action === 'move' ? { forum_slug: forumSlug } : {},
+      })
     }
 
     return NextResponse.json({

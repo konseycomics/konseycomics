@@ -82,7 +82,7 @@ export default function ForumCategoryClient({ forum, initialTopics = [] }) {
             <div className="forum-category-copy">
               <div>{topic.sabitlendi ? <Pin size={13} /> : null}{topic.spoiler ? <span>Spoiler</span> : null}{topic.anket_aktif ? <span>Anket</span> : null}</div>
               <Link href={topic.href || `/topluluk/konu/${topic.slug}`}>{topic.spoiler ? 'Spoiler içeren konu' : topic.baslik}</Link>
-              <small>{topic.profil?.kullanici_adi || 'Konsey Üyesi'} · {formatDate(topic.created_at)}</small>
+              <small>{topic.profil?.kullanici_adi || 'Konsey Üyesi'}{topic.profil?.ekip_uyesi ? ` · Konsey Ekibi · ${topic.profil.ekip_rolu || 'Ekip Üyesi'}` : ''} · {formatDate(topic.created_at)}</small>
             </div>
             <div className="forum-category-stat"><MessageSquare size={14} /><strong>{Number(topic.yanit_sayisi || 0)}</strong></div>
             <div className="forum-category-stat"><Eye size={14} /><strong>{Number(topic.goruntulenme_sayisi || 0)}</strong></div>

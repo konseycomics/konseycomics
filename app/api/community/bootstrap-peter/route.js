@@ -85,6 +85,19 @@ export async function POST(req) {
       .single()
     if (systemProfileError) throw systemProfileError
 
+    stage = 'system_profile_update'
+    const { error: systemProfileUpdateError } = await admin
+      .from('topluluk_sistem_profilleri')
+      .update({
+        kullanici_adi: 'Peter Parker',
+        gorunen_ad: 'Peter Parker',
+        bio: 'Konsey Forum topluluk yöneticisi. Dost canlısı mahalle moderatörünüz.',
+        ekip_rolu: 'Topluluk Yöneticisi',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', systemProfile.id)
+    if (systemProfileUpdateError) throw systemProfileUpdateError
+
     stage = 'technical_owner_lookup'
     const { data: owners, error: ownerError } = await admin
       .from('profiller')

@@ -40,8 +40,8 @@ values (
   'peter-parker',
   'Peter Parker',
   'Peter Parker',
-  'Konsey Forum topluluk yoneticisi. Dost canlisi mahalle moderatorunuz.',
-  'Topluluk Yoneticisi'
+  'Konsey Forum topluluk yöneticisi. Dost canlısı mahalle moderatörünüz.',
+  'Topluluk Yöneticisi'
 )
 on conflict (id) do update set
   slug = excluded.slug,

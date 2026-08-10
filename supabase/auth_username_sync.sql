@@ -4,6 +4,8 @@
 -- 2) kullanici_adi bilgisini raw_user_meta_data'dan garanti tasimak
 -- 3) eski kullanicilari backfill etmek
 -- 4) yanlislikla e-posta on eki gibi dusen kullanici adlarini duzeltmek
+-- Google e-posta on eki ve mevcut uye_ profillerinin donusumu icin
+-- google_email_username_upgrade.sql dosyasini bunun ardindan calistirin.
 
 begin;
 

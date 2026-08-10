@@ -1,17 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-
-function slugifyUsername(value) {
-  const base = String(value || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9_]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-
-  if (base.length >= 3) return base.slice(0, 24)
-  if (base.length > 0) return `${base}${'_'.repeat(Math.max(0, 3 - base.length))}`.slice(0, 24)
-  return ''
-}
+import { getPreferredUsername, getUsernameCandidates, isGeneratedUsername } from '../../../lib/username'
 
 function getClients() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -32,20 +21,6 @@ function getClients() {
   }
 }
 
-function getPreferredUsername(user, explicitUsername, { allowFallback = true } = {}) {
-  const explicitOrMetadata =
-    slugifyUsername(explicitUsername) ||
-    slugifyUsername(user?.user_metadata?.kullanici_adi) ||
-    slugifyUsername(user?.user_metadata?.username) ||
-    slugifyUsername(user?.raw_user_meta_data?.kullanici_adi) ||
-    slugifyUsername(user?.raw_user_meta_data?.username)
-
-  if (explicitOrMetadata) return explicitOrMetadata
-  if (!allowFallback) return ''
-
-  return `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
-}
-
 async function ensureProfile(adminClient, user, explicitUsername) {
   const { data: existingProfile, error: existingError } = await adminClient
     .from('profiller')
@@ -56,22 +31,26 @@ async function ensureProfile(adminClient, user, explicitUsername) {
   if (existingError) throw existingError
   if (existingProfile?.id) {
     const preferredUsername = getPreferredUsername(user, explicitUsername, { allowFallback: false })
+    const canReplaceUsername = Boolean(explicitUsername) || isGeneratedUsername(existingProfile.kullanici_adi)
 
     if (
+      canReplaceUsername &&
       preferredUsername &&
       existingProfile.kullanici_adi &&
       existingProfile.kullanici_adi.toLowerCase() !== preferredUsername.toLowerCase()
     ) {
-      const { data: usedProfile } = await adminClient
-        .from('profiller')
-        .select('id')
-        .eq('kullanici_adi', preferredUsername)
-        .maybeSingle()
+      for (const candidate of getUsernameCandidates(preferredUsername, user.id)) {
+        const { data: usedProfile } = await adminClient
+          .from('profiller')
+          .select('id')
+          .ilike('kullanici_adi', candidate)
+          .maybeSingle()
 
-      if (!usedProfile?.id || usedProfile.id === user.id) {
+        if (usedProfile?.id && usedProfile.id !== user.id) continue
+
         const { data: updatedProfile, error: updateError } = await adminClient
           .from('profiller')
-          .update({ kullanici_adi: preferredUsername })
+          .update({ kullanici_adi: candidate })
           .eq('id', user.id)
           .select('id, kullanici_adi')
           .single()
@@ -87,14 +66,11 @@ async function ensureProfile(adminClient, user, explicitUsername) {
 
   const preferredUsername = getPreferredUsername(user, explicitUsername, { allowFallback: true })
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const suffix = attempt === 0 ? '' : `_${Math.floor(100 + Math.random() * 900)}`
-    const candidate = `${preferredUsername}${suffix}`.slice(0, 24)
-
+  for (const candidate of getUsernameCandidates(preferredUsername, user.id)) {
     const { data: usedProfile } = await adminClient
       .from('profiller')
       .select('id')
-      .eq('kullanici_adi', candidate)
+      .ilike('kullanici_adi', candidate)
       .maybeSingle()
 
     if (usedProfile?.id && usedProfile.id !== user.id) continue

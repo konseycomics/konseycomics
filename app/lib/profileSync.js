@@ -1,32 +1,7 @@
 'use client'
 
 import { supabase } from './supabase'
-
-function slugifyUsername(value) {
-  const base = String(value || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9_]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-
-  if (base.length >= 3) return base.slice(0, 24)
-  if (base.length > 0) return `${base}${'_'.repeat(Math.max(0, 3 - base.length))}`.slice(0, 24)
-  return ''
-}
-
-function getPreferredUsername(user, explicitUsername, { allowFallback = true } = {}) {
-  const explicitOrMetadata =
-    slugifyUsername(explicitUsername) ||
-    slugifyUsername(user?.user_metadata?.kullanici_adi) ||
-    slugifyUsername(user?.user_metadata?.username) ||
-    slugifyUsername(user?.raw_user_meta_data?.kullanici_adi) ||
-    slugifyUsername(user?.raw_user_meta_data?.username)
-
-  if (explicitOrMetadata) return explicitOrMetadata
-  if (!allowFallback) return ''
-
-  return `uye_${String(user?.id || '').replace(/-/g, '').slice(0, 8)}`
-}
+import { getPreferredUsername, getUsernameCandidates } from './username'
 
 function isDuplicateUsernameError(error) {
   const message = String(error?.message || '').toLowerCase()
@@ -47,14 +22,11 @@ export async function ensureOwnProfile(user, explicitUsername) {
 
   const preferredUsername = getPreferredUsername(user, explicitUsername)
 
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const suffix = attempt === 0 ? '' : `_${Math.floor(100 + Math.random() * 900)}`
-    const candidate = `${preferredUsername}${suffix}`.slice(0, 24)
-
+  for (const candidate of getUsernameCandidates(preferredUsername, user.id)) {
     const { data: usedProfile } = await supabase
       .from('public_profiller')
       .select('id')
-      .eq('kullanici_adi', candidate)
+      .ilike('kullanici_adi', candidate)
       .maybeSingle()
 
     if (usedProfile?.id && usedProfile.id !== user.id) continue

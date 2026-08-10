@@ -129,4 +129,9 @@ from resolved_profiles r
 where p.id = r.id
   and p.kullanici_adi is distinct from r.kullanici_adi;
 
+-- Bu fonksiyonlar yalnizca veritabani tetikleyicisi ve yonetim islemleri icindir.
+revoke all on function public.normalize_username(text) from public, anon, authenticated;
+revoke all on function public.available_profile_username(text, uuid) from public, anon, authenticated;
+revoke all on function public.handle_new_user_profile() from public, anon, authenticated;
+
 commit;

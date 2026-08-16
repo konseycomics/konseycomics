@@ -45,7 +45,7 @@ export function Msg({ text }) {
   return <div style={{ background: err ? '#fff0f0' : '#f0fdf4', border: `1px solid ${err ? '#fecaca' : '#bbf7d0'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: err ? '#dc2626' : '#166534' }}>{text}</div>
 }
 
-async function uploadAdminImage(file, { bucket, prefix }) {
+export async function uploadAdminImage(file, { bucket, prefix }) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Oturum bulunamadı.')
 
@@ -103,23 +103,47 @@ export function ResimYukle({ onizleme, onChange, bucket = 'kapaklar', width = '1
 
 export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' }) {
   const [yukleniyor, setYukleniyor] = useState(false)
+  const [ilerleme, setIlerleme] = useState({ tamamlanan: 0, toplam: 0 })
+  const [surukleniyor, setSurukleniyor] = useState(false)
 
-  async function handle(e) {
-    const files = Array.from(e.target.files || [])
+  async function dosyalariYukle(gelenDosyalar) {
+    const siralayici = new Intl.Collator('tr', { numeric: true, sensitivity: 'base' })
+    const files = Array.from(gelenDosyalar || [])
+      .filter(file => String(file.type || '').startsWith('image/'))
+      .sort((a, b) => siralayici.compare(a.webkitRelativePath || a.name, b.webkitRelativePath || b.name))
     if (files.length === 0) return
 
     setYukleniyor(true)
+    setIlerleme({ tamamlanan: 0, toplam: files.length })
     try {
-      const yuklenenler = await Promise.all(files.map((file) => (
-        uploadAdminImage(file, { bucket, prefix: 'sayfa' })
-      )))
+      const yuklenenler = new Array(files.length)
+      let siradaki = 0
+      async function worker() {
+        while (siradaki < files.length) {
+          const index = siradaki
+          siradaki += 1
+          yuklenenler[index] = await uploadAdminImage(files[index], { bucket, prefix: 'sayfa' })
+          setIlerleme(current => ({ ...current, tamamlanan: current.tamamlanan + 1 }))
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(3, files.length) }, () => worker()))
       onChange([...(gorseller || []), ...yuklenenler.filter(Boolean)])
     } catch (error) {
       alert(error.message || 'Görseller yüklenemedi.')
     } finally {
       setYukleniyor(false)
-      e.target.value = ''
+      setSurukleniyor(false)
     }
+  }
+
+  async function handle(e) {
+    await dosyalariYukle(e.target.files)
+    e.target.value = ''
+  }
+
+  async function handleDrop(e) {
+    e.preventDefault()
+    await dosyalariYukle(e.dataTransfer.files)
   }
 
   function kaldir(index) {
@@ -138,13 +162,27 @@ export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' 
 
   return (
     <div>
-      <label style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'10px 16px', border:'1px dashed rgba(255,255,255,0.18)', borderRadius:'12px', cursor:'pointer', background:PANEL_BG_STRONG, fontSize:'13px', fontWeight:600, color:'#fff' }}>
-        {yukleniyor ? 'Yukleniyor...' : '+ Sayfa Gorselleri Yukle'}
-        <input type="file" accept="image/*" multiple onChange={handle} disabled={yukleniyor} style={{ display:'none' }} />
-      </label>
-      <div style={{ fontSize:'12px', color:TEXT_SUBTLE, lineHeight:1.6, marginTop:'10px', marginBottom:'12px' }}>
-        Gorselleri yukleme sirasi okuyucudaki okuma sirasi olur. Sonradan asagi yukari tasiyabilirsin.
+      <div
+        onDragEnter={e => { e.preventDefault(); setSurukleniyor(true) }}
+        onDragOver={e => e.preventDefault()}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setSurukleniyor(false) }}
+        onDrop={handleDrop}
+        style={{ padding:'18px', border:`1px dashed ${surukleniyor ? '#d6ad4d' : 'rgba(255,255,255,0.18)'}`, borderRadius:'14px', background:surukleniyor ? 'rgba(214,173,77,0.08)' : PANEL_BG_STRONG }}
+      >
+        <div style={{ display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap' }}>
+          <label style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', minHeight:'38px', padding:'0 14px', border:PANEL_BORDER, borderRadius:'10px', cursor:'pointer', background:'rgba(255,255,255,0.07)', fontSize:'12px', fontWeight:700, color:'#fff' }}>
+            Görselleri Seç
+            <input type="file" accept="image/*" multiple onChange={handle} disabled={yukleniyor} style={{ display:'none' }} />
+          </label>
+          <label style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', minHeight:'38px', padding:'0 14px', border:PANEL_BORDER, borderRadius:'10px', cursor:'pointer', background:'rgba(255,255,255,0.04)', fontSize:'12px', fontWeight:700, color:'#fff' }}>
+            Klasör Seç
+            <input type="file" accept="image/*" multiple webkitdirectory="" directory="" onChange={handle} disabled={yukleniyor} style={{ display:'none' }} />
+          </label>
+          <span style={{ color:TEXT_SUBTLE,fontSize:'12px' }}>{yukleniyor ? `${ilerleme.tamamlanan} / ${ilerleme.toplam} yüklendi` : 'Sürükleyip bırak'}</span>
+        </div>
+        {yukleniyor && <div style={{ height:'4px',marginTop:'14px',overflow:'hidden',borderRadius:'4px',background:'rgba(255,255,255,0.08)' }}><div style={{ width:`${ilerleme.toplam ? (ilerleme.tamamlanan / ilerleme.toplam) * 100 : 0}%`,height:'100%',background:'#d6ad4d',transition:'width 180ms ease' }} /></div>}
       </div>
+      <div style={{ fontSize:'11px', color:TEXT_SUBTLE, marginTop:'9px', marginBottom:'12px' }}>Dosya adlarına göre sıralanır: 1, 2, 3…</div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))', gap:'12px' }}>
         {gorseller.map((url, index) => (
           <div key={`${url}-${index}`} style={{ border:PANEL_BORDER, borderRadius:'14px', overflow:'hidden', background:PANEL_BG_STRONG }}>

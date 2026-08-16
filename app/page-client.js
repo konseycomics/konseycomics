@@ -965,6 +965,13 @@ function HomeForumSection({ topics = [] }) {
 }
 
 export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [] }) {
+  const [currentTime, setCurrentTime] = useState(null)
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(Date.now())
+    updateTime()
+    const timer = window.setInterval(updateTime, 30000)
+    return () => window.clearInterval(timer)
+  }, [])
   const router = useRouter()
   const loading = false
   const [arama, setArama] = useState('')
@@ -982,7 +989,13 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
   const heroSeriler = oneCikanlar.length > 0 ? oneCikanlar : seriler
   const heroSlides = Array.isArray(siteAyarlari.anasayfa_hero_slider)
     ? siteAyarlari.anasayfa_hero_slider
-        .filter(slide => slide?.aktif !== false)
+        .filter(slide => {
+          if (slide?.aktif === false) return false
+          const baslangic = slide?.baslangic_tarihi ? new Date(slide.baslangic_tarihi).getTime() : null
+          const bitis = slide?.bitis_tarihi ? new Date(slide.bitis_tarihi).getTime() : null
+          if ((baslangic || bitis) && currentTime === null) return false
+          return (!baslangic || baslangic <= currentTime) && (!bitis || bitis > currentTime)
+        })
         .map((slide, index) => {
           const seri = findSeriById(slide.seri_id)
           if (slide?.seri_id && !seri) return null

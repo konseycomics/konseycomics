@@ -24,10 +24,15 @@ export async function POST(req) {
   try {
     const authHeader = req.headers.get('authorization') || ''
     const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
-    const { seriId, seriBaslik, bolumBaslik, bolumNo } = await req.json()
+    const { seriId, seriBaslik, bolumBaslik, bolumNo, availableAt } = await req.json()
 
     if (!accessToken || !seriId || !seriBaslik || !bolumBaslik) {
       return NextResponse.json({ error: 'Missing notification payload.' }, { status: 400 })
+    }
+
+    const gorunurAt = availableAt ? new Date(availableAt) : new Date()
+    if (Number.isNaN(gorunurAt.getTime())) {
+      return NextResponse.json({ error: 'Invalid notification date.' }, { status: 400 })
     }
 
     const { publicClient, adminClient } = getClients()
@@ -70,6 +75,7 @@ export async function POST(req) {
       baslik: 'Takip ettiğin seriye yeni bölüm geldi',
       mesaj: `${seriBaslik} için ${bolumNo ? `#${bolumNo} ` : ''}${bolumBaslik} şimdi yayında.`,
       okundu: false,
+      gorunur_at: gorunurAt.toISOString(),
     }))
 
     const { error: bildirimError } = await adminClient

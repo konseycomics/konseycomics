@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { ACCENT, ADMIN_BG, BD, BP, BS, CARD, CARD_INNER, CokluResimYukle, I, LB, Msg, PANEL_BG, PANEL_BORDER, PURPLE, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE, AramaSecim, AramaSecimTek, PANEL_BG_STRONG } from './ui'
 import { ForumModerasyonSayfasi, KonseySayfasi, KullanicilarSayfasi, PlanetSayfasi, YorumlarSayfasi } from './sections/community'
 import { SayfalarSayfasi, SosyalMedyaSayfasi } from './sections/vitrin'
+import { YayinMerkeziSayfasi } from './sections/publishing'
 
 function BarChart({ data, renk = '#111', yukseklik = 160 }) {
   if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
@@ -138,7 +139,7 @@ export default function Admin() {
       supabase.from('seriler').select('id, baslik'),
       supabase.from('bolumler').select('id, baslik'),
       supabase.from('profiller').select('id, kullanici_adi'),
-      supabase.from('bildirimler').select('*').eq('okundu', false).order('created_at', { ascending: false }).limit(10),
+      supabase.from('bildirimler').select('*').eq('okundu', false).lte('gorunur_at', new Date().toISOString()).order('created_at', { ascending: false }).limit(10),
     ])
     setGlobalSeriler(s.data || [])
     setGlobalBolumler(b.data || [])
@@ -154,6 +155,7 @@ export default function Admin() {
   const menu = [
     { title: 'Genel Bakis', items: [{ key: 'istatistik', label: 'Istatistikler', icon: '◢' }, { key: 'okuma', label: 'Okuma Sayilari', icon: '▤' }] },
     { title: 'Icerik', items: [
+      { key: 'yayin', label: 'Yayin Merkezi', icon: '◉' },
       { key: 'seriler', label: 'Seriler', icon: '◫' },
       { key: 'bolumler', label: 'Bolumler', icon: '≡' },
       { key: 'kategoriler', label: 'Kategoriler', icon: '▣' },
@@ -235,6 +237,7 @@ export default function Admin() {
         <div style={{ padding: '28px 28px 48px', overflow: 'auto' }}>
           {aktif === 'istatistik' && <IstatistikSayfasi />}
           {aktif === 'okuma' && <OkumaSayilariSayfasi />}
+          {aktif === 'yayin' && <YayinMerkeziSayfasi />}
           {aktif === 'seriler' && <SerilerSayfasi />}
           {aktif === 'bolumler' && <BolumlerSayfasi />}
           {aktif === 'konsey' && <KonseySayfasi />}
@@ -1922,6 +1925,12 @@ function SerilerSayfasi() {
 
 // ---- BÖLÜMLER ----
 function BolumlerSayfasi() {
+  function tarihInputDegeri(value) {
+    if (!value) return ''
+    const date = new Date(value)
+    const pad = number => String(number).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
   const [bolumler, setBolumler] = useState([])
   const [seriler, setSeriler] = useState([])
   const [ekip, setEkip] = useState([])
@@ -1935,38 +1944,41 @@ function BolumlerSayfasi() {
   const [seriFiltre, setSeriFiltre] = useState('tumu')
   const [aramaMetni, setAramaMetni] = useState('')
   const [sayfaFiltre, setSayfaFiltre] = useState('tumu')
-  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',pdf_indirme_link:'',cbr_indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'', sayfa_gorselleri:[] }
+  const bos = { seri_id:'',sayi:'',baslik:'',kapak_url:'',drive_link:'',indirme_link:'',pdf_indirme_link:'',cbr_indirme_link:'',cevirmen_id:'',balonlama_id:'',grafik_id:'',sayfa_gorselleri:[],yayin_durumu:'yayinda',yayin_tarihi:'' }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
   async function fetchHepsi() {
-    const [b,s,e,ayar] = await Promise.all([
+    const [b,s,e,sayfalar] = await Promise.all([
       supabase.from('bolumler').select('*, seriler(baslik)').order('created_at',{ascending:false}),
       supabase.from('seriler').select('id, baslik').order('baslik'),
       supabase.from('ekip').select('*').order('isim'),
-      supabase.from('site_ayarlari').select('deger').eq('anahtar', 'bolum_okuma_sayfalari').maybeSingle(),
+      supabase.from('bolum_sayfalari').select('bolum_id, sira, gorsel_url').order('sira'),
     ])
-    setBolumler(b.data||[]); setSeriler(s.data||[]); setEkip(e.data||[]); setBolumSayfaMap(ayar.data?.deger || {})
+    const sayfaMap = (sayfalar.data || []).reduce((map, item) => {
+      const key = String(item.bolum_id)
+      if (!map[key]) map[key] = []
+      map[key].push(item.gorsel_url)
+      return map
+    }, {})
+    setBolumler(b.data||[]); setSeriler(s.data||[]); setEkip(e.data||[]); setBolumSayfaMap(sayfaMap)
   }
 
   async function kaydetBolumSayfalari(bolumId, sayfalar) {
     if (!bolumId) return
-    const yeniMap = {
-      ...bolumSayfaMap,
-      [String(bolumId)]: (sayfalar || []).filter(Boolean)
+    const temizSayfalar = (sayfalar || []).filter(Boolean)
+    const { error: silmeError } = await supabase.from('bolum_sayfalari').delete().eq('bolum_id', bolumId)
+    if (silmeError) throw silmeError
+    if (temizSayfalar.length > 0) {
+      const { error: eklemeError } = await supabase.from('bolum_sayfalari').insert(
+        temizSayfalar.map((gorsel_url, index) => ({ bolum_id: bolumId, sira: index + 1, gorsel_url }))
+      )
+      if (eklemeError) throw eklemeError
     }
-    const temizMap = Object.fromEntries(
-      Object.entries(yeniMap).filter(([, value]) => Array.isArray(value) && value.length > 0)
-    )
-    await supabase.from('site_ayarlari').upsert({
-      anahtar:'bolum_okuma_sayfalari',
-      deger: temizMap,
-      guncellendi_at: new Date().toISOString()
-    }, { onConflict:'anahtar' })
-    setBolumSayfaMap(temizMap)
+    setBolumSayfaMap(current => ({ ...current, [String(bolumId)]: temizSayfalar }))
   }
 
-  async function takipcilereYeniBolumBildirimGonder({ seriId, seriBaslik, bolumBaslik, bolumNo }) {
+  async function takipcilereYeniBolumBildirimGonder({ seriId, seriBaslik, bolumBaslik, bolumNo, availableAt }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const accessToken = session?.access_token
@@ -1978,7 +1990,7 @@ function BolumlerSayfasi() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ seriId, seriBaslik, bolumBaslik, bolumNo }),
+        body: JSON.stringify({ seriId, seriBaslik, bolumBaslik, bolumNo, availableAt }),
       })
 
       if (!response.ok) {
@@ -1994,6 +2006,8 @@ function BolumlerSayfasi() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     setYukleniyor(true)
     const pdfLink = form.pdf_indirme_link || form.indirme_link || null
+    const yayinTarihi = form.yayin_durumu === 'taslak' ? null : form.yayin_durumu === 'yayinda' ? (form.yayin_tarihi || new Date().toISOString()) : form.yayin_tarihi ? new Date(form.yayin_tarihi).toISOString() : null
+    if (form.yayin_durumu === 'planlandi' && (!yayinTarihi || new Date(yayinTarihi) <= new Date())) { setMsg('❌ Planlama zamanı gelecekte olmalı!'); setYukleniyor(false); return }
     const payload = {
       seri_id:form.seri_id,
       sayi:parseInt(form.sayi),
@@ -2005,7 +2019,9 @@ function BolumlerSayfasi() {
       cbr_indirme_link:form.cbr_indirme_link || null,
       cevirmen_id:form.cevirmen_id||null,
       balonlama_id:form.balonlama_id||null,
-      grafik_id:form.grafik_id||null
+      grafik_id:form.grafik_id||null,
+      yayin_durumu:form.yayin_durumu,
+      yayin_tarihi:yayinTarihi
     }
     let bolumId = duzenleId
     if (duzenleId) await supabase.from('bolumler').update(payload).eq('id',duzenleId)
@@ -2019,6 +2035,7 @@ function BolumlerSayfasi() {
           seriBaslik,
           bolumBaslik: form.baslik,
           bolumNo: payload.sayi,
+          availableAt: yayinTarihi,
         })
       }
     }
@@ -2075,6 +2092,13 @@ function BolumlerSayfasi() {
       <div style={{ ...CARD_INNER, padding:'16px', marginBottom:'16px' }}>
         <div style={{ fontSize:'13px', fontWeight:600, marginBottom:'14px' }}>Okuyucu Sayfalari</div>
         <CokluResimYukle gorseller={form.sayfa_gorselleri || []} onChange={(liste) => setForm(f => ({ ...f, sayfa_gorselleri: liste }))} />
+      </div>
+      <div style={{ ...CARD_INNER,padding:'16px',marginBottom:'16px' }}>
+        <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'12px' }}>Yayın Durumu</div>
+        <div style={{ display:'grid',gridTemplateColumns:'repeat(3, minmax(0, 1fr))',gap:'8px',marginBottom:form.yayin_durumu==='planlandi'?'12px':0 }}>
+          {[['yayinda','Şimdi'],['planlandi','Planla'],['taslak','Taslak']].map(([value,label])=><button type="button" key={value} onClick={()=>setForm(f=>({...f,yayin_durumu:value}))} style={{...BS,borderRadius:'10px',background:form.yayin_durumu===value?'rgba(214,173,77,0.16)':undefined}}>{label}</button>)}
+        </div>
+        {form.yayin_durumu==='planlandi'&&<input type="datetime-local" value={form.yayin_tarihi || ''} onChange={e=>setForm(f=>({...f,yayin_tarihi:e.target.value}))} style={I} />}
       </div>
       <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'12px',marginBottom:'20px' }}>
         {[['cevirmen_id','Çevirmen'],['balonlama_id','Balonlama'],['grafik_id','Grafik']].map(([key,label])=>(
@@ -2149,7 +2173,7 @@ function BolumlerSayfasi() {
                 <div style={{ fontSize:'13px',fontWeight:600 }}>#{b.sayi} {b.baslik}</div>
                 <div style={{ fontSize:'11px',color:TEXT_SUBTLE,marginTop:'4px' }}>{bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
                 <div style={{ display:'flex',gap:'6px',marginTop:'8px' }}>
-                  <button onClick={()=>{setForm({...bos,...b,sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={{...BS,flex:1}}>Düzenle</button>
+                  <button onClick={()=>{setForm({...bos,...b,yayin_tarihi:tarihInputDegeri(b.yayin_tarihi),sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={{...BS,flex:1}}>Düzenle</button>
                   <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
                 </div>
               </div>
@@ -2166,7 +2190,7 @@ function BolumlerSayfasi() {
                 <div style={{ fontSize:'14px',fontWeight:500 }}>#{b.sayi} {b.baslik}</div>
                 <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>{b.goruntuleme_sayisi||0} ham açılış · {bolumSayfaMap[String(b.id)]?.length || 0} sayfa</div>
               </div>
-              <button onClick={()=>{setForm({...bos,...b,sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
+              <button onClick={()=>{setForm({...bos,...b,yayin_tarihi:tarihInputDegeri(b.yayin_tarihi),sayfa_gorselleri:bolumSayfaMap[String(b.id)] || []});setKapakOnizleme(b.kapak_url);setDuzenleId(b.id);setMod('form')}} style={BS}>Düzenle</button>
               <button onClick={()=>sil(b.id)} style={BD}>Sil</button>
             </div>
           ))}

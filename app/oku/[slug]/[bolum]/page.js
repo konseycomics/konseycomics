@@ -288,13 +288,12 @@ export default function Okuyucu() {
     async function fetchOkumaSayfalari() {
       if (!bolumData?.id) return
       const { data } = await supabase
-        .from('site_ayarlari')
-        .select('deger')
-        .eq('anahtar', 'bolum_okuma_sayfalari')
-        .maybeSingle()
+        .from('bolum_sayfalari')
+        .select('gorsel_url')
+        .eq('bolum_id', bolumData.id)
+        .order('sira', { ascending: true })
 
-      const sayfalar = data?.deger?.[String(bolumData.id)]
-      setOkumaSayfalari(Array.isArray(sayfalar) ? sayfalar.filter(Boolean) : [])
+      setOkumaSayfalari((data || []).map(item => item.gorsel_url).filter(Boolean))
     }
 
     fetchOkumaSayfalari()

@@ -7,6 +7,6 @@
     "crons": ["* * * * *"]
   },
   "vars": {
-    "PROCESS_URL": "https://konseycomics.com/api/instagram/process"
+    "PROCESS_URL": "https://www.konseycomics.com/api/instagram/process"
   }
 }

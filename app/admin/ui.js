@@ -45,7 +45,7 @@ export function Msg({ text }) {
   return <div style={{ background: err ? '#fff0f0' : '#f0fdf4', border: `1px solid ${err ? '#fecaca' : '#bbf7d0'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '13px', color: err ? '#dc2626' : '#166534' }}>{text}</div>
 }
 
-export async function uploadAdminImage(file, { bucket, prefix }) {
+export async function uploadAdminImage(file, { bucket, prefix, format = 'webp' }) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Oturum bulunamadı.')
 
@@ -53,6 +53,7 @@ export async function uploadAdminImage(file, { bucket, prefix }) {
   formData.append('file', file)
   formData.append('bucket', bucket)
   formData.append('prefix', prefix)
+  formData.append('format', format)
 
   const res = await fetch('/api/media/upload', {
     method: 'POST',
@@ -101,7 +102,7 @@ export function ResimYukle({ onizleme, onChange, bucket = 'kapaklar', width = '1
   )
 }
 
-export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' }) {
+export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar', format = 'webp', maxFiles }) {
   const [yukleniyor, setYukleniyor] = useState(false)
   const [ilerleme, setIlerleme] = useState({ tamamlanan: 0, toplam: 0 })
   const [surukleniyor, setSurukleniyor] = useState(false)
@@ -112,6 +113,10 @@ export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' 
       .filter(file => String(file.type || '').startsWith('image/'))
       .sort((a, b) => siralayici.compare(a.webkitRelativePath || a.name, b.webkitRelativePath || b.name))
     if (files.length === 0) return
+    if (maxFiles && gorseller.length + files.length > maxFiles) {
+      alert(`En fazla ${maxFiles} görsel yükleyebilirsin.`)
+      return
+    }
 
     setYukleniyor(true)
     setIlerleme({ tamamlanan: 0, toplam: files.length })
@@ -122,7 +127,7 @@ export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar' 
         while (siradaki < files.length) {
           const index = siradaki
           siradaki += 1
-          yuklenenler[index] = await uploadAdminImage(files[index], { bucket, prefix: 'sayfa' })
+          yuklenenler[index] = await uploadAdminImage(files[index], { bucket, prefix: bucket === 'instagram' ? 'post' : 'sayfa', format })
           setIlerleme(current => ({ ...current, tamamlanan: current.tamamlanan + 1 }))
         }
       }

@@ -5,7 +5,7 @@ import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
-const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site', 'forum'])
+const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site', 'forum', 'instagram'])
 const USER_AVATAR_PREFIXES = new Set(['avatar', 'banner'])
 
 function getClients() {
@@ -62,6 +62,7 @@ function optimizeSettings(storageKey) {
   if (bucket === 'bolum-kapaklari') return { width: 900, quality: 78 }
   if (bucket === 'site') return { width: 1920, quality: 80 }
   if (bucket === 'forum') return { width: 1600, quality: 78 }
+  if (bucket === 'instagram') return { width: 1080, quality: 88 }
   if (bucket === 'kapaklar' && filename?.startsWith('sayfa-')) return { width: 1600, quality: 78 }
   if (bucket === 'kapaklar') return { width: 1100, quality: 80 }
   return { width: 1400, quality: 78 }
@@ -100,7 +101,7 @@ async function getRequester(req) {
   }
 }
 
-async function putR2Object(key, body) {
+async function putR2Object(key, body, contentType) {
   const config = r2Config()
   const payloadHash = hash(body)
   const now = new Date()
@@ -129,7 +130,7 @@ async function putR2Object(key, body) {
     method: 'PUT',
     headers: {
       Authorization: authorization,
-      'Content-Type': 'image/webp',
+      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
       'x-amz-content-sha256': payloadHash,
       'x-amz-date': amzDate,
@@ -151,6 +152,7 @@ export async function POST(req) {
     const file = formData.get('file')
     const bucket = String(formData.get('bucket') || 'kapaklar')
     const prefix = safePrefix(formData.get('prefix') || 'resim')
+    const format = String(formData.get('format') || 'webp') === 'jpeg' ? 'jpeg' : 'webp'
 
     if (!file || typeof file.arrayBuffer !== 'function') {
       return NextResponse.json({ error: 'Dosya bulunamadı.' }, { status: 400 })
@@ -174,15 +176,22 @@ export async function POST(req) {
     }
 
     const original = Buffer.from(await file.arrayBuffer())
-    const key = `${bucket}/${prefix}-${requester.userId}-${Date.now()}-${randomUUID().slice(0, 8)}.webp`
+    if (format === 'jpeg' && !requester.isAdmin) {
+      return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    }
+
+    const extension = format === 'jpeg' ? 'jpg' : 'webp'
+    const key = `${bucket}/${prefix}-${requester.userId}-${Date.now()}-${randomUUID().slice(0, 8)}.${extension}`
     const { width, quality } = optimizeSettings(key)
-    const optimized = await sharp(original, { failOn: 'none' })
+    let pipeline = sharp(original, { failOn: 'none' })
       .rotate()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality, effort: 5 })
-      .toBuffer()
+    pipeline = format === 'jpeg'
+      ? pipeline.flatten({ background: '#ffffff' }).jpeg({ quality, mozjpeg: true })
+      : pipeline.webp({ quality, effort: 5 })
+    const optimized = await pipeline.toBuffer()
 
-    const url = await putR2Object(key, optimized)
+    const url = await putR2Object(key, optimized, format === 'jpeg' ? 'image/jpeg' : 'image/webp')
 
     return NextResponse.json({
       ok: true,

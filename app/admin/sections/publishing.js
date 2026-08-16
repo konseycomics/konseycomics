@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, Clock3, Eye, ImagePlus, Library, PenLine, Plus, Send, Sparkles } from 'lucide-react'
+import { CalendarClock, Camera, Check, Clock3, Eye, ImagePlus, Library, PenLine, Plus, Send, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { BP, BS, CARD_INNER, CokluResimYukle, I, LB, Msg, PANEL_BORDER, ResimYukle, S, SectionTitle, Surface, TEXT_SOFT, TEXT_SUBTLE, AramaSecimTek } from '../ui'
 
@@ -58,6 +58,11 @@ const bosForm = {
   slider_ekle: false,
   slider_arka_plan_url: '',
   slider_bitis_zamani: '',
+  instagram_ekle: false,
+  instagram_gorselleri: [],
+  instagram_aciklama: '',
+  instagram_farkli_zaman: false,
+  instagram_yayin_zamani: yerelTarihDegeri(),
 }
 
 export function YayinMerkeziSayfasi() {
@@ -71,8 +76,24 @@ export function YayinMerkeziSayfasi() {
   const [seriKapakOnizleme, setSeriKapakOnizleme] = useState(null)
   const [bolumKapakOnizleme, setBolumKapakOnizleme] = useState(null)
   const [sliderOnizleme, setSliderOnizleme] = useState(null)
+  const [instagramDurumu, setInstagramDurumu] = useState({ yukleniyor: true, connected: false })
+  const [instagramGonderileri, setInstagramGonderileri] = useState([])
 
-  useEffect(() => { verileriYukle() }, [])
+  useEffect(() => { verileriYukle(); instagramVerileriniYukle() }, [])
+
+  async function instagramVerileriniYukle() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const headers = { Authorization: `Bearer ${session.access_token}` }
+    const [statusResponse, postsResponse] = await Promise.all([
+      fetch('/api/instagram/status', { headers }),
+      fetch('/api/instagram/posts', { headers }),
+    ])
+    const status = await statusResponse.json().catch(() => ({}))
+    const posts = await postsResponse.json().catch(() => ({}))
+    setInstagramDurumu({ yukleniyor: false, ...status })
+    setInstagramGonderileri(posts.posts || [])
+  }
 
   async function verileriYukle() {
     const [seriSonuc, bolumSonuc, kategoriSonuc, ekipSonuc] = await Promise.all([
@@ -107,13 +128,16 @@ export function YayinMerkeziSayfasi() {
     : form.yayin_sekli === 'simdi'
       ? new Date().toISOString()
       : form.yayin_zamani ? new Date(form.yayin_zamani).toISOString() : null
+  const instagramYayinTarihi = form.instagram_farkli_zaman || form.yayin_sekli === 'taslak'
+    ? (form.instagram_yayin_zamani ? new Date(form.instagram_yayin_zamani).toISOString() : null)
+    : yayinTarihi
   const gelecekYayinlar = bolumler
     .filter(item => item.yayin_durumu === 'planlandi' && item.yayin_tarihi && new Date(item.yayin_tarihi) > new Date())
     .sort((a, b) => new Date(a.yayin_tarihi) - new Date(b.yayin_tarihi))
   const sonYayinlar = bolumler.slice(0, 6)
 
   function formuSifirla() {
-    setForm({ ...bosForm, yayin_zamani: yerelTarihDegeri() })
+    setForm({ ...bosForm, yayin_zamani: yerelTarihDegeri(), instagram_yayin_zamani: yerelTarihDegeri() })
     setSeriKapakOnizleme(null)
     setBolumKapakOnizleme(null)
     setSliderOnizleme(null)
@@ -168,6 +192,24 @@ export function YayinMerkeziSayfasi() {
     if (error) throw error
   }
 
+  async function instagramPlanla({ bolumId }) {
+    if (!form.instagram_ekle) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) throw new Error('Instagram planlaması için oturum bulunamadı.')
+    const response = await fetch('/api/instagram/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        bolumId,
+        gorseller: form.instagram_gorselleri,
+        aciklama: form.instagram_aciklama,
+        yayinTarihi: instagramYayinTarihi,
+        taslak: form.yayin_sekli === 'taslak',
+      }),
+    })
+    if (!response.ok) throw new Error((await response.json().catch(() => ({})))?.error || 'Instagram gönderisi planlanamadı.')
+  }
+
   async function yayiniKaydet() {
     setMsg('')
     if (form.seri_tipi === 'mevcut' && !form.seri_id) return setMsg('❌ Bir seri seçmelisin.')
@@ -176,6 +218,9 @@ export function YayinMerkeziSayfasi() {
     if (form.sayfa_gorselleri.length === 0 && !form.drive_link) return setMsg('❌ Sayfa görselleri veya Drive bağlantısı gerekli.')
     if (form.yayin_sekli === 'planla' && (!yayinTarihi || new Date(yayinTarihi) <= new Date())) return setMsg('❌ Planlama zamanı gelecekte olmalı.')
     if (form.yayin_sekli === 'taslak' && form.slider_ekle) return setMsg('❌ Taslak yayın için slider planlanamaz.')
+    if (form.instagram_ekle && !instagramDurumu.connected) return setMsg('❌ Önce Instagram hesabını bağlamalısın.')
+    if (form.instagram_ekle && form.instagram_gorselleri.length === 0) return setMsg('❌ Instagram için en az bir görsel gerekli.')
+    if (form.instagram_ekle && form.instagram_farkli_zaman && (!instagramYayinTarihi || (form.yayin_sekli !== 'taslak' && new Date(instagramYayinTarihi) <= new Date()))) return setMsg('❌ Instagram yayın zamanı gelecekte olmalı.')
 
     setKaydediliyor(true)
     let olusturulanSeriId = null
@@ -242,9 +287,12 @@ export function YayinMerkeziSayfasi() {
         await sliderEkle({ seri, baslangicTarihi: yayinTarihi })
       }
 
+      await instagramPlanla({ bolumId: bolum.id })
+
       setMsg(yayinDurumu === 'planlandi' ? `✅ Yayın ${tarihYaz(yayinTarihi)} için planlandı.` : yayinDurumu === 'taslak' ? '✅ Taslak kaydedildi.' : '✅ Bölüm yayınlandı.')
       formuSifirla()
       await verileriYukle()
+      await instagramVerileriniYukle()
     } catch (error) {
       if (olusturulanBolumId) await supabase.from('bolumler').delete().eq('id', olusturulanBolumId)
       if (olusturulanSeriId) await supabase.from('seriler').delete().eq('id', olusturulanSeriId)
@@ -320,6 +368,20 @@ export function YayinMerkeziSayfasi() {
             {form.slider_ekle && <div style={{ display:'grid',gridTemplateColumns:'150px minmax(0,1fr)',gap:'16px',marginTop:'16px',alignItems:'start' }}><ResimYukle bucket="site" width="150px" height="86px" onizleme={sliderOnizleme || form.slider_arka_plan_url} onChange={(url,preview)=>{setForm(current=>({...current,slider_arka_plan_url:url}));setSliderOnizleme(preview)}} /><div><div style={LB}>Slider Bitiş Zamanı</div><input type="datetime-local" value={form.slider_bitis_zamani} onChange={e=>setForm(current=>({...current,slider_bitis_zamani:e.target.value}))} style={I} /><div style={{ color:TEXT_SUBTLE,fontSize:'11px',marginTop:'7px' }}>Boş bırakılırsa sen kaldırana kadar kalır.</div></div></div>}
           </Surface>
 
+          <Surface>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',marginBottom:'16px' }}>
+              <label style={{ display:'flex',alignItems:'center',gap:'10px',cursor:'pointer',fontSize:'14px',fontWeight:800 }}><input type="checkbox" checked={form.instagram_ekle} onChange={e=>setForm(current=>({...current,instagram_ekle:e.target.checked}))} /><Camera size={18} /> Instagram gönderisi planla</label>
+              <span style={{ display:'inline-flex',alignItems:'center',gap:'6px',fontSize:'11px',color:instagramDurumu.connected?'#6fd29a':'#e0b74c' }}><i style={{ width:'7px',height:'7px',borderRadius:'50%',background:'currentColor' }} />{instagramDurumu.yukleniyor?'Kontrol ediliyor':instagramDurumu.connected?`@${instagramDurumu.account?.username || 'bağlı'}`:'Bağlantı bekliyor'}</span>
+            </div>
+            {form.instagram_ekle && <div style={{ display:'grid',gap:'16px' }}>
+              <CokluResimYukle gorseller={form.instagram_gorselleri} onChange={liste=>setForm(current=>({...current,instagram_gorselleri:liste}))} bucket="instagram" format="jpeg" maxFiles={10} />
+              <div><div style={LB}>Gönderi Açıklaması</div><textarea maxLength={2200} value={form.instagram_aciklama} onChange={e=>setForm(current=>({...current,instagram_aciklama:e.target.value}))} style={{...I,minHeight:'130px',resize:'vertical'}} placeholder="Yeni bölüm yayında! Açıklama ve etiketler..." /><div style={{ textAlign:'right',color:TEXT_SUBTLE,fontSize:'10px',marginTop:'5px' }}>{form.instagram_aciklama.length} / 2200</div></div>
+              <label style={{ display:'flex',alignItems:'center',gap:'9px',fontSize:'12px',fontWeight:700,cursor:'pointer' }}><input type="checkbox" checked={form.instagram_farkli_zaman} onChange={e=>setForm(current=>({...current,instagram_farkli_zaman:e.target.checked}))} /> Site yayınından farklı zamanda paylaş</label>
+              {form.instagram_farkli_zaman && <div><div style={LB}>Instagram Yayın Zamanı</div><input type="datetime-local" value={form.instagram_yayin_zamani} onChange={e=>setForm(current=>({...current,instagram_yayin_zamani:e.target.value}))} style={{...I,maxWidth:'320px'}} /></div>}
+              {!instagramDurumu.connected && <div style={{ padding:'12px',border:'1px solid rgba(224,183,76,.28)',borderRadius:'10px',background:'rgba(224,183,76,.07)',color:'#e8cf8a',fontSize:'12px',lineHeight:1.6 }}>Meta bağlantısı tamamlandığında bu alan yayınlamaya hazır olacak.</div>}
+            </div>}
+          </Surface>
+
           <button type="button" onClick={yayiniKaydet} disabled={kaydediliyor} style={{...BP,minHeight:'52px',borderRadius:'12px',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:'9px',fontSize:'13px',opacity:kaydediliyor ? .65 : 1}}>{kaydediliyor ? <Clock3 size={17} /> : <Check size={17} />}{kaydediliyor ? 'Kaydediliyor' : form.yayin_sekli === 'planla' ? 'Yayını Planla' : form.yayin_sekli === 'taslak' ? 'Taslağı Kaydet' : 'Şimdi Yayınla'}</button>
         </div>
 
@@ -331,7 +393,13 @@ export function YayinMerkeziSayfasi() {
               <div><div style={{ color:TEXT_SUBTLE,fontSize:'10px' }}>BÖLÜM</div><strong style={{ fontSize:'14px' }}>#{form.sayi || '—'} {form.baslik || 'Başlık bekleniyor'}</strong></div>
               <div><div style={{ color:TEXT_SUBTLE,fontSize:'10px' }}>ZAMAN</div><strong style={{ fontSize:'13px',color:'#e0b74c' }}>{form.yayin_sekli==='simdi'?'Hemen':form.yayin_sekli==='taslak'?'Taslak':tarihYaz(yayinTarihi)}</strong></div>
               <div><div style={{ color:TEXT_SUBTLE,fontSize:'10px' }}>SAYFALAR</div><strong style={{ fontSize:'14px' }}>{form.sayfa_gorselleri.length}</strong></div>
+              {form.instagram_ekle&&<div><div style={{ color:TEXT_SUBTLE,fontSize:'10px' }}>INSTAGRAM</div><strong style={{ fontSize:'13px',color:'#e0b74c' }}>{form.instagram_gorselleri.length} görsel · {tarihYaz(instagramYayinTarihi)}</strong></div>}
             </div>
+          </Surface>
+
+          <Surface>
+            <div style={{ display:'flex',alignItems:'center',gap:'7px',fontSize:'13px',fontWeight:800,marginBottom:'12px' }}><Camera size={16} /> Instagram Kuyruğu</div>
+            <div style={{ display:'grid',gap:'8px' }}>{instagramGonderileri.slice(0,5).map(post=><div key={post.id} style={{ ...CARD_INNER,padding:'10px' }}><strong style={{ display:'block',fontSize:'11px',textTransform:'capitalize' }}>{post.durum}</strong><span style={{ display:'block',color:TEXT_SUBTLE,fontSize:'9px',marginTop:'3px' }}>{tarihYaz(post.yayin_tarihi)}</span>{post.hata_mesaji&&<span style={{ display:'block',color:'#fca5a5',fontSize:'9px',marginTop:'4px' }}>{post.hata_mesaji}</span>}</div>)}{instagramGonderileri.length===0&&<div style={{ color:TEXT_SUBTLE,fontSize:'12px' }}>Henüz gönderi yok.</div>}</div>
           </Surface>
 
           <Surface>

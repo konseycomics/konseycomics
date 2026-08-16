@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "konseycomics-instagram-scheduler",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-16",
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "vars": {
+    "PROCESS_URL": "https://konseycomics.com/api/instagram/process"
+  }
+}

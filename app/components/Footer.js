@@ -4,6 +4,7 @@ import Image from 'next/image'
 const kesfet = [
   { label: 'Tüm Seriler', href: '/seriler' },
   { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
+  { label: 'Yerli Eserler', href: '/yerli-eserler' },
   { label: 'Forum', href: '/forum' },
 ]
 

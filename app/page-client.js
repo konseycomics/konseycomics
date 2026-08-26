@@ -8,7 +8,7 @@ import Footer from './components/Footer'
 import Link from 'next/link'
 import { isRecentlyAddedSeries } from './lib/seriesBadges'
 import { supabase } from './lib/supabase'
-import { ArrowRight, Eye, MessageSquare, Pin, Users } from 'lucide-react'
+import { ArrowRight, BookOpen, Eye, MessageSquare, Pin, Users } from 'lucide-react'
 
 const SERI_TURLERI = [
   {
@@ -964,6 +964,22 @@ function HomeForumSection({ topics = [] }) {
   )
 }
 
+function IndependentWorksSection() {
+  return (
+    <section className="home-independent-band">
+      <div className="site-section home-independent-grid">
+        <div className="home-independent-mark" aria-hidden="true"><BookOpen size={28} /></div>
+        <div className="home-independent-copy">
+          <span>Bağımsız yerli çizgi romanlar</span>
+          <h2>Hikâyen senin.<br />Yayın desteği Konsey&apos;den.</h2>
+          <p>Kendi çizgi romanını üretiyorsan, eserini Konsey Comics okurlarıyla buluşturma fırsatı için bize ulaş.</p>
+        </div>
+        <Link href="/yerli-eserler">Detayları Gör <ArrowRight size={17} /></Link>
+      </div>
+    </section>
+  )
+}
+
 export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [] }) {
   const [currentTime, setCurrentTime] = useState(null)
   useEffect(() => {
@@ -1125,6 +1141,13 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
         .home-forum-topic-icon { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #403720; border-radius: 4px; color: #d6ad4d; }
         .home-forum-topic-copy { min-width: 0; display: grid; gap: 5px; }.home-forum-topic-copy strong { overflow: hidden; color: #e6e6e1; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }.home-forum-topic-copy small { color: #6f6f69; font-size: 10px; }
         .home-forum-topic-stats { display: flex; align-items: center; gap: 6px; color: #73736e; font-size: 10px; }.home-forum-empty { padding: 28px 16px; color: #777; font-size: 12px; text-align: center; }
+        .home-independent-band { margin-top: var(--section-gap); border-top: 1px solid #3d331c; border-bottom: 1px solid #3d331c; background: #0c0b08; }
+        .home-independent-grid { min-height: 240px; display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 34px; padding-top: 42px; padding-bottom: 42px; }
+        .home-independent-mark { width: 68px; height: 68px; display: grid; place-items: center; border: 1px solid #55471f; color: #e0b74c; }
+        .home-independent-copy > span { color: #e0b74c; font-size: 10px; font-weight: 900; letter-spacing: 1.3px; text-transform: uppercase; }
+        .home-independent-copy h2 { margin: 10px 0 12px; color: #f0f0eb; font-family: var(--font-display); font-size: 60px; font-weight: 400; line-height: .9; text-transform: uppercase; }
+        .home-independent-copy p { max-width: 66ch; margin: 0; color: #989891; font-size: 14px; line-height: 1.7; }
+        .home-independent-grid > a { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border: 1px solid #6a5726; border-radius: 6px; color: #e8c466; font-size: 12px; font-weight: 900; text-decoration: none; white-space: nowrap; }
         @media (max-width: 960px) {
           .grid-4 { grid-template-columns: repeat(3, 1fr) !important; }
           .grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
@@ -1141,6 +1164,9 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .mini-gorev-grid { grid-template-columns: 1fr !important; }
           .mini-gorev-hero { grid-template-columns: 1fr !important; }
           .home-forum-grid { grid-template-columns: 1fr; }
+          .home-independent-grid { grid-template-columns: 68px minmax(0, 1fr); }
+          .home-independent-copy h2 { font-size: 52px; }
+          .home-independent-grid > a { grid-column: 2; justify-self: start; }
         }
         @media (max-width: 640px) {
           .home-section-heading { margin-bottom: 22px !important; }
@@ -1170,6 +1196,9 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           .mini-gorev-hero { grid-template-columns: 1fr !important; }
           .home-forum-grid { gap: 28px; padding-top: 36px; padding-bottom: 36px; }
           .home-forum-topic-row { grid-template-columns: 34px minmax(0, 1fr); }.home-forum-topic-stats { display: none; }
+          .home-independent-grid { grid-template-columns: 1fr; gap: 22px; }
+          .home-independent-copy h2 { font-size: 44px; }
+          .home-independent-grid > a { grid-column: 1; width: 100%; }
         }
       `}</style>
 
@@ -1572,6 +1601,8 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           </div>
         </section>
       )}
+
+      <IndependentWorksSection />
 
       <HomeForumSection topics={forumTopics} />
 

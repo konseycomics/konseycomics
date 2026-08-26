@@ -48,6 +48,7 @@ export default function Navbar() {
   const linkler = [
     { label: 'Seriler', href: '/seriler' },
     { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
+    { label: 'Yerli Eserler', href: '/yerli-eserler', featured: true, flag: true },
     { label: 'Hakkımızda', href: '/hakkimizda' },
     { label: 'İletişim', href: '/iletisim' },
   ]
@@ -64,11 +65,11 @@ export default function Navbar() {
 
           <ul style={{ display: 'flex', gap: '4px', listStyle: 'none', flex: 1, margin: 0, padding: 0 }} className="desktop-nav">
             {linkler.map(item => (
-              <li key={item.href}>
-                <Link href={item.href} style={{ fontSize: '14px', fontWeight: 500, color: '#d7d7d2', textDecoration: 'none', padding: '8px 12px', borderRadius: '10px', display: 'block', letterSpacing: '0.1px' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.color = '#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#d7d7d2' }}
-                >{item.label}</Link>
+              <li key={item.href} style={{ display: 'flex', alignItems: 'center' }}>
+                <Link href={item.href} style={{ height: item.featured ? '34px' : 'auto', fontSize: '14px', fontWeight: item.featured ? 800 : 500, color: item.featured ? '#fff' : '#d7d7d2', textDecoration: 'none', padding: item.featured ? '0 12px' : '8px 12px', borderRadius: item.featured ? '6px' : '10px', display: item.featured ? 'inline-flex' : 'block', alignItems: 'center', background: item.featured ? '#c4121c' : 'transparent', letterSpacing: '0.1px', whiteSpace: 'nowrap' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = item.featured ? '#e01b27' : '#141414'; e.currentTarget.style.color = '#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = item.featured ? '#c4121c' : 'transparent'; e.currentTarget.style.color = item.featured ? '#fff' : '#d7d7d2' }}
+                >{item.flag && <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0, marginRight: '7px', fontSize: '17px', lineHeight: 1 }}>🇹🇷</span>}<span style={{ display: 'inline-flex', alignItems: 'center', lineHeight: 1 }}>{item.label}</span></Link>
               </li>
             ))}
           </ul>
@@ -120,8 +121,8 @@ export default function Navbar() {
       {menuOpen && (
         <div id="mobile-navigation" style={{ position: 'fixed', top: '124px', left: 0, right: 0, background: '#000', borderBottom: '1px solid #121212', padding: '12px 0', zIndex: 99, maxHeight: 'calc(100vh - 124px)', overflowY: 'auto' }}>
           {linkler.map(item => (
-            <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', padding: '12px 24px', fontSize: '15px', fontWeight: 500, color: '#f5f5f3', textDecoration: 'none', borderBottom: '1px solid #121212' }}>
-              {item.label}
+            <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={{ display: 'block', margin: item.featured ? '8px 24px' : 0, padding: item.featured ? '12px 14px' : '12px 24px', fontSize: '15px', fontWeight: item.featured ? 800 : 500, color: '#f5f5f3', background: item.featured ? '#c4121c' : 'transparent', borderRadius: item.featured ? '6px' : 0, textDecoration: 'none', borderBottom: item.featured ? 'none' : '1px solid #121212' }}>
+              {item.flag && <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'center', marginRight: '7px', fontSize: '17px', lineHeight: 1, verticalAlign: 'middle' }}>🇹🇷</span>}<span style={{ verticalAlign: 'middle' }}>{item.label}</span>
             </Link>
           ))}
           <Link href="/forum" onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: '12px 24px 4px', padding: '12px', background: '#e0b74c', color: '#0b0b0b', borderRadius: '8px', fontSize: '14px', fontWeight: 900, textDecoration: 'none' }}><Users size={17} /> Foruma Git</Link>

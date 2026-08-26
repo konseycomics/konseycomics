@@ -6,12 +6,28 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import { isRecentlyAddedSeries } from '../../lib/seriesBadges'
+import { Mail } from 'lucide-react'
+
+function InstagramIcon({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="17.4" cy="6.7" r="1.15" fill="currentColor" />
+    </svg>
+  )
+}
 
 const KATEGORI_AYARLARI = {
   'cizgi-roman': {
     title: 'Çizgi Romanlar',
     kicker: 'Konsey Arşivi',
     matchers: ['Marvel', 'DC', 'Bağımsız'],
+  },
+  'yerli-eserler': {
+    title: 'Yerli Eserler',
+    kicker: '🇹🇷 Türkiye’den bağımsız çizgi romanlar',
+    matchers: ['Yerli', 'Yerli Eserler', 'Yerli Çizgi Roman'],
   },
   manga: {
     title: 'Mangalar',
@@ -107,8 +123,9 @@ function SeriKarti({ seri }) {
   )
 }
 
-export default function KategoriSayfasi() {
-  const { slug } = useParams()
+export default function KategoriSayfasi({ categorySlug = '' }) {
+  const params = useParams()
+  const slug = categorySlug || params.slug
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -122,6 +139,7 @@ export default function KategoriSayfasi() {
     kicker: 'Konsey Arşivi',
     matchers: [String(slug || '')],
   }
+  const yerliEserSayfasi = slug === 'yerli-eserler'
 
   const siralama = temizSiralama(searchParams.get('sirala'))
   const arama = searchParams.get('q') || ''
@@ -272,6 +290,76 @@ export default function KategoriSayfasi() {
             line-height: 0.92;
             color: #fff;
             margin-bottom: 14px;
+          }
+          .series-page-local .series-hero {
+            background: transparent;
+            border-bottom-color: rgba(255,255,255,0.08);
+          }
+          .series-page-local .series-kicker {
+            border-color: #c4121c;
+            background: #c4121c;
+            color: #fff;
+          }
+          .series-page-local .series-card .series-chip {
+            border-color: rgba(255,255,255,0.12);
+            background: rgba(10,10,10,0.68);
+          }
+          .local-hero-callout {
+            width: min(760px, 100%);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 24px;
+            margin-top: 28px;
+            padding: 24px 26px;
+            border: 1px solid #e12a34;
+            border-radius: 6px;
+            background: #c4121c;
+            box-shadow: 0 18px 42px rgba(196,18,28,0.2);
+            text-align: left;
+          }
+          .local-hero-callout strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #fff;
+            font-size: 24px;
+          }
+          .local-hero-callout span {
+            color: rgba(255,255,255,0.78);
+            font-size: 13px;
+          }
+          .local-hero-actions {
+            display: flex;
+            gap: 8px;
+          }
+          .local-hero-actions a {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 14px;
+            gap: 8px;
+            border: 1px solid #fff;
+            border-radius: 6px;
+            background: #fff;
+            color: #a90e17;
+            font-size: 12px;
+            font-weight: 800;
+            text-decoration: none;
+            white-space: nowrap;
+          }
+          .local-hero-actions a:last-child {
+            border-color: #fff;
+            background: #fff;
+            color: #a90e17;
+          }
+          .local-publisher-note {
+            width: min(760px, 100%);
+            margin: 11px auto 0;
+            color: rgba(255,255,255,0.46);
+            font-size: 11px;
+            line-height: 1.6;
+            text-align: left;
           }
           .series-filters {
             position: sticky;
@@ -572,20 +660,33 @@ export default function KategoriSayfasi() {
             .series-chip-row::-webkit-scrollbar {
               display: none;
             }
+            .local-hero-callout { grid-template-columns: 1fr; padding: 20px; }
+            .local-hero-callout strong { font-size: 20px; }
+            .local-hero-actions { display: grid; grid-template-columns: 1fr 1fr; }
           }
         `}</style>
 
-        <section className="series-page">
+        <section className={`series-page ${yerliEserSayfasi ? 'series-page-local' : ''}`}>
           <header className="series-hero">
             <div className="site-shell series-hero-grid">
               <div>
                 <div className="series-kicker">{kategoriAyar.kicker}</div>
                 <h1>{kategoriAyar.title}</h1>
+                {yerliEserSayfasi && (
+                  <div className="local-hero-callout">
+                    <div><strong>Senin de bir çizgi romanın mı var?</strong><span>Eserini Konsey Comics okurlarıyla buluştur.</span></div>
+                    <div className="local-hero-actions">
+                      <a href="https://instagram.com/konseycomics" target="_blank" rel="noreferrer"><InstagramIcon size={17} /> Instagram</a>
+                      <a href="mailto:iletisim@konseycomics.com?subject=Yerli%20Eser%20Yayın%20Başvurusu"><Mail size={17} /> E-posta</a>
+                    </div>
+                  </div>
+                )}
+                {yerliEserSayfasi && <p className="local-publisher-note">Konsey Comics, bağımsız ve kâr amacı gütmeyen bir fansub projesidir. Eserlerin yapımcısı değil, yerli üretimleri okurla buluşturan dijital yayıncısıdır.</p>}
               </div>
             </div>
           </header>
 
-          <section className="series-filters">
+          {!yerliEserSayfasi && <section className="series-filters">
             <div className="site-shell series-filter-shell">
               <div className="series-search-row">
                 <input
@@ -636,7 +737,7 @@ export default function KategoriSayfasi() {
                 </div>
               )}
             </div>
-          </section>
+          </section>}
 
           <section className="site-shell series-section">
             <div className="series-section-top">
@@ -652,14 +753,14 @@ export default function KategoriSayfasi() {
               </div>
             ) : filtrelenmis.length === 0 ? (
               <div className="series-empty">
-                <h3>Sonuç Bulunamadı</h3>
-                <p>Bu seçimle uyuşan bir seri bulamadık. Aramayı ya da tür filtresini temizleyebilirsin.</p>
-                <button onClick={() => {
+                <h3>{yerliEserSayfasi ? 'İlk Yerli Eser Yakında' : 'Sonuç Bulunamadı'}</h3>
+                <p>{yerliEserSayfasi ? 'Yayımlanacak bağımsız yerli çizgi roman burada yerini alacak.' : 'Bu seçimle uyuşan bir seri bulamadık. Aramayı ya da tür filtresini temizleyebilirsin.'}</p>
+                {!yerliEserSayfasi && <button onClick={() => {
                   setGorunenAdet(ILK_GORUNEN_KART)
                   replaceParams({ sirala: 'yeni', q: '', tur: 'Tümü' })
                 }}>
                   Filtreleri Temizle
-                </button>
+                </button>}
               </div>
             ) : (
               <>
@@ -677,6 +778,7 @@ export default function KategoriSayfasi() {
               </>
             )}
           </section>
+
         </section>
       </main>
       <Footer />

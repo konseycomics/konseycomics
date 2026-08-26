@@ -42,6 +42,7 @@ const bosForm = {
   yeni_seri_ozet: '',
   yeni_seri_kapak_url: '',
   yeni_seri_kategori_id: '',
+  eser_sahibi_id: '',
   yeni_seri_yil: String(new Date().getFullYear()),
   sayi: '',
   baslik: '',
@@ -71,6 +72,7 @@ export function YayinMerkeziSayfasi() {
   const [bolumler, setBolumler] = useState([])
   const [kategoriler, setKategoriler] = useState([])
   const [ekip, setEkip] = useState([])
+  const [kayitliKullanicilar, setKayitliKullanicilar] = useState([])
   const [msg, setMsg] = useState('')
   const [kaydediliyor, setKaydediliyor] = useState(false)
   const [seriKapakOnizleme, setSeriKapakOnizleme] = useState(null)
@@ -96,16 +98,18 @@ export function YayinMerkeziSayfasi() {
   }
 
   async function verileriYukle() {
-    const [seriSonuc, bolumSonuc, kategoriSonuc, ekipSonuc] = await Promise.all([
-      supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, kategori_id, yayin_durumu, yayin_tarihi').order('baslik'),
+    const [seriSonuc, bolumSonuc, kategoriSonuc, ekipSonuc, kullaniciSonuc] = await Promise.all([
+      supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, kategori_id, eser_sahibi_id, yayin_durumu, yayin_tarihi').order('baslik'),
       supabase.from('bolumler').select('id, seri_id, sayi, baslik, yayin_durumu, yayin_tarihi, seriler(baslik, slug)').order('yayin_tarihi', { ascending: false, nullsFirst: false }),
       supabase.from('kategoriler').select('id, isim').order('isim'),
       supabase.from('ekip').select('id, isim').order('isim'),
+      supabase.from('public_profiller').select('id, kullanici_adi, rol').order('kullanici_adi'),
     ])
     setSeriler(seriSonuc.data || [])
     setBolumler(bolumSonuc.data || [])
     setKategoriler(kategoriSonuc.data || [])
     setEkip(ekipSonuc.data || [])
+    setKayitliKullanicilar(kullaniciSonuc.data || [])
   }
 
   function seriSec(seriId) {
@@ -114,6 +118,7 @@ export function YayinMerkeziSayfasi() {
     setForm(current => ({
       ...current,
       seri_id: seriId,
+      eser_sahibi_id: seriler.find(item => String(item.id) === String(seriId))?.eser_sahibi_id || '',
       sayi: String(sonrakiSayi),
       baslik: current.baslik || `Bölüm ${sonrakiSayi}`,
     }))
@@ -123,6 +128,8 @@ export function YayinMerkeziSayfasi() {
     () => seriler.find(item => String(item.id) === String(form.seri_id)),
     [form.seri_id, seriler]
   )
+  const seciliKategoriId = form.seri_tipi === 'yeni' ? form.yeni_seri_kategori_id : seciliSeri?.kategori_id
+  const yerliEserAkisi = kategoriler.find(item => String(item.id) === String(seciliKategoriId))?.isim === 'Yerli Eserler'
   const yayinTarihi = form.yayin_sekli === 'taslak'
     ? null
     : form.yayin_sekli === 'simdi'
@@ -214,6 +221,7 @@ export function YayinMerkeziSayfasi() {
     setMsg('')
     if (form.seri_tipi === 'mevcut' && !form.seri_id) return setMsg('❌ Bir seri seçmelisin.')
     if (form.seri_tipi === 'yeni' && (!form.yeni_seri_baslik || !form.yeni_seri_kategori_id)) return setMsg('❌ Yeni seri başlığı ve kategorisi zorunlu.')
+    if (yerliEserAkisi && !form.eser_sahibi_id) return setMsg('❌ Yerli eser için kayıtlı bir eser sahibi seçmelisin.')
     if (!form.sayi || !form.baslik) return setMsg('❌ Bölüm numarası ve başlığı zorunlu.')
     if (form.sayfa_gorselleri.length === 0 && !form.drive_link) return setMsg('❌ Sayfa görselleri veya Drive bağlantısı gerekli.')
     if (form.yayin_sekli === 'planla' && (!yayinTarihi || new Date(yayinTarihi) <= new Date())) return setMsg('❌ Planlama zamanı gelecekte olmalı.')
@@ -236,6 +244,7 @@ export function YayinMerkeziSayfasi() {
           ozet: form.yeni_seri_ozet.trim(),
           kapak_url: form.yeni_seri_kapak_url,
           kategori_id: form.yeni_seri_kategori_id,
+          eser_sahibi_id: form.eser_sahibi_id || null,
           kategori: kategoriler.find(item => item.id === form.yeni_seri_kategori_id)?.isim || 'Çizgi Roman',
           tur: 'seri',
           durum: 'Devam Eden',
@@ -248,6 +257,12 @@ export function YayinMerkeziSayfasi() {
         if (error) throw error
         seri = data
         olusturulanSeriId = data.id
+      }
+
+      if (form.seri_tipi === 'mevcut' && yerliEserAkisi && form.eser_sahibi_id !== (seri.eser_sahibi_id || '')) {
+        const { error: sahipError } = await supabase.from('seriler').update({ eser_sahibi_id: form.eser_sahibi_id }).eq('id', seri.id)
+        if (sahipError) throw sahipError
+        seri = { ...seri, eser_sahibi_id: form.eser_sahibi_id }
       }
 
       const bolumPayload = {
@@ -317,8 +332,8 @@ export function YayinMerkeziSayfasi() {
           <Surface>
             <div style={{ display:'flex',alignItems:'center',gap:'9px',fontSize:'15px',fontWeight:800,marginBottom:'18px' }}><Library size={18} /> 1. Seri</div>
             <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'16px' }}>
-              <button type="button" onClick={()=>setForm(current=>({...current,seri_tipi:'mevcut'}))} style={{...BS,borderRadius:'10px',minHeight:'42px',background:form.seri_tipi==='mevcut'?'rgba(214,173,77,0.16)':undefined,borderColor:form.seri_tipi==='mevcut'?'#6b5728':undefined}}>Mevcut Seri</button>
-              <button type="button" onClick={()=>setForm(current=>({...current,seri_tipi:'yeni'}))} style={{...BS,borderRadius:'10px',minHeight:'42px',background:form.seri_tipi==='yeni'?'rgba(214,173,77,0.16)':undefined,borderColor:form.seri_tipi==='yeni'?'#6b5728':undefined}}><Plus size={14} /> Hızlı Seri Oluştur</button>
+              <button type="button" onClick={()=>setForm(current=>({...current,seri_tipi:'mevcut',eser_sahibi_id:''}))} style={{...BS,borderRadius:'10px',minHeight:'42px',background:form.seri_tipi==='mevcut'?'rgba(214,173,77,0.16)':undefined,borderColor:form.seri_tipi==='mevcut'?'#6b5728':undefined}}>Mevcut Seri</button>
+              <button type="button" onClick={()=>setForm(current=>({...current,seri_tipi:'yeni',seri_id:'',eser_sahibi_id:''}))} style={{...BS,borderRadius:'10px',minHeight:'42px',background:form.seri_tipi==='yeni'?'rgba(214,173,77,0.16)':undefined,borderColor:form.seri_tipi==='yeni'?'#6b5728':undefined}}><Plus size={14} /> Hızlı Seri Oluştur</button>
             </div>
             {form.seri_tipi === 'mevcut' ? (
               <div><div style={LB}>Seri</div><AramaSecimTek liste={seriler.map(item=>({id:item.id,isim:item.baslik}))} secili={form.seri_id} onChange={seriSec} placeholder="Seri seç" /></div>
@@ -328,11 +343,22 @@ export function YayinMerkeziSayfasi() {
                 <div style={{ display:'grid',gap:'12px' }}>
                   <div><div style={LB}>Seri Başlığı</div><input value={form.yeni_seri_baslik} onChange={e=>setForm(current=>({...current,yeni_seri_baslik:e.target.value,yeni_seri_slug:slugOlustur(e.target.value)}))} style={I} /></div>
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 130px',gap:'10px' }}>
-                    <div><div style={LB}>Kategori</div><select value={form.yeni_seri_kategori_id} onChange={e=>setForm(current=>({...current,yeni_seri_kategori_id:e.target.value}))} style={S}><option value="">Kategori seç</option>{kategoriler.map(item=><option key={item.id} value={item.id}>{item.isim}</option>)}</select></div>
+                    <div><div style={LB}>Kategori</div><select value={form.yeni_seri_kategori_id} onChange={e=>setForm(current=>({...current,yeni_seri_kategori_id:e.target.value,eser_sahibi_id:''}))} style={S}><option value="">Kategori seç</option>{kategoriler.map(item=><option key={item.id} value={item.id}>{item.isim}</option>)}</select></div>
                     <div><div style={LB}>Yıl</div><input type="number" value={form.yeni_seri_yil} onChange={e=>setForm(current=>({...current,yeni_seri_yil:e.target.value}))} style={I} /></div>
                   </div>
                   <div><div style={LB}>Özet</div><textarea value={form.yeni_seri_ozet} onChange={e=>setForm(current=>({...current,yeni_seri_ozet:e.target.value}))} style={{...I,minHeight:'84px',resize:'vertical'}} /></div>
                 </div>
+              </div>
+            )}
+            {yerliEserAkisi && (
+              <div style={{ marginTop:'14px' }}>
+                <div style={LB}>Eser Sahibi (Kayıtlı Kullanıcı)</div>
+                <AramaSecimTek
+                  liste={kayitliKullanicilar.map(item=>({ id:item.id, isim:`@${item.kullanici_adi}${item.rol==='cizer'?' · Çizer':''}` }))}
+                  secili={form.eser_sahibi_id}
+                  onChange={value=>setForm(current=>({...current,eser_sahibi_id:value}))}
+                  placeholder="Kullanıcı seç"
+                />
               </div>
             )}
           </Surface>

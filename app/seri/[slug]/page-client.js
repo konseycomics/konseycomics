@@ -35,6 +35,7 @@ export default function SeriDetay() {
   const [bolumler, setBolumler] = useState([])
   const [yazarlar, setYazarlar] = useState([])
   const [cizerler, setCizerler] = useState([])
+  const [eserSahibi, setEserSahibi] = useState(null)
   const [turler, setTurler] = useState([])
   const [loading, setLoading] = useState(true)
   const [listeDurumu, setListeDurumu] = useState(null)
@@ -63,7 +64,7 @@ export default function SeriDetay() {
           body: JSON.stringify({ seriId: seriData.id }),
         }).catch(() => {})
 
-        const [b, y, c, t, detay, onerilen, unvanlar] = await Promise.all([
+        const [b, y, c, t, detay, onerilen, unvanlar, eserSahibiRes] = await Promise.all([
           supabase.from('bolumler')
             .select('*, cevirmen:ekip!cevirmen_id(isim), balonlama:ekip!balonlama_id(isim), grafik:ekip!grafik_id(isim)')
             .eq('seri_id', seriData.id)
@@ -85,6 +86,9 @@ export default function SeriDetay() {
             .or(`seri_id.eq.${seriData.id}${seriData.character_group ? `,character_group.eq.${seriData.character_group}` : ''}`)
             .eq('aktif', true)
             .order('siralama'),
+          seriData.eser_sahibi_id
+            ? supabase.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').eq('id', seriData.eser_sahibi_id).maybeSingle()
+            : Promise.resolve({ data: null }),
         ])
 
         setBolumler(b.data || [])
@@ -94,6 +98,7 @@ export default function SeriDetay() {
         setDetayAyar(detay.data?.deger?.[String(seriData.id)] || {})
         setOnerilenSeri(onerilen.data || null)
         setSeriUnvanlari(unvanlar.data || [])
+        setEserSahibi(eserSahibiRes.data || null)
 
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
@@ -196,6 +201,7 @@ export default function SeriDetay() {
   ]
 
   const metaSatirlari = [
+    ...(eserSahibi ? [['Eser Sahibi', <Link key="eser-sahibi" href={`/profil/${eserSahibi.kullanici_adi}`} style={{ color:'#fff', textDecoration:'none' }}>@{eserSahibi.kullanici_adi}</Link>]] : []),
     ['Yayıncı', seri.kategoriler?.isim || 'Belirtilmemiş'],
     ['Kategori', seri.kategoriler?.isim || 'Belirtilmemiş'],
     ['Yıl', seri.yil || 'Belirtilmemiş'],

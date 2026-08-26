@@ -126,6 +126,7 @@ export function KullanicilarSayfasi() {
             <option value="tumu">Tum Roller</option>
             <option value="okuyucu">Okuyucu</option>
             <option value="cevirmeni">Çevirmen</option>
+            <option value="cizer">Çizer</option>
             <option value="grafik">Grafik</option>
             <option value="editor">Editör</option>
             <option value="moderator">Moderatör</option>
@@ -147,7 +148,7 @@ export function KullanicilarSayfasi() {
                 <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>Seviye {k.seviye} · {k.xp} XP · {new Date(k.created_at).toLocaleDateString('tr-TR')}</div>
               </div>
               <select value={k.rol} onChange={e=>rolDegistir(k.id,e.target.value)} style={{...S,width:'auto',fontSize:'12px',padding:'4px 8px'}}>
-                <option value="okuyucu">Okuyucu</option><option value="cevirmeni">Çevirmen</option><option value="grafik">Grafik</option><option value="editor">Editör</option><option value="moderator">Moderatör</option><option value="admin">Admin</option><option value="yonetici">Yönetici</option>
+                <option value="okuyucu">Okuyucu</option><option value="cevirmeni">Çevirmen</option><option value="cizer">Çizer</option><option value="grafik">Grafik</option><option value="editor">Editör</option><option value="moderator">Moderatör</option><option value="admin">Admin</option><option value="yonetici">Yönetici</option>
               </select>
               <button onClick={()=>banToggle(k.id,k.askiya_alindi)} style={k.askiya_alindi?BS:BD}>{k.askiya_alindi?'Banı Kaldır':'Banla'}</button>
             </div>

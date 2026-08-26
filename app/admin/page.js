@@ -1584,6 +1584,7 @@ function SerilerSayfasi() {
   const [turler, setTurler] = useState([])
   const [yazarlar, setYazarlar] = useState([])
   const [cizerler, setCizerler] = useState([])
+  const [kayitliKullanicilar, setKayitliKullanicilar] = useState([])
   const [detayVitrinAyarMap, setDetayVitrinAyarMap] = useState({})
   const [mod, setMod] = useState('liste')
   const [gorunum, setGorunum] = useState('liste')
@@ -1597,20 +1598,21 @@ function SerilerSayfasi() {
   const [durumFiltre, setDurumFiltre] = useState('tumu')
   const [oneCikanFiltre, setOneCikanFiltre] = useState('tumu')
   const detayPreviewRef = useRef(null)
-  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false, detay_arka_plan_url:'', detay_arka_plan_fit:'cover', detay_arka_plan_pozisyon:'center center', detay_arka_plan_x:50, detay_arka_plan_y:50 }
+  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',eser_sahibi_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false, detay_arka_plan_url:'', detay_arka_plan_fit:'cover', detay_arka_plan_pozisyon:'center center', detay_arka_plan_x:50, detay_arka_plan_y:50 }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
   async function fetchHepsi() {
-    const [s,k,t,y,c,ayar] = await Promise.all([
+    const [s,k,t,y,c,ayar,kullaniciRes] = await Promise.all([
       supabase.from('seriler').select('*, kategoriler(isim)').order('created_at',{ascending:false}),
       supabase.from('kategoriler').select('*').order('isim'),
       supabase.from('turler').select('*').order('isim'),
       supabase.from('yazarlar').select('*').order('isim'),
       supabase.from('cizerler').select('*').order('isim'),
       supabase.from('site_ayarlari').select('deger').eq('anahtar', 'seri_detay_vitrin').maybeSingle(),
+      supabase.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').order('kullanici_adi'),
     ])
-    setSeriler(s.data||[]); setKategoriler(k.data||[]); setTurler(t.data||[]); setYazarlar(y.data||[]); setCizerler(c.data||[]); setDetayVitrinAyarMap(ayar.data?.deger || {})
+    setSeriler(s.data||[]); setKategoriler(k.data||[]); setTurler(t.data||[]); setYazarlar(y.data||[]); setCizerler(c.data||[]); setDetayVitrinAyarMap(ayar.data?.deger || {}); setKayitliKullanicilar(kullaniciRes.data||[])
   }
 
   function slugOlustur(v) {
@@ -1643,7 +1645,7 @@ function SerilerSayfasi() {
   async function kaydet() {
     if (!form.baslik) { setMsg('❌ Başlık zorunlu!'); return }
     setYukleniyor(true)
-    const payload = { baslik:form.baslik, slug:form.slug||slugOlustur(form.baslik), tur:form.tur, kategori:form.kategori, kategori_id:form.kategori_id||null, ozet:form.ozet, durum:form.tur==='tek'?'Tek Sayılık':form.durum, kapak_url:form.kapak_url, turler:form.turler, yil:form.yil?parseInt(form.yil):null, one_cikan:form.one_cikan }
+    const payload = { baslik:form.baslik, slug:form.slug||slugOlustur(form.baslik), tur:form.tur, kategori:form.kategori, kategori_id:form.kategori_id||null, eser_sahibi_id:form.eser_sahibi_id||null, ozet:form.ozet, durum:form.tur==='tek'?'Tek Sayılık':form.durum, kapak_url:form.kapak_url, turler:form.turler, yil:form.yil?parseInt(form.yil):null, one_cikan:form.one_cikan }
     let seriId = duzenleId
     if (duzenleId) { await supabase.from('seriler').update(payload).eq('id',duzenleId) }
     else { const { data } = await supabase.from('seriler').insert([payload]).select().single(); seriId = data?.id }
@@ -1742,6 +1744,12 @@ function SerilerSayfasi() {
         <div><div style={LB}>Kategori</div><AramaSecimTek liste={kategoriler.map(k=>({id:k.id,isim:k.isim}))} secili={form.kategori_id} onChange={v=>setForm(f=>({...f,kategori_id:v}))} placeholder="Kategori seç" /></div>
         <div><div style={LB}>Durum</div><select value={form.durum} onChange={e=>setForm(f=>({...f,durum:e.target.value}))} style={S}><option>Devam Eden</option><option>Tamamlandı</option><option>Askıya Alındı</option><option>Tek Sayılık</option></select></div>
       </div>
+      {kategoriler.find(k=>k.id===form.kategori_id)?.isim === 'Yerli Eserler' && (
+        <div style={{ marginBottom:'12px' }}>
+          <div style={LB}>Eser Sahibi (Kayıtlı Kullanıcı)</div>
+          <AramaSecimTek liste={kayitliKullanicilar.map(k=>({id:k.id,isim:`@${k.kullanici_adi}${k.rol==='cizer'?' · Çizer':''}`}))} secili={form.eser_sahibi_id} onChange={v=>setForm(f=>({...f,eser_sahibi_id:v}))} placeholder="Kullanıcı seç" />
+        </div>
+      )}
       <div style={{ marginBottom:'12px' }}><div style={LB}>Özet</div><textarea value={form.ozet} onChange={e=>setForm(f=>({...f,ozet:e.target.value}))} style={{...I,height:'80px',resize:'vertical'}} /></div>
       <div style={{ ...CARD_INNER, padding:'16px',marginBottom:'16px' }}>
         <div style={{ fontSize:'13px',fontWeight:600,marginBottom:'14px' }}>Seri Detay Hero Alanı</div>

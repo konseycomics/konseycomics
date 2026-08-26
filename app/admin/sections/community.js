@@ -90,7 +90,17 @@ export function KullanicilarSayfasi() {
   useEffect(() => { fetchHepsi() }, [])
   async function fetchHepsi() { const { data } = await supabase.from('profiller').select('*').order('created_at',{ascending:false}); setKullanicilar(data||[]) }
 
-  async function rolDegistir(id, yeniRol) { await supabase.from('profiller').update({rol:yeniRol}).eq('id',id); fetchHepsi(); setMsg('✅ Rol güncellendi!') }
+  async function rolDegistir(id, yeniRol) {
+    setMsg('')
+    const { data, error } = await supabase.from('profiller').update({rol:yeniRol}).eq('id',id).select('id, rol').single()
+    if (error) {
+      setMsg(`❌ Rol güncellenemedi: ${error.message}`)
+      await fetchHepsi()
+      return
+    }
+    setKullanicilar(current => current.map(k => k.id === id ? { ...k, rol: data.rol } : k))
+    setMsg('✅ Rol güncellendi!')
+  }
   async function banToggle(id, mevcut) { await supabase.from('profiller').update({askiya_alindi:!mevcut}).eq('id',id); fetchHepsi(); setMsg(mevcut?'✅ Ban kaldırıldı!':'✅ Kullanıcı banlandı!') }
 
   const filtreli = kullanicilar

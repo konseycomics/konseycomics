@@ -1,4 +1,5 @@
 import HomeClient from './page-client'
+import { cache } from 'react'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
 import { getLeaderboards } from './lib/leaderboardData'
 import { getCommunityTopics } from './lib/communityData'
@@ -13,7 +14,7 @@ function withTimeout(promise, fallback) {
   ])
 }
 
-async function getHomePageData() {
+const getHomePageData = cache(async function getHomePageData() {
   noStore()
   const supabase = createSupabaseServerClient()
 
@@ -48,7 +49,7 @@ async function getHomePageData() {
     liderlik,
     forumTopics: forumData.topics || [],
   }
-}
+})
 
 export async function generateMetadata() {
   const { siteAyarlari } = await getHomePageData()

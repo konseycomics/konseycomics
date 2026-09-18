@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-const MAINTENANCE_ENABLED = true
+const MAINTENANCE_ENABLED = false
 const MAINTENANCE_BYPASS_PATHS = ['/admin', '/api', '/auth']
 
 function maintenanceResponse() {

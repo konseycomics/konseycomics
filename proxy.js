@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-const MAINTENANCE_ENABLED = process.env.MAINTENANCE_MODE === 'true'
+const MAINTENANCE_ENABLED = true
+const MAINTENANCE_BYPASS_PATHS = ['/admin', '/api', '/auth']
 
 function maintenanceResponse() {
   return new NextResponse(`<!doctype html>
@@ -253,6 +254,7 @@ function maintenanceResponse() {
 
 export async function proxy(req) {
   const host = req.headers.get('host') || ''
+  const pathname = req.nextUrl.pathname
   const canonicalHost = 'www.konseycomics.com'
   const bareHost = 'konseycomics.com'
   const legacyHost = 'konseycomics.vercel.app'
@@ -264,8 +266,14 @@ export async function proxy(req) {
     return NextResponse.redirect(redirectUrl, 308)
   }
 
-  if (MAINTENANCE_ENABLED) {
+  const maintenanceBypass = MAINTENANCE_BYPASS_PATHS.some(path => pathname === path || pathname.startsWith(`${path}/`))
+
+  if (MAINTENANCE_ENABLED && !maintenanceBypass) {
     return maintenanceResponse()
+  }
+
+  if (maintenanceBypass) {
+    return NextResponse.next()
   }
 
   let res = NextResponse.next({

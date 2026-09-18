@@ -4,21 +4,33 @@ import { getLeaderboards } from './lib/leaderboardData'
 import { getCommunityTopics } from './lib/communityData'
 import { unstable_noStore as noStore } from 'next/cache'
 
+const HOME_DATA_TIMEOUT_MS = 4500
+
+function withTimeout(promise, fallback) {
+  return Promise.race([
+    Promise.resolve(promise).catch(() => fallback),
+    new Promise(resolve => setTimeout(() => resolve(fallback), HOME_DATA_TIMEOUT_MS)),
+  ])
+}
+
 async function getHomePageData() {
   noStore()
   const supabase = createSupabaseServerClient()
 
-  const [{ data: seriler }, { data: bolumler }, { data: ayarData }, liderlik, forumData] = await Promise.all([
-    supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
-    supabase
+  const [seriRes, bolumRes, ayarRes, liderlik, forumData] = await Promise.all([
+    withTimeout(supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }), { data: [] }),
+    withTimeout(supabase
       .from('bolumler')
       .select('id, baslik, sayi, kapak_url, created_at, seri_id, seriler(baslik, slug, kapak_url)')
       .order('created_at', { ascending: false })
-      .limit(10),
-    supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']),
-    getLeaderboards(),
-    getCommunityTopics({ limit: 16 }),
+      .limit(10), { data: [] }),
+    withTimeout(supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']), { data: [] }),
+    withTimeout(getLeaderboards(), {}),
+    withTimeout(getCommunityTopics({ limit: 16 }), { topics: [] }),
   ])
+  const seriler = seriRes.data || []
+  const bolumler = bolumRes.data || []
+  const ayarData = ayarRes.data || []
 
   const siteAyarlari = {}
   ayarData?.forEach((item) => {

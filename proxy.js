@@ -2,7 +2,70 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
 const MAINTENANCE_ENABLED = false
+const AUTO_MAINTENANCE_ENABLED = true
 const MAINTENANCE_BYPASS_PATHS = ['/admin', '/api', '/auth']
+const HEALTH_CHECK_TTL_MS = 60_000
+const HEALTH_CHECK_TIMEOUT_MS = 2_500
+
+let supabaseHealth = {
+  checkedAt: 0,
+  healthy: true,
+  pending: null,
+}
+
+async function isSupabaseHealthy() {
+  const now = Date.now()
+
+  if (now - supabaseHealth.checkedAt < HEALTH_CHECK_TTL_MS) {
+    return supabaseHealth.healthy
+  }
+
+  if (supabaseHealth.pending) {
+    return supabaseHealth.pending
+  }
+
+  supabaseHealth.pending = (async () => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS)
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY
+
+      if (!supabaseUrl || !supabaseKey) {
+        return false
+      }
+
+      const healthUrl = new URL('/rest/v1/kategoriler', supabaseUrl)
+      healthUrl.searchParams.set('select', 'id')
+      healthUrl.searchParams.set('limit', '1')
+
+      const response = await fetch(healthUrl, {
+        method: 'GET',
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+
+      return response.ok
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timeout)
+    }
+  })()
+
+  try {
+    supabaseHealth.healthy = await supabaseHealth.pending
+    supabaseHealth.checkedAt = Date.now()
+    return supabaseHealth.healthy
+  } finally {
+    supabaseHealth.pending = null
+  }
+}
 
 function maintenanceResponse() {
   return new NextResponse(`<!doctype html>
@@ -274,6 +337,13 @@ export async function proxy(req) {
 
   if (maintenanceBypass) {
     return NextResponse.next()
+  }
+
+  const acceptsHtml = req.headers.get('accept')?.includes('text/html')
+  const shouldCheckHealth = AUTO_MAINTENANCE_ENABLED && req.method === 'GET' && acceptsHtml
+
+  if (shouldCheckHealth && !(await isSupabaseHealthy())) {
+    return maintenanceResponse()
   }
 
   let res = NextResponse.next({

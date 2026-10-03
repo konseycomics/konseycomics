@@ -807,6 +807,7 @@ export default function Okuyucu() {
             letter-spacing: 0.4px;
           }
           .reader-frame {
+            overflow-anchor: none;
             position: relative;
             z-index: 1;
             border: 1px solid rgba(255,255,255,0.08);
@@ -831,6 +832,8 @@ export default function Okuyucu() {
           }
           .reader-pages {
             display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            width: 100%;
             gap: 24px;
             padding: 22px 0 10px;
           }
@@ -1192,11 +1195,18 @@ export default function Okuyucu() {
           }
           .reader-frame.is-fullscreen.mode-flip .reader-stage,
           .reader-frame:fullscreen.mode-flip .reader-stage {
-            min-height: 100dvh;
+            min-height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 76px 18px 24px;
+            padding: 12px 18px;
+          }
+          .reader-frame.is-fullscreen.mode-flip,
+          .reader-frame:fullscreen.mode-flip {
+            top: 76px;
+            bottom: 76px;
+            height: calc(100dvh - 152px);
+            box-shadow: 0 -76px 0 #050505, 0 76px 0 #050505;
           }
           .reader-frame.is-fullscreen.mode-scroll .reader-stage,
           .reader-frame:fullscreen.mode-scroll .reader-stage {
@@ -1801,17 +1811,14 @@ export default function Okuyucu() {
                   </div>
                 ) : (
                   <div className="reader-stage" ref={stageRef}>
-                    <div className="reader-pages">
+                    <div className="reader-pages" style={{ width: `${okuyucuZoom * 100}%` }}>
                       {gorunenSayfalar.map((sayfaUrl, index) => (
                         <div
                           key={`${sayfaUrl}-${index}`}
                           className="reader-page"
                           ref={(node) => { sayfaRefleri.current[index] = node }}
                           data-page-index={index}
-                          style={okuyucuZoom > 1 ? {
-                            width: `${okuyucuZoom * 100}%`,
-                            maxWidth: `${980 * okuyucuZoom}px`,
-                          } : undefined}
+                          style={{ width: '100%', maxWidth: `${980 * okuyucuZoom}px` }}
                         >
                           <div className="reader-page-inner">
                             <img

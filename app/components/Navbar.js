@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
 import { Users } from 'lucide-react'
-import ForumLaunchNotice from './ForumLaunchNotice'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -56,7 +55,6 @@ export default function Navbar() {
   return (
     <>
       <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
-      <ForumLaunchNotice />
       <nav style={{ background: '#000', borderBottom: '1px solid #121212' }}>
         <div className="site-shell" style={{ height: '90px', display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', flexShrink: 0 }}>

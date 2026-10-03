@@ -56,6 +56,18 @@ export default function ReaderBook({ pages, title, page, pageWidth, pageHeight, 
       mobileScrollSupport: false, useMouseEvents: true,
       showPageCorners: false, disableFlipByClick: true, swipeDistance: 45
     })
+    // In portrait mode the library's previous-page point is not a visible corner.
+    // Keep tap-to-flip disabled, but exempt explicit button and swipe navigation.
+    for (const method of ['flipPrev', 'flipNext']) {
+      const navigate = engine[method].bind(engine)
+      engine[method] = corner => {
+        const settings = engine.getSettings()
+        const previous = settings.disableFlipByClick
+        settings.disableFlipByClick = false
+        try { navigate(corner) }
+        finally { settings.disableFlipByClick = previous }
+      }
+    }
     engine.on('flip', event => callbackRef.current(event.data + 1))
     engineRef.current = engine
     engine.loadFromHTML(nodes)

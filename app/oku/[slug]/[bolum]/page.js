@@ -2,6 +2,7 @@
 import { useParams, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
@@ -10,6 +11,9 @@ import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock, trackSeriesFavori
 
 const INITIAL_VISIBLE_PAGE_COUNT = 6
 const PAGE_BATCH_SIZE = 4
+const MIN_READER_ZOOM = 1
+const MAX_READER_ZOOM = 2.5
+const READER_ZOOM_STEP = 0.25
 
 function driveEmbedUrl(link) {
   if (!link) return null
@@ -81,6 +85,7 @@ export default function Okuyucu() {
   const [okumaModu, setOkumaModu] = useState('scroll')
   const [ciftSayfaAktif, setCiftSayfaAktif] = useState(false)
   const [tamEkranAktif, setTamEkranAktif] = useState(false)
+  const [okuyucuZoom, setOkuyucuZoom] = useState(MIN_READER_ZOOM)
   const [flipGecisi, setFlipGecisi] = useState(null)
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
   const sayfaRefleri = useRef([])
@@ -90,6 +95,8 @@ export default function Okuyucu() {
   const dokunusBaslangicXRef = useRef(null)
   const dokunusBaslangicYRef = useRef(null)
   const flipGecisZamanlayiciRef = useRef(null)
+  const yerlesikTamEkranRef = useRef(false)
+  const pinchBaslangicRef = useRef(null)
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const [kullanici, setKullanici] = useState(null)
@@ -302,6 +309,7 @@ export default function Okuyucu() {
   useEffect(() => {
     setAktifSayfa(1)
     setOkumaModu('scroll')
+    setOkuyucuZoom(MIN_READER_ZOOM)
     setFlipGecisi(null)
     setGorunenSayfaSayisi(INITIAL_VISIBLE_PAGE_COUNT)
     sayfaRefleri.current = []
@@ -309,19 +317,42 @@ export default function Okuyucu() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setTamEkranAktif(Boolean(document.fullscreenElement))
+      const yerlesikTamEkran = Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+
+      if (yerlesikTamEkran) {
+        yerlesikTamEkranRef.current = true
+        setTamEkranAktif(true)
+      } else if (yerlesikTamEkranRef.current) {
+        yerlesikTamEkranRef.current = false
+        setTamEkranAktif(false)
+      }
     }
 
     document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
     handleFullscreenChange()
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
       if (flipGecisZamanlayiciRef.current) {
         window.clearTimeout(flipGecisZamanlayiciRef.current)
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!tamEkranAktif) return
+
+    const oncekiOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.classList.add('reader-fullscreen-active')
+
+    return () => {
+      document.body.style.overflow = oncekiOverflow
+      document.body.classList.remove('reader-fullscreen-active')
+    }
+  }, [tamEkranAktif])
 
   useEffect(() => {
     const medya = window.matchMedia('(min-width: 980px)')
@@ -434,18 +465,70 @@ export default function Okuyucu() {
     const hedef = readerFrameRef.current
     if (!hedef) return
 
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen()
+    if (tamEkranAktif) {
+      const yerlesikTamEkran = document.fullscreenElement || document.webkitFullscreenElement
+      const tamEkrandanCik = document.exitFullscreen || document.webkitExitFullscreen
+
+      if (yerlesikTamEkran && tamEkrandanCik) {
+        try {
+          await tamEkrandanCik.call(document)
+        } catch (error) {
+          console.warn('Tam ekran modundan cikilamadi:', error?.message || error)
+          yerlesikTamEkranRef.current = false
+          setTamEkranAktif(false)
+        }
       } else {
-        await hedef.requestFullscreen()
+        setTamEkranAktif(false)
+      }
+      return
+    }
+
+    try {
+      const tamEkranIste = hedef.requestFullscreen || hedef.webkitRequestFullscreen
+
+      if (tamEkranIste) {
+        await tamEkranIste.call(hedef)
+        yerlesikTamEkranRef.current = true
+        setTamEkranAktif(true)
+      } else {
+        setTamEkranAktif(true)
       }
     } catch (error) {
       console.warn('Tam ekran modu acilamadi:', error?.message || error)
+      setTamEkranAktif(true)
     }
   }
 
+  function zoomGuncelle(yeniZoom) {
+    const sinirliZoom = Math.min(MAX_READER_ZOOM, Math.max(MIN_READER_ZOOM, yeniZoom))
+    setOkuyucuZoom(Math.round(sinirliZoom * 100) / 100)
+  }
+
+  function handleReaderTouchStart(e) {
+    if (e.touches?.length !== 2) return
+
+    const [birinci, ikinci] = e.touches
+    pinchBaslangicRef.current = {
+      mesafe: Math.hypot(ikinci.clientX - birinci.clientX, ikinci.clientY - birinci.clientY),
+      zoom: okuyucuZoom,
+    }
+  }
+
+  function handleReaderTouchMove(e) {
+    if (e.touches?.length !== 2 || !pinchBaslangicRef.current) return
+
+    e.preventDefault()
+    const [birinci, ikinci] = e.touches
+    const mesafe = Math.hypot(ikinci.clientX - birinci.clientX, ikinci.clientY - birinci.clientY)
+    zoomGuncelle(pinchBaslangicRef.current.zoom * (mesafe / pinchBaslangicRef.current.mesafe))
+  }
+
+  function handleReaderTouchEnd(e) {
+    if (e.touches?.length < 2) pinchBaslangicRef.current = null
+  }
+
   function handleFlipTouchStart(e) {
+    if (e.touches?.length !== 1) return
     const touch = e.touches?.[0]
     if (!touch) return
     dokunusBaslangicXRef.current = touch.clientX
@@ -453,6 +536,7 @@ export default function Okuyucu() {
   }
 
   function handleFlipTouchEnd(e) {
+    if (pinchBaslangicRef.current) return
     const startX = dokunusBaslangicXRef.current
     const startY = dokunusBaslangicYRef.current
     const touch = e.changedTouches?.[0]
@@ -622,6 +706,12 @@ export default function Okuyucu() {
           .reader-shell {
             position: relative;
             overflow: hidden;
+          }
+          body.reader-fullscreen-active .reader-shell {
+            overflow: visible;
+          }
+          body.reader-fullscreen-active .reader-shell > .site-shell {
+            z-index: 10000 !important;
           }
           .reader-shell::before {
             content: '';
@@ -982,7 +1072,7 @@ export default function Okuyucu() {
             font-size: 12px;
           }
           .reader-flip-fullscreen {
-            min-height: 36px;
+            min-height: 42px;
             padding: 0 14px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.12);
@@ -994,31 +1084,93 @@ export default function Okuyucu() {
             text-transform: uppercase;
             cursor: pointer;
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          }
+          .reader-flip-fullscreen svg {
+            width: 17px;
+            height: 17px;
+          }
+          .reader-view-actions,
+          .reader-zoom-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .reader-zoom-controls {
+            min-height: 42px;
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+          }
+          .reader-zoom-controls button {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: none;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            cursor: pointer;
+          }
+          .reader-zoom-controls button:disabled {
+            opacity: 0.32;
+            cursor: not-allowed;
+          }
+          .reader-zoom-controls svg {
+            width: 17px;
+            height: 17px;
+          }
+          .reader-zoom-value {
+            min-width: 50px;
+            color: rgba(255,255,255,0.78);
+            font-size: 11px;
+            font-weight: 800;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
           }
           .reader-frame.is-fullscreen,
           .reader-frame:fullscreen {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100dvh;
+            z-index: 1000;
             border-radius: 0;
             border: none;
             background: #050505;
             box-shadow: none;
+            overflow: auto;
+            overscroll-behavior: contain;
           }
-          .reader-frame.is-fullscreen .reader-stage,
-          .reader-frame:fullscreen .reader-stage {
-            min-height: 100vh;
+          .reader-frame.is-fullscreen.mode-flip .reader-stage,
+          .reader-frame:fullscreen.mode-flip .reader-stage {
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24px 18px;
+            padding: 76px 18px 24px;
+          }
+          .reader-frame.is-fullscreen.mode-scroll .reader-stage,
+          .reader-frame:fullscreen.mode-scroll .reader-stage {
+            min-height: 100dvh;
+            padding: 72px 10px 24px;
           }
           .reader-fullscreen-controls {
-            position: absolute;
-            top: 16px;
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
-            z-index: 12;
+            z-index: 1002;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             padding: 8px;
             border-radius: 14px;
             background: rgba(8,8,8,0.74);
@@ -1027,7 +1179,8 @@ export default function Okuyucu() {
           }
           .reader-fullscreen-controls button {
             min-height: 40px;
-            padding: 0 14px;
+            min-width: 40px;
+            padding: 0 11px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.1);
             background: rgba(255,255,255,0.06);
@@ -1038,6 +1191,14 @@ export default function Okuyucu() {
             text-transform: uppercase;
             cursor: pointer;
             font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+          }
+          .reader-fullscreen-controls svg {
+            width: 17px;
+            height: 17px;
           }
           .reader-fullscreen-controls button:disabled {
             opacity: 0.4;
@@ -1242,6 +1403,16 @@ export default function Okuyucu() {
             .reader-mode-toggle button {
               flex: 1;
             }
+            .reader-view-actions {
+              width: 100%;
+            }
+            .reader-zoom-controls {
+              flex: 1;
+              justify-content: space-between;
+            }
+            .reader-flip-fullscreen {
+              flex: 1;
+            }
             .reader-stage {
               padding: 10px 8px 18px;
             }
@@ -1276,12 +1447,12 @@ export default function Okuyucu() {
               align-items: flex-start;
             }
             .reader-fullscreen-controls {
-              width: calc(100% - 24px);
+              width: auto;
+              max-width: calc(100% - 24px);
               justify-content: space-between;
               gap: 8px;
             }
             .reader-fullscreen-controls button {
-              flex: 1;
               min-width: 0;
               padding: 0 10px;
               font-size: 10px;
@@ -1393,10 +1564,34 @@ export default function Okuyucu() {
                     </button>
                   </div>
                 )}
-                {ozelOkuyucuVar && okumaModu === 'flip' && (
-                  <button type="button" className="reader-flip-fullscreen" onClick={toggleTamEkran}>
-                    {tamEkranAktif ? 'Tam Ekrandan Çık' : 'Tam Ekran'}
-                  </button>
+                {ozelOkuyucuVar && (
+                  <div className="reader-view-actions">
+                    <div className="reader-zoom-controls" aria-label="Yakınlaştırma kontrolleri">
+                      <button
+                        type="button"
+                        onClick={() => zoomGuncelle(okuyucuZoom - READER_ZOOM_STEP)}
+                        disabled={okuyucuZoom <= MIN_READER_ZOOM}
+                        title="Uzaklaştır"
+                        aria-label="Uzaklaştır"
+                      >
+                        <ZoomOut aria-hidden="true" />
+                      </button>
+                      <span className="reader-zoom-value">%{Math.round(okuyucuZoom * 100)}</span>
+                      <button
+                        type="button"
+                        onClick={() => zoomGuncelle(okuyucuZoom + READER_ZOOM_STEP)}
+                        disabled={okuyucuZoom >= MAX_READER_ZOOM}
+                        title="Yakınlaştır"
+                        aria-label="Yakınlaştır"
+                      >
+                        <ZoomIn aria-hidden="true" />
+                      </button>
+                    </div>
+                    <button type="button" className="reader-flip-fullscreen" onClick={toggleTamEkran} title="Tam ekran">
+                      <Maximize2 aria-hidden="true" />
+                      <span>Tam Ekran</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1410,31 +1605,45 @@ export default function Okuyucu() {
             </div>
             )}
 
-            <div className={`reader-frame ${tamEkranAktif ? 'is-fullscreen' : ''}`} ref={readerFrameRef}>
+            <div
+              className={`reader-frame mode-${okumaModu} ${tamEkranAktif ? 'is-fullscreen' : ''}`}
+              ref={readerFrameRef}
+              onTouchStart={handleReaderTouchStart}
+              onTouchMove={handleReaderTouchMove}
+              onTouchEnd={handleReaderTouchEnd}
+              onTouchCancel={handleReaderTouchEnd}
+              style={{ touchAction: 'pan-x pan-y' }}
+            >
+              {tamEkranAktif && (
+                <div className="reader-fullscreen-controls">
+                  <button
+                    type="button"
+                    onClick={() => zoomGuncelle(okuyucuZoom - READER_ZOOM_STEP)}
+                    disabled={okuyucuZoom <= MIN_READER_ZOOM}
+                    title="Uzaklaştır"
+                    aria-label="Uzaklaştır"
+                  >
+                    <ZoomOut aria-hidden="true" />
+                  </button>
+                  <span className="reader-zoom-value">%{Math.round(okuyucuZoom * 100)}</span>
+                  <button
+                    type="button"
+                    onClick={() => zoomGuncelle(okuyucuZoom + READER_ZOOM_STEP)}
+                    disabled={okuyucuZoom >= MAX_READER_ZOOM}
+                    title="Yakınlaştır"
+                    aria-label="Yakınlaştır"
+                  >
+                    <ZoomIn aria-hidden="true" />
+                  </button>
+                  <button type="button" onClick={toggleTamEkran} title="Tam ekrandan çık" aria-label="Tam ekrandan çık">
+                    <Minimize2 aria-hidden="true" />
+                    <span>Çık</span>
+                  </button>
+                </div>
+              )}
               {ozelOkuyucuVar ? (
                 okumaModu === 'flip' ? (
                   <div className="reader-stage">
-                    {tamEkranAktif && (
-                      <div className="reader-fullscreen-controls">
-                        <button
-                          type="button"
-                          onClick={oncekiSayfayaGit}
-                          disabled={aktifSayfa === 1 && !oncekiBolum}
-                        >
-                          Önceki
-                        </button>
-                        <button type="button" onClick={toggleTamEkran}>
-                          Tam Ekrandan Çık
-                        </button>
-                        <button
-                          type="button"
-                          onClick={sonrakiSayfayaGit}
-                          disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
-                        >
-                          Sonraki
-                        </button>
-                      </div>
-                    )}
                     <div className="reader-flip-shell">
                       <button
                         type="button"
@@ -1445,7 +1654,13 @@ export default function Okuyucu() {
                       >
                         ←
                       </button>
-                      <div className="reader-flip-stage">
+                      <div
+                        className="reader-flip-stage"
+                        style={okuyucuZoom > 1 ? {
+                          width: `${okuyucuZoom * 100}%`,
+                          maxWidth: `${1180 * okuyucuZoom}px`,
+                        } : undefined}
+                      >
                         <div
                           className={`reader-flip-book ${masaustuCizgiRomanModu && gosterilenFlipSayfalari.length > 1 ? 'is-spread' : ''}`}
                           onTouchStart={handleFlipTouchStart}
@@ -1537,6 +1752,10 @@ export default function Okuyucu() {
                           className="reader-page"
                           ref={(node) => { sayfaRefleri.current[index] = node }}
                           data-page-index={index}
+                          style={okuyucuZoom > 1 ? {
+                            width: `${okuyucuZoom * 100}%`,
+                            maxWidth: `${980 * okuyucuZoom}px`,
+                          } : undefined}
                         >
                           <div className="reader-page-inner">
                             <img

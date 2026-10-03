@@ -6,6 +6,7 @@ import { Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
+import ReaderOverlay from '../../../components/ReaderOverlay'
 import YorumSistemi from '../../../components/YorumSistemi'
 import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock, trackSeriesFavoriteAndUnlock } from '../../../lib/unvanClient'
 
@@ -84,7 +85,8 @@ export default function Okuyucu() {
   const [aktifSayfa, setAktifSayfa] = useState(1)
   const [okumaModu, setOkumaModu] = useState('scroll')
   const [ciftSayfaAktif, setCiftSayfaAktif] = useState(false)
-  const [tamEkranAktif, setTamEkranAktif] = useState(false)
+  const tamEkranAktif = false
+  const [bagimsizOkuyucuAcik, setBagimsizOkuyucuAcik] = useState(false)
   const [okuyucuZoom, setOkuyucuZoom] = useState(MIN_READER_ZOOM)
   const [flipGecisi, setFlipGecisi] = useState(null)
   const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
@@ -96,7 +98,6 @@ export default function Okuyucu() {
   const dokunusBaslangicXRef = useRef(null)
   const dokunusBaslangicYRef = useRef(null)
   const flipGecisZamanlayiciRef = useRef(null)
-  const yerlesikTamEkranRef = useRef(false)
   const pinchBaslangicRef = useRef(null)
   const zoomOdakRef = useRef(null)
 
@@ -334,43 +335,12 @@ export default function Okuyucu() {
   }, [bolumData?.id])
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const yerlesikTamEkran = Boolean(document.fullscreenElement || document.webkitFullscreenElement)
-
-      if (yerlesikTamEkran) {
-        yerlesikTamEkranRef.current = true
-        setTamEkranAktif(true)
-      } else if (yerlesikTamEkranRef.current) {
-        yerlesikTamEkranRef.current = false
-        setTamEkranAktif(false)
-      }
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
-    handleFullscreenChange()
-
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
       if (flipGecisZamanlayiciRef.current) {
         window.clearTimeout(flipGecisZamanlayiciRef.current)
       }
     }
   }, [])
-
-  useEffect(() => {
-    if (!tamEkranAktif) return
-
-    const oncekiOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.body.classList.add('reader-fullscreen-active')
-
-    return () => {
-      document.body.style.overflow = oncekiOverflow
-      document.body.classList.remove('reader-fullscreen-active')
-    }
-  }, [tamEkranAktif])
 
   useEffect(() => {
     const medya = window.matchMedia('(min-width: 980px)')
@@ -479,42 +449,8 @@ export default function Okuyucu() {
     if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
   }
 
-  async function toggleTamEkran() {
-    const hedef = readerFrameRef.current
-    if (!hedef) return
-
-    if (tamEkranAktif) {
-      const yerlesikTamEkran = document.fullscreenElement || document.webkitFullscreenElement
-      const tamEkrandanCik = document.exitFullscreen || document.webkitExitFullscreen
-
-      if (yerlesikTamEkran && tamEkrandanCik) {
-        try {
-          await tamEkrandanCik.call(document)
-        } catch (error) {
-          console.warn('Tam ekran modundan cikilamadi:', error?.message || error)
-          yerlesikTamEkranRef.current = false
-          setTamEkranAktif(false)
-        }
-      } else {
-        setTamEkranAktif(false)
-      }
-      return
-    }
-
-    try {
-      const tamEkranIste = hedef.requestFullscreen || hedef.webkitRequestFullscreen
-
-      if (tamEkranIste) {
-        await tamEkranIste.call(hedef)
-        yerlesikTamEkranRef.current = true
-        setTamEkranAktif(true)
-      } else {
-        setTamEkranAktif(true)
-      }
-    } catch (error) {
-      console.warn('Tam ekran modu acilamadi:', error?.message || error)
-      setTamEkranAktif(true)
-    }
+  function toggleTamEkran() {
+    setBagimsizOkuyucuAcik(true)
   }
 
   function zoomGuncelle(yeniZoom, nokta) {
@@ -717,6 +653,22 @@ export default function Okuyucu() {
 
   return (
     <>
+      {bagimsizOkuyucuAcik && <ReaderOverlay
+        key={bolumData.id}
+        pages={okumaSayfalari}
+        title={bolumData.baslik}
+        initialPage={aktifSayfa}
+        initialMode={okumaModu}
+        onClose={({ page, mode }) => {
+          setBagimsizOkuyucuAcik(false)
+          setOkumaModu(mode)
+          setAktifSayfa(page)
+          setGorunenSayfaSayisi(current => Math.max(current, page + 2))
+          if (mode === 'scroll') {
+            requestAnimationFrame(() => requestAnimationFrame(() => sayfaRefleri.current[page - 1]?.scrollIntoView({ block: 'start', behavior: 'instant' })))
+          }
+        }}
+      />}
       <Navbar />
 
       <main style={{ background: '#050505', minHeight: '100vh' }}>

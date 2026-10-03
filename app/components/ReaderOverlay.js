@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { ChevronLeft, ChevronRight, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react'
 import './ReaderOverlay.css'
+import ReaderBook from './ReaderBook'
 
 export default function ReaderOverlay({ pages, title, initialPage, initialMode, onClose }) {
   const [mode, setMode] = useState(initialMode)
@@ -12,18 +13,23 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
   const [scrollStart, setScrollStart] = useState(initialPage)
   const [scale, setScale] = useState(1)
   const [spreadPreference, setSpreadPreference] = useState('auto')
-  const [turnDirection, setTurnDirection] = useState(null)
+  const [pageAspect, setPageAspect] = useState(0.65)
   const [size, setSize] = useState({ width: 0, height: 0 })
   const viewportRef = useRef(null)
   const transformRef = useRef(null)
   const imageRefs = useRef([])
   const positionedRef = useRef(false)
-  const swipeRef = useRef(null)
-  const turningRef = useRef(false)
-  const turnTimerRef = useRef(null)
+  const bookRef = useRef(null)
   const turnRef = useRef(null)
   const closeRef = useRef(onClose)
   const positionRef = useRef({ page, mode })
+
+  useEffect(() => {
+    const image = new Image()
+    image.onload = () => { if (image.naturalHeight) setPageAspect(image.naturalWidth / image.naturalHeight) }
+    image.src = pages[0]
+    return () => { image.onload = null }
+  }, [pages])
 
   const spread = spreadPreference === 'double' || (spreadPreference === 'auto' && (size.width >= 980 || size.width > size.height))
   const spreadStart = !spread || page === 1 ? page : page % 2 === 0 ? page : page - 1
@@ -51,7 +57,6 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
     document.querySelector('.isolated-reader-close')?.focus()
     return () => {
       resize.disconnect()
-      clearTimeout(turnTimerRef.current)
       document.body.style.overflow = bodyOverflow
       background.forEach((node, index) => { node.inert = inertStates[index] })
       document.removeEventListener('keydown', exit)
@@ -93,17 +98,11 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
   }
 
   function turn(delta) {
-    if (turningRef.current) return
-    const target = !spread ? page + delta : delta > 0 ? (spreadStart === 1 ? 2 : spreadStart + 2) : (spreadStart <= 2 ? 1 : spreadStart - 2)
-    if (target < 1 || target > pages.length) return
-    turningRef.current = true
-    setTurnDirection(delta > 0 ? 'next' : 'prev')
+    const engine = bookRef.current
+    if (!engine) return
+    transformRef.current?.resetTransform(0)
     setScale(1)
-    setPage(target)
-    turnTimerRef.current = setTimeout(() => {
-      turningRef.current = false
-      setTurnDirection(null)
-    }, 260)
+    engine.turn(delta)
   }
 
   function resetZoom() {
@@ -123,7 +122,9 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
     turnRef.current = turn
   })
 
-  const width = Math.max(1, Math.min(size.width, 980))
+  const bookPageWidth = Math.max(1, Math.floor(Math.min(size.width / (spread ? 2 : 1), size.height * pageAspect)))
+  const bookPageHeight = Math.max(1, Math.floor(bookPageWidth / pageAspect))
+  const width = mode === 'flip' ? bookPageWidth * (spread ? 2 : 1) : Math.max(1, Math.min(size.width, 980))
   return createPortal(
     <div className="isolated-reader" role="dialog" aria-modal="true" aria-label={`${title} okuma ekranı`}>
       <header className="isolated-reader-toolbar">
@@ -143,24 +144,9 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
           <button type="button" className="isolated-reader-close" onClick={() => onClose({ page, mode })} aria-label="Okuma ekranından çık"><X size={19} /><span>Çık</span></button>
         </div>
       </header>
-      <div className="isolated-reader-viewport" ref={viewportRef}
-        onTouchStartCapture={event => {
-          if (mode !== 'flip' || scale > 1.01 || event.touches.length !== 1) { swipeRef.current = null; return }
-          swipeRef.current = { x: event.touches[0].clientX, y: event.touches[0].clientY }
-        }}
-        onTouchMoveCapture={event => { if (event.touches.length > 1) swipeRef.current = null }}
-        onTouchCancel={() => { swipeRef.current = null }}
-        onTouchEndCapture={event => {
-          const start = swipeRef.current
-          swipeRef.current = null
-          if (!start || scale > 1.01 || !event.changedTouches[0]) return
-          const dx = event.changedTouches[0].clientX - start.x
-          const dy = event.changedTouches[0].clientY - start.y
-          if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1)
-        }}
-      >
+      <div className="isolated-reader-viewport" ref={viewportRef}>
         {size.width > 0 && <TransformWrapper
-          key={mode === 'flip' ? `flip-${spreadStart}-${spread}` : `scroll-${scrollStart}`}
+          key={mode === 'flip' ? `flip-${spread}-${width}-${bookPageHeight}` : `scroll-${scrollStart}`}
           ref={transformRef}
           minScale={1}
           maxScale={4}
@@ -174,7 +160,7 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
           onTransform={updatePage}
         >
           <TransformComponent wrapperStyle={{ width: '100%', height: '100%', touchAction: 'none' }} contentStyle={{ width, display: 'block' }}>
-            <div className={`isolated-reader-pages ${mode} ${spread && mode === 'flip' && visiblePages.length > 1 ? 'spread' : ''} ${turnDirection ? `turn-${turnDirection}` : ''}`} onWheel={event => {
+            {mode === 'flip' ? <ReaderBook pages={pages} title={title} page={page} pageWidth={bookPageWidth} pageHeight={bookPageHeight} spread={spread} zoomed={scale > 1.01} onPage={setPage} bookRef={bookRef} /> : <div className="isolated-reader-pages scroll" onWheel={event => {
               if (mode !== 'scroll' || !transformRef.current) return
               const ref = transformRef.current
               const content = ref.instance.contentComponent
@@ -191,7 +177,7 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
                 onError={positionInitialPage}
                 style={mode === 'flip' ? { maxHeight: size.height, objectFit: 'contain' } : undefined}
               />)}
-            </div>
+            </div>}
           </TransformComponent>
         </TransformWrapper>}
       </div>

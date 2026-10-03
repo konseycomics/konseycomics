@@ -91,6 +91,7 @@ export default function Okuyucu() {
   const sayfaRefleri = useRef([])
   const stageRef = useRef(null)
   const readerFrameRef = useRef(null)
+  const readerViewportRef = useRef(null)
   const okumaTakipRef = useRef(null)
   const dokunusBaslangicXRef = useRef(null)
   const dokunusBaslangicYRef = useRef(null)
@@ -106,7 +107,7 @@ export default function Okuyucu() {
     const rect = odak.node.getBoundingClientRect()
     const dx = rect.left + rect.width * odak.x - odak.clientX
     const dy = rect.top + rect.height * odak.y - odak.clientY
-    const frame = readerFrameRef.current
+    const frame = readerViewportRef.current
     if (frame) frame.scrollLeft += dx
     if (tamEkranAktif) {
       if (frame) frame.scrollTop += dy
@@ -518,7 +519,7 @@ export default function Okuyucu() {
 
   function zoomGuncelle(yeniZoom, nokta) {
     const sinirliZoom = Math.min(MAX_READER_ZOOM, Math.max(MIN_READER_ZOOM, yeniZoom))
-    const frame = readerFrameRef.current
+    const frame = readerViewportRef.current
     if (frame) {
       const frameRect = frame.getBoundingClientRect()
       const clientX = nokta?.x ?? frameRect.left + frame.clientWidth / 2
@@ -613,7 +614,7 @@ export default function Okuyucu() {
   }, [handleKeyDown])
 
   useEffect(() => {
-    if (!ozelOkuyucuVar) return
+    if (!ozelOkuyucuVar || okumaModu !== 'scroll') return
 
     const hesaplaAktifSayfa = () => {
       const stageNode = stageRef.current
@@ -644,13 +645,16 @@ export default function Okuyucu() {
 
     hesaplaAktifSayfa()
     window.addEventListener('scroll', hesaplaAktifSayfa, { passive: true })
+    const viewport = readerViewportRef.current
+    viewport?.addEventListener('scroll', hesaplaAktifSayfa, { passive: true })
     window.addEventListener('resize', hesaplaAktifSayfa)
 
     return () => {
       window.removeEventListener('scroll', hesaplaAktifSayfa)
+      viewport?.removeEventListener('scroll', hesaplaAktifSayfa)
       window.removeEventListener('resize', hesaplaAktifSayfa)
     }
-  }, [ozelOkuyucuVar, okumaSayfalari])
+  }, [ozelOkuyucuVar, okumaSayfalari, okumaModu, tamEkranAktif])
 
   useEffect(() => {
     if (!ozelOkuyucuVar) return
@@ -1190,7 +1194,7 @@ export default function Okuyucu() {
             border: none;
             background: #050505;
             box-shadow: none;
-            overflow: auto;
+            overflow: hidden;
             overscroll-behavior: contain;
           }
           .reader-frame.is-fullscreen.mode-flip .reader-stage,
@@ -1201,20 +1205,25 @@ export default function Okuyucu() {
             justify-content: center;
             padding: 12px 18px;
           }
-          .reader-frame.is-fullscreen.mode-flip,
-          .reader-frame:fullscreen.mode-flip {
-            top: 76px;
+          .reader-viewport {
+            overflow: auto;
+            overflow-anchor: none;
+            overscroll-behavior: contain;
+          }
+          .reader-frame.is-fullscreen .reader-viewport {
+            position: absolute;
+            inset: 76px 0 0;
+          }
+          .reader-frame.is-fullscreen.mode-flip .reader-viewport {
             bottom: 76px;
-            height: calc(100dvh - 152px);
-            box-shadow: 0 -76px 0 #050505, 0 76px 0 #050505;
           }
           .reader-frame.is-fullscreen.mode-scroll .reader-stage,
           .reader-frame:fullscreen.mode-scroll .reader-stage {
-            min-height: 100dvh;
-            padding: 72px 10px 24px;
+            min-height: 100%;
+            padding: 12px 10px 24px;
           }
           .reader-fullscreen-controls {
-            position: fixed;
+            position: absolute;
             top: max(12px, env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%);
@@ -1279,7 +1288,7 @@ export default function Okuyucu() {
             cursor: not-allowed;
           }
           .reader-frame.is-fullscreen .reader-flip-mobile-controls {
-            position: fixed;
+            position: absolute;
             bottom: max(12px, env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
@@ -1709,6 +1718,13 @@ export default function Okuyucu() {
                   </button>
                 </div>
               )}
+              {tamEkranAktif && okumaModu === 'flip' && (
+                <div className="reader-flip-mobile-controls">
+                  <button type="button" onClick={oncekiSayfayaGit} disabled={aktifSayfa === 1 && !oncekiBolum} aria-label="Önceki sayfa"><ChevronLeft size={20} /> Önceki</button>
+                  <button type="button" onClick={sonrakiSayfayaGit} disabled={aktifSayfa === toplamSayfa && !siradakiBolum} aria-label="Sonraki sayfa">Sonraki <ChevronRight size={20} /></button>
+                </div>
+              )}
+              <div className="reader-viewport" ref={readerViewportRef}>
               {ozelOkuyucuVar ? (
                 okumaModu === 'flip' ? (
                   <div className="reader-stage">
@@ -1781,7 +1797,7 @@ export default function Okuyucu() {
                           <span>{masaustuCizgiRomanModu ? 'Çift sayfa spread görünümü aktif.' : 'Oklarla, kaydırarak veya butonlarla gezebilirsin.'}</span>
                         </div>
                         )}
-                        <div className="reader-flip-mobile-controls">
+                        {!tamEkranAktif && <div className="reader-flip-mobile-controls">
                           <button
                             type="button"
                             onClick={oncekiSayfayaGit}
@@ -1796,7 +1812,7 @@ export default function Okuyucu() {
                           >
                             Sonraki <ChevronRight size={20} aria-hidden="true" />
                           </button>
-                        </div>
+                        </div>}
                       </div>
                       <button
                         type="button"
@@ -1880,6 +1896,7 @@ export default function Okuyucu() {
                 </div>
               )}
 
+              </div>
               {!tamEkranAktif && (
               <div className="reader-bottom">
                 {oncekiBolum ? (

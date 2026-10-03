@@ -1,8 +1,8 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react'
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
@@ -97,6 +97,23 @@ export default function Okuyucu() {
   const flipGecisZamanlayiciRef = useRef(null)
   const yerlesikTamEkranRef = useRef(false)
   const pinchBaslangicRef = useRef(null)
+  const zoomOdakRef = useRef(null)
+
+  useLayoutEffect(() => {
+    const odak = zoomOdakRef.current
+    if (!odak || !odak.node.isConnected) return
+    zoomOdakRef.current = null
+    const rect = odak.node.getBoundingClientRect()
+    const dx = rect.left + rect.width * odak.x - odak.clientX
+    const dy = rect.top + rect.height * odak.y - odak.clientY
+    const frame = readerFrameRef.current
+    if (frame) frame.scrollLeft += dx
+    if (tamEkranAktif) {
+      if (frame) frame.scrollTop += dy
+    } else {
+      window.scrollBy({ top: dy, behavior: 'instant' })
+    }
+  }, [okuyucuZoom, tamEkranAktif])
   const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const [kullanici, setKullanici] = useState(null)
@@ -499,13 +516,34 @@ export default function Okuyucu() {
     }
   }
 
-  function zoomGuncelle(yeniZoom) {
+  function zoomGuncelle(yeniZoom, nokta) {
     const sinirliZoom = Math.min(MAX_READER_ZOOM, Math.max(MIN_READER_ZOOM, yeniZoom))
+    const frame = readerFrameRef.current
+    if (frame) {
+      const frameRect = frame.getBoundingClientRect()
+      const clientX = nokta?.x ?? frameRect.left + frame.clientWidth / 2
+      const clientY = nokta?.y ?? Math.max(0, frameRect.top) + Math.min(frameRect.height, window.innerHeight - Math.max(0, frameRect.top)) / 2
+      const candidates = [...frame.querySelectorAll('.reader-page, .reader-flip-book')]
+      const node = candidates.find(item => {
+        const rect = item.getBoundingClientRect()
+        return rect.top <= clientY && rect.bottom >= clientY
+      }) || candidates[0]
+      if (node) {
+        const rect = node.getBoundingClientRect()
+        zoomOdakRef.current = {
+          node, clientX, clientY,
+          x: (clientX - rect.left) / rect.width,
+          y: (clientY - rect.top) / rect.height,
+        }
+      }
+    }
     setOkuyucuZoom(Math.round(sinirliZoom * 100) / 100)
   }
 
   function handleReaderTouchStart(e) {
     if (e.touches?.length !== 2) return
+    dokunusBaslangicXRef.current = null
+    dokunusBaslangicYRef.current = null
 
     const [birinci, ikinci] = e.touches
     pinchBaslangicRef.current = {
@@ -520,7 +558,10 @@ export default function Okuyucu() {
     e.preventDefault()
     const [birinci, ikinci] = e.touches
     const mesafe = Math.hypot(ikinci.clientX - birinci.clientX, ikinci.clientY - birinci.clientY)
-    zoomGuncelle(pinchBaslangicRef.current.zoom * (mesafe / pinchBaslangicRef.current.mesafe))
+    zoomGuncelle(pinchBaslangicRef.current.zoom * (mesafe / pinchBaslangicRef.current.mesafe), {
+      x: (birinci.clientX + ikinci.clientX) / 2,
+      y: (birinci.clientY + ikinci.clientY) / 2,
+    })
   }
 
   function handleReaderTouchEnd(e) {
@@ -528,7 +569,7 @@ export default function Okuyucu() {
   }
 
   function handleFlipTouchStart(e) {
-    if (e.touches?.length !== 1) return
+    if (e.touches?.length !== 1 || okuyucuZoom > 1) return
     const touch = e.touches?.[0]
     if (!touch) return
     dokunusBaslangicXRef.current = touch.clientX
@@ -536,7 +577,7 @@ export default function Okuyucu() {
   }
 
   function handleFlipTouchEnd(e) {
-    if (pinchBaslangicRef.current) return
+    if (pinchBaslangicRef.current || okuyucuZoom > 1) return
     const startX = dokunusBaslangicXRef.current
     const startY = dokunusBaslangicYRef.current
     const touch = e.changedTouches?.[0]
@@ -770,7 +811,7 @@ export default function Okuyucu() {
             z-index: 1;
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 28px;
-            overflow: hidden;
+            overflow: auto;
             background: rgba(18,18,18,0.92);
             box-shadow: 0 28px 80px rgba(0,0,0,0.42);
           }
@@ -1205,7 +1246,7 @@ export default function Okuyucu() {
             cursor: not-allowed;
           }
           .reader-flip-mobile-controls {
-            display: none;
+            display: flex;
             gap: 10px;
             margin-top: 14px;
           }
@@ -1226,6 +1267,23 @@ export default function Okuyucu() {
           .reader-flip-mobile-controls button:disabled {
             opacity: 0.4;
             cursor: not-allowed;
+          }
+          .reader-frame.is-fullscreen .reader-flip-mobile-controls {
+            position: fixed;
+            bottom: max(12px, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(320px, calc(100vw - 32px));
+            z-index: 1002;
+            padding: 6px;
+            border-radius: 12px;
+            background: rgba(8,8,8,0.9);
+          }
+          .reader-flip-mobile-controls button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
           }
           .reader-load-note {
             width: min(100%, 980px);
@@ -1713,24 +1771,22 @@ export default function Okuyucu() {
                           <span>{masaustuCizgiRomanModu ? 'Çift sayfa spread görünümü aktif.' : 'Oklarla, kaydırarak veya butonlarla gezebilirsin.'}</span>
                         </div>
                         )}
-                        {!tamEkranAktif && (
                         <div className="reader-flip-mobile-controls">
                           <button
                             type="button"
                             onClick={oncekiSayfayaGit}
                             disabled={aktifSayfa === 1 && !oncekiBolum}
                           >
-                            Önceki
+                            <ChevronLeft size={20} aria-hidden="true" /> Önceki
                           </button>
                           <button
                             type="button"
                             onClick={sonrakiSayfayaGit}
                             disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
                           >
-                            Sonraki
+                            Sonraki <ChevronRight size={20} aria-hidden="true" />
                           </button>
                         </div>
-                        )}
                       </div>
                       <button
                         type="button"

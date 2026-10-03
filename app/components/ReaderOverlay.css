@@ -6,7 +6,7 @@
 .isolated-reader button[aria-pressed='true'] { background: #e0b74c; color: #111; border-color: #e0b74c; }
 .isolated-reader button:hover:not(:disabled) { border-color: #e0b74c; }
 .isolated-reader-tools output { width: 48px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
-.isolated-reader-viewport { min-height: 0; min-width: 0; overflow: hidden; touch-action: none; }
+.isolated-reader-viewport { min-height: 0; min-width: 0; overflow: hidden; touch-action: none; overscroll-behavior: none; }
 .isolated-reader-pages { width: 100%; user-select: none; }
 .isolated-reader-pages img { width: 100%; height: auto; display: block; pointer-events: none; }
 .isolated-reader-pages.scroll img + img { margin-top: 8px; }

@@ -15,6 +15,7 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
   const [spreadPreference, setSpreadPreference] = useState('auto')
   const [pageAspect, setPageAspect] = useState(0.65)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  const [screen, setScreen] = useState(null)
   const viewportRef = useRef(null)
   const transformRef = useRef(null)
   const imageRefs = useRef([])
@@ -39,7 +40,27 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
   useEffect(() => {
     const previous = document.activeElement
     const bodyOverflow = document.body.style.overflow
+    const bodyPosition = document.body.style.position
+    const bodyTop = document.body.style.top
+    const bodyWidth = document.body.style.width
+    const rootOverflow = document.documentElement.style.overflow
+    const scrollY = window.scrollY
     document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollY}px`
+    document.body.style.width = '100%'
+    document.documentElement.style.overflow = 'hidden'
+    const visualViewport = window.visualViewport
+    const measureScreen = () => setScreen({
+      width: visualViewport?.width ?? window.innerWidth,
+      height: visualViewport?.height ?? window.innerHeight,
+      left: visualViewport?.offsetLeft ?? 0,
+      top: visualViewport?.offsetTop ?? 0
+    })
+    measureScreen()
+    window.addEventListener('resize', measureScreen)
+    visualViewport?.addEventListener('resize', measureScreen)
+    visualViewport?.addEventListener('scroll', measureScreen)
     const background = [...document.body.children].filter(node => !node.classList.contains('isolated-reader'))
     const inertStates = background.map(node => node.inert)
     background.forEach(node => { node.inert = true })
@@ -52,12 +73,26 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
     }
     document.addEventListener('keydown', exit)
     const viewport = viewportRef.current
-    const resize = new ResizeObserver(([entry]) => setSize({ width: entry.contentRect.width, height: entry.contentRect.height }))
+    const resize = new ResizeObserver(([entry]) => {
+      if (positionRef.current.mode === 'scroll') {
+        positionedRef.current = false
+        setScrollStart(positionRef.current.page)
+      }
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height })
+    })
     resize.observe(viewport)
-    document.querySelector('.isolated-reader-close')?.focus()
+    document.querySelector('.isolated-reader-close')?.focus({ preventScroll: true })
     return () => {
       resize.disconnect()
       document.body.style.overflow = bodyOverflow
+      document.body.style.position = bodyPosition
+      document.body.style.top = bodyTop
+      document.body.style.width = bodyWidth
+      document.documentElement.style.overflow = rootOverflow
+      window.scrollTo({ top: scrollY, behavior: 'instant' })
+      window.removeEventListener('resize', measureScreen)
+      visualViewport?.removeEventListener('resize', measureScreen)
+      visualViewport?.removeEventListener('scroll', measureScreen)
       background.forEach((node, index) => { node.inert = inertStates[index] })
       document.removeEventListener('keydown', exit)
       previous?.focus?.({ preventScroll: true })
@@ -126,7 +161,7 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
   const bookPageHeight = Math.max(1, Math.floor(bookPageWidth / pageAspect))
   const width = mode === 'flip' ? bookPageWidth * (spread ? 2 : 1) : Math.max(1, Math.min(size.width, 980))
   return createPortal(
-    <div className="isolated-reader" role="dialog" aria-modal="true" aria-label={`${title} okuma ekranı`}>
+    <div className="isolated-reader" style={screen ? { ...screen, right: 'auto', bottom: 'auto' } : undefined} role="dialog" aria-modal="true" aria-label={`${title} okuma ekranı`}>
       <header className="isolated-reader-toolbar">
         <div className="isolated-reader-modes" aria-label="Okuma modu">
           <button type="button" aria-pressed={mode === 'scroll'} onClick={() => changeMode('scroll')}>Dikey Oku</button>
@@ -146,7 +181,7 @@ export default function ReaderOverlay({ pages, title, initialPage, initialMode, 
       </header>
       <div className="isolated-reader-viewport" ref={viewportRef}>
         {size.width > 0 && <TransformWrapper
-          key={mode === 'flip' ? `flip-${spread}-${width}-${bookPageHeight}` : `scroll-${scrollStart}`}
+          key={mode === 'flip' ? `flip-${spread}-${width}-${bookPageHeight}` : `scroll-${scrollStart}-${width}-${size.height}`}
           ref={transformRef}
           minScale={1}
           maxScale={4}

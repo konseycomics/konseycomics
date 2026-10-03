@@ -1707,6 +1707,11 @@ export default function Okuyucu() {
                               <div
                                 key={`${sayfa.url}-${sayfa.number}`}
                                 className={`reader-flip-page ${gosterilenFlipSayfalari.length === 1 ? 'is-cover' : index === 0 ? 'is-left' : 'is-right'}`}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Sayfa ${sayfa.number} okuma ekranını aç`}
+                                onClick={() => { setAktifSayfa(sayfa.number); setBagimsizOkuyucuAcik(true) }}
+                                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setAktifSayfa(sayfa.number); setBagimsizOkuyucuAcik(true) } }}
                               >
                                 <img
                                   src={sayfa.url}
@@ -1788,7 +1793,13 @@ export default function Okuyucu() {
                           data-page-index={index}
                           style={{ width: '100%', maxWidth: `${980 * okuyucuZoom}px` }}
                         >
-                          <div className="reader-page-inner">
+                          <div className="reader-page-inner"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Sayfa ${index + 1} okuma ekranını aç`}
+                            onClick={() => { setAktifSayfa(index + 1); setBagimsizOkuyucuAcik(true) }}
+                            onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setAktifSayfa(index + 1); setBagimsizOkuyucuAcik(true) } }}
+                          >
                             <img
                               src={sayfaUrl}
                               alt={`${bolumData.baslik} sayfa ${index + 1}`}

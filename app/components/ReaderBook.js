@@ -78,10 +78,20 @@ export default function ReaderBook({ pages, title, page, pageWidth, pageHeight, 
     }
   }, [pages, title, pageWidth, pageHeight, spread])
 
-  return <div ref={hostRef} className={`reader-book ${spread ? 'double' : 'single'}`}
+  const start = !spread || page === 1 ? page - 1 : (page % 2 === 0 ? page : page - 1) - 1
+  const detailPages = pages.slice(start, start + (spread && page !== 1 ? 2 : 1))
+
+  return <div className={`reader-book ${spread ? 'double' : 'single'} ${zoomed ? 'is-zoomed' : ''}`}
     style={{ width: pageWidth * (spread ? 2 : 1), height: pageHeight }}
     onTouchStartCapture={event => {
       if (event.touches.length > 1 && engineRef.current) engineRef.current.getUI().touchPoint = null
     }}
-  />
+  >
+    <div ref={hostRef} className="reader-book-engine" aria-hidden={zoomed} />
+    {zoomed && <div className="reader-book-detail" style={{ left: spread && page === 1 ? pageWidth : 0 }}>
+      {detailPages.map((src, index) => <img key={`${src}-${index}`} src={src}
+        alt={`${title} sayfa ${start + index + 1}`} draggable={false}
+        style={{ width: pageWidth, height: pageHeight }} />)}
+    </div>}
+  </div>
 }

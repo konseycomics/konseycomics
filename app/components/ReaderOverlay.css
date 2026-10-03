@@ -12,6 +12,10 @@
 .isolated-reader-pages.scroll img + img { margin-top: 8px; }
 .reader-book { position: relative; }
 .reader-book > div { width: 100%; height: 100%; }
+.reader-book.is-zoomed .reader-book-engine { visibility: hidden; }
+.reader-book .reader-book-detail { position: absolute; top: 0; display: flex; width: auto; pointer-events: none; }
+.reader-book-detail img { display: block; flex: none; object-fit: fill; }
+.isolated-reader-viewport .react-transform-wrapper { transform: none; }
 .reader-book-sheet { background: #fff; overflow: hidden; }
 .reader-book-sheet img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
 .reader-book-sheet.--left { box-shadow: inset -10px 0 12px -12px #000; }

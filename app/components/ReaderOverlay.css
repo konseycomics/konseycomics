@@ -1,6 +1,7 @@
 .isolated-reader { position: fixed; inset: 0; height: 100dvh; z-index: 20000; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #050505; color: #fff; isolation: isolate; }
+.isolated-reader.is-embedded { position: relative; inset: auto; height: min(900px, calc(100dvh - 110px)); min-height: 420px; z-index: 1; width: 100%; scroll-margin-top: 100px; }
 .isolated-reader-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; border-bottom: 1px solid #292929; background: #101010; }
-.isolated-reader-modes, .isolated-reader-tools { display: flex; align-items: center; gap: 5px; }
+.isolated-reader-modes, .isolated-reader-tools { display: flex; align-items: center; gap: 5px; max-width: 100%; }
 .isolated-reader button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; min-width: 42px; padding: 0 12px; color: #eee; border: 1px solid #333; border-radius: 6px; background: #1c1c1c; cursor: pointer; font-family: inherit; font-size: 13px; }
 .isolated-reader button:disabled { opacity: .35; cursor: default; }
 .isolated-reader button[aria-pressed='true'] { background: #e0b74c; color: #111; border-color: #e0b74c; }
@@ -24,4 +25,12 @@
 .reader-book.double .reader-book-sheet.--left::after { box-shadow: inset -10px 0 14px -12px #0009; }
 .reader-book.double .reader-book-sheet.--right::after { box-shadow: inset 10px 0 14px -12px #0009; }
 .isolated-reader-footer { min-height: 62px; display: flex; align-items: center; justify-content: center; gap: 22px; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid #292929; background: #101010; font-size: 13px; font-variant-numeric: tabular-nums; }
+.reader-page-picker { position: relative; }
+.reader-page-form { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; padding: 10px; background: #141414; border: 1px solid #444; border-radius: 6px; z-index: 2; }
+.reader-page-form input { width: 76px; min-width: 0; height: 42px; box-sizing: border-box; color: #fff; background: #050505; border: 1px solid #555; border-radius: 4px; padding: 0 8px; font: inherit; }
+.reader-next-chapter { display: inline-flex; gap: 6px; align-items: center; min-height: 42px; padding: 0 12px; border-radius: 6px; background: #e0b74c; color: #111; text-decoration: none; font-weight: 700; }
+.isolated-reader .reader-flip-fullscreen { letter-spacing: 0; text-transform: none; }
+@media (max-width: 600px) { .isolated-reader-footer { gap: 6px; } .isolated-reader-footer button { padding: 0 8px; font-size: 12px; } .isolated-reader-footer button > span { display: none; } .reader-next-chapter { padding: 0 8px; font-size: 12px; } }
+@media (max-width: 360px) { .isolated-reader-tools button > span { display: none; } .isolated-reader-tools output { width: 40px; } .reader-next-chapter { max-width: 100px; font-size: 11px; line-height: 1.3; } .isolated-reader-footer button { font-size: 11px; } }
 @media (max-width: 600px) { .isolated-reader-toolbar { justify-content: center; } .isolated-reader-tools button { padding: 0 9px; } .isolated-reader-footer { justify-content: space-between; } }
+@media (max-width: 600px) { .isolated-reader-tools .reader-flip-fullscreen span { display: none; } .isolated-reader-tools .reader-flip-fullscreen { flex: none; } }

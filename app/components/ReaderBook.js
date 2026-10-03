@@ -21,6 +21,12 @@ export default function ReaderBook({ pages, title, page, pageWidth, pageHeight, 
   }, [zoomed, pageWidth, pageHeight, spread])
 
   useImperativeHandle(bookRef, () => ({
+    goTo(pageNumber) {
+      const engine = engineRef.current
+      if (!engine) return
+      engine.getRender().finishAnimation()
+      engine.turnToPage(pageNumber - 1)
+    },
     turn(delta) {
       const engine = engineRef.current
       if (!engine || engine.getState() !== 'read') return
@@ -41,6 +47,8 @@ export default function ReaderBook({ pages, title, page, pageWidth, pageHeight, 
       const sheet = document.createElement('div')
       sheet.className = 'reader-book-sheet'
       const image = document.createElement('img')
+      image.loading = Math.abs(index - (currentPageRef.current - 1)) <= 4 ? 'eager' : 'lazy'
+      image.decoding = 'async'
       image.src = src
       image.alt = `${title} sayfa ${index + 1}`
       image.draggable = false

@@ -1,20 +1,13 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import ReaderOverlay from '../../../components/ReaderOverlay'
 import YorumSistemi from '../../../components/YorumSistemi'
 import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock, trackSeriesFavoriteAndUnlock } from '../../../lib/unvanClient'
-
-const INITIAL_VISIBLE_PAGE_COUNT = 6
-const PAGE_BATCH_SIZE = 4
-const MIN_READER_ZOOM = 1
-const MAX_READER_ZOOM = 2.5
-const READER_ZOOM_STEP = 0.25
 
 function driveEmbedUrl(link) {
   if (!link) return null
@@ -26,42 +19,6 @@ function driveEmbedUrl(link) {
 function tarih(dateStr) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
-function getYayilimSayfalari(pageNumber, spreadMode, sayfalar, toplamSayfa) {
-  if (!sayfalar.length || !toplamSayfa) return []
-
-  const guvenliSayfa = Math.max(1, Math.min(toplamSayfa, pageNumber))
-
-  if (!spreadMode) {
-    const url = sayfalar[guvenliSayfa - 1]
-    return url ? [{ number: guvenliSayfa, url }] : []
-  }
-
-  const baslangic = guvenliSayfa <= 1 ? 1 : (guvenliSayfa % 2 === 0 ? guvenliSayfa : guvenliSayfa - 1)
-
-  if (baslangic === 1) {
-    return sayfalar[0] ? [{ number: 1, url: sayfalar[0] }] : []
-  }
-
-  return [baslangic, baslangic + 1]
-    .filter((number) => number <= toplamSayfa)
-    .map((number) => ({ number, url: sayfalar[number - 1] }))
-}
-
-function preloadReaderImages(urls) {
-  return Promise.all(
-    urls
-      .filter(Boolean)
-      .map((src) => new Promise((resolve) => {
-        const img = new window.Image()
-        img.decoding = 'async'
-        img.onload = () => resolve(src)
-        img.onerror = () => resolve(src)
-        img.src = src
-        if (img.complete) resolve(src)
-      }))
-  )
 }
 
 function bolumKrediSatirlari(chapter) {
@@ -82,47 +39,13 @@ export default function Okuyucu() {
   const [tumBolumler, setTumBolumler] = useState([])
   const [loading, setLoading] = useState(true)
   const [iframeHata, setIframeHata] = useState(false)
-  const [aktifSayfa, setAktifSayfa] = useState(1)
-  const [okumaModu, setOkumaModu] = useState('scroll')
-  const [ciftSayfaAktif, setCiftSayfaAktif] = useState(false)
   const tamEkranAktif = false
-  const [bagimsizOkuyucuAcik, setBagimsizOkuyucuAcik] = useState(false)
-  const [okuyucuZoom, setOkuyucuZoom] = useState(MIN_READER_ZOOM)
-  const [flipGecisi, setFlipGecisi] = useState(null)
-  const [gorunenSayfaSayisi, setGorunenSayfaSayisi] = useState(INITIAL_VISIBLE_PAGE_COUNT)
-  const sayfaRefleri = useRef([])
-  const stageRef = useRef(null)
-  const readerFrameRef = useRef(null)
-  const readerViewportRef = useRef(null)
   const okumaTakipRef = useRef(null)
-  const dokunusBaslangicXRef = useRef(null)
-  const dokunusBaslangicYRef = useRef(null)
-  const flipGecisZamanlayiciRef = useRef(null)
-  const pinchBaslangicRef = useRef(null)
-  const zoomOdakRef = useRef(null)
-
-  useLayoutEffect(() => {
-    const odak = zoomOdakRef.current
-    if (!odak || !odak.node.isConnected) return
-    zoomOdakRef.current = null
-    const rect = odak.node.getBoundingClientRect()
-    const dx = rect.left + rect.width * odak.x - odak.clientX
-    const dy = rect.top + rect.height * odak.y - odak.clientY
-    const frame = readerViewportRef.current
-    if (frame) frame.scrollLeft += dx
-    if (tamEkranAktif) {
-      if (frame) frame.scrollTop += dy
-    } else {
-      window.scrollBy({ top: dy, behavior: 'instant' })
-    }
-  }, [okuyucuZoom, tamEkranAktif])
-  const [progressGorunsun, setProgressGorunsun] = useState(false)
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const [kullanici, setKullanici] = useState(null)
   const [listeDurumu, setListeDurumu] = useState(null)
   const [listeYukleniyor, setListeYukleniyor] = useState(false)
   const yorumlarRef = useRef(null)
-
   async function handleDownloadClick() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -311,6 +234,7 @@ export default function Okuyucu() {
   }, [bolumData?.id, seriData?.id])
 
   useEffect(() => {
+    let active = true
     async function fetchOkumaSayfalari() {
       if (!bolumData?.id) return
       const { data } = await supabase
@@ -319,40 +243,12 @@ export default function Okuyucu() {
         .eq('bolum_id', bolumData.id)
         .order('sira', { ascending: true })
 
-      setOkumaSayfalari((data || []).map(item => item.gorsel_url).filter(Boolean))
+      if (active) setOkumaSayfalari((data || []).map(item => item.gorsel_url).filter(Boolean))
     }
 
     fetchOkumaSayfalari()
+    return () => { active = false }
   }, [bolumData?.id])
-
-  useEffect(() => {
-    setAktifSayfa(1)
-    setOkumaModu('scroll')
-    setOkuyucuZoom(MIN_READER_ZOOM)
-    setFlipGecisi(null)
-    setGorunenSayfaSayisi(INITIAL_VISIBLE_PAGE_COUNT)
-    sayfaRefleri.current = []
-  }, [bolumData?.id])
-
-  useEffect(() => {
-    return () => {
-      if (flipGecisZamanlayiciRef.current) {
-        window.clearTimeout(flipGecisZamanlayiciRef.current)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    const medya = window.matchMedia('(min-width: 980px)')
-    const guncelle = () => setCiftSayfaAktif(medya.matches)
-
-    guncelle()
-    medya.addEventListener('change', guncelle)
-
-    return () => {
-      medya.removeEventListener('change', guncelle)
-    }
-  }, [])
 
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
@@ -366,259 +262,7 @@ export default function Okuyucu() {
   const heroBackground = detayAyar?.arka_plan_url || seriData?.hero_gorsel_url || seriData?.arkaplan_url || seriData?.kapak_url || bolumData?.kapak_url || ''
   const heroBackgroundPosition = `${detayAyar?.arka_plan_x ?? 50}% ${detayAyar?.arka_plan_y ?? 50}%`
   const ozelOkuyucuVar = okumaSayfalari.length > 0
-  const toplamSayfa = ozelOkuyucuVar ? okumaSayfalari.length : 0
-  const gorunenSayfalar = ozelOkuyucuVar ? okumaSayfalari.slice(0, gorunenSayfaSayisi) : []
-  const aktifSayfaIndex = Math.max(0, Math.min(Math.max(toplamSayfa, 1) - 1, aktifSayfa - 1))
-  const aktifSayfaUrl = ozelOkuyucuVar ? okumaSayfalari[aktifSayfaIndex] : null
-  const masaustuCizgiRomanModu = okumaModu === 'flip' && ciftSayfaAktif
-  const aktifYayilimSayfalari = getYayilimSayfalari(aktifSayfa, masaustuCizgiRomanModu, okumaSayfalari, toplamSayfa)
-  const aktifYayilimBaslangici = aktifYayilimSayfalari[0]?.number || 1
-  const gosterilenFlipSayfalari = flipGecisi?.hedefSayfalar || aktifYayilimSayfalari
-  const aktifYayilimEtiketi = masaustuCizgiRomanModu
-    ? (gosterilenFlipSayfalari.length > 1
-      ? `${gosterilenFlipSayfalari[0].number}-${gosterilenFlipSayfalari[gosterilenFlipSayfalari.length - 1].number}`
-      : `${gosterilenFlipSayfalari[0]?.number || 1}`)
-    : `${aktifSayfa}`
-  const gosterilenAktifSayfa = ozelOkuyucuVar ? aktifSayfa : 1
-  const sayfaYuzdesi = toplamSayfa > 0 ? Math.round((gosterilenAktifSayfa / toplamSayfa) * 100) : 0
   const bolumKredileri = bolumKrediSatirlari(bolumData)
-
-  function flipSayfaGuncelle(yeniSayfa) {
-    if (!toplamSayfa) return
-    setAktifSayfa(Math.max(1, Math.min(toplamSayfa, yeniSayfa)))
-  }
-
-  async function flipGecisiBaslat(direction, hedefSayfa) {
-    if (!ozelOkuyucuVar) return
-
-    if (flipGecisZamanlayiciRef.current) {
-      window.clearTimeout(flipGecisZamanlayiciRef.current)
-    }
-
-    const hedefSayfalar = getYayilimSayfalari(hedefSayfa, masaustuCizgiRomanModu, okumaSayfalari, toplamSayfa)
-    const cevrilenSayfa = direction === 'next'
-      ? aktifYayilimSayfalari[aktifYayilimSayfalari.length - 1]
-      : aktifYayilimSayfalari[0]
-
-    if (!cevrilenSayfa) {
-      flipSayfaGuncelle(hedefSayfa)
-      return
-    }
-
-    await preloadReaderImages(hedefSayfalar.map((item) => item.url))
-
-    setFlipGecisi({
-      direction,
-      cevrilenSayfa,
-      hedefSayfalar,
-      ciftSayfa: masaustuCizgiRomanModu && aktifYayilimSayfalari.length > 1,
-    })
-
-    flipGecisZamanlayiciRef.current = window.setTimeout(() => {
-      setFlipGecisi(null)
-      flipSayfaGuncelle(hedefSayfa)
-    }, 420)
-  }
-
-  function sonrakiSayfayaGit() {
-    if (!ozelOkuyucuVar || flipGecisi) return
-    if (masaustuCizgiRomanModu) {
-      const sonrakiYayilim = aktifYayilimBaslangici === 1 ? 2 : aktifYayilimBaslangici + 2
-      if (sonrakiYayilim <= toplamSayfa) {
-        flipGecisiBaslat('next', sonrakiYayilim)
-        return
-      }
-    } else if (aktifSayfa < toplamSayfa) {
-      flipGecisiBaslat('next', aktifSayfa + 1)
-      return
-    }
-    if (siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
-  }
-
-  function oncekiSayfayaGit() {
-    if (!ozelOkuyucuVar || flipGecisi) return
-    if (masaustuCizgiRomanModu) {
-      if (aktifYayilimBaslangici > 1) {
-        flipGecisiBaslat('prev', aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2)
-        return
-      }
-    } else if (aktifSayfa > 1) {
-      flipGecisiBaslat('prev', aktifSayfa - 1)
-      return
-    }
-    if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
-  }
-
-  function toggleTamEkran() {
-    setBagimsizOkuyucuAcik(true)
-  }
-
-  function zoomGuncelle(yeniZoom, nokta) {
-    const sinirliZoom = Math.min(MAX_READER_ZOOM, Math.max(MIN_READER_ZOOM, yeniZoom))
-    const frame = readerViewportRef.current
-    if (frame) {
-      const frameRect = frame.getBoundingClientRect()
-      const clientX = nokta?.x ?? frameRect.left + frame.clientWidth / 2
-      const clientY = nokta?.y ?? Math.max(0, frameRect.top) + Math.min(frameRect.height, window.innerHeight - Math.max(0, frameRect.top)) / 2
-      const candidates = [...frame.querySelectorAll('.reader-page, .reader-flip-book')]
-      const node = candidates.find(item => {
-        const rect = item.getBoundingClientRect()
-        return rect.top <= clientY && rect.bottom >= clientY
-      }) || candidates[0]
-      if (node) {
-        const rect = node.getBoundingClientRect()
-        zoomOdakRef.current = {
-          node, clientX, clientY,
-          x: (clientX - rect.left) / rect.width,
-          y: (clientY - rect.top) / rect.height,
-        }
-      }
-    }
-    setOkuyucuZoom(Math.round(sinirliZoom * 100) / 100)
-  }
-
-  function handleReaderTouchStart(e) {
-    if (e.touches?.length !== 2) return
-    dokunusBaslangicXRef.current = null
-    dokunusBaslangicYRef.current = null
-
-    const [birinci, ikinci] = e.touches
-    pinchBaslangicRef.current = {
-      mesafe: Math.hypot(ikinci.clientX - birinci.clientX, ikinci.clientY - birinci.clientY),
-      zoom: okuyucuZoom,
-    }
-  }
-
-  function handleReaderTouchMove(e) {
-    if (e.touches?.length !== 2 || !pinchBaslangicRef.current) return
-
-    e.preventDefault()
-    const [birinci, ikinci] = e.touches
-    const mesafe = Math.hypot(ikinci.clientX - birinci.clientX, ikinci.clientY - birinci.clientY)
-    zoomGuncelle(pinchBaslangicRef.current.zoom * (mesafe / pinchBaslangicRef.current.mesafe), {
-      x: (birinci.clientX + ikinci.clientX) / 2,
-      y: (birinci.clientY + ikinci.clientY) / 2,
-    })
-  }
-
-  function handleReaderTouchEnd(e) {
-    if (e.touches?.length < 2) pinchBaslangicRef.current = null
-  }
-
-  function handleFlipTouchStart(e) {
-    if (e.touches?.length !== 1 || okuyucuZoom > 1) return
-    const touch = e.touches?.[0]
-    if (!touch) return
-    dokunusBaslangicXRef.current = touch.clientX
-    dokunusBaslangicYRef.current = touch.clientY
-  }
-
-  function handleFlipTouchEnd(e) {
-    if (pinchBaslangicRef.current || okuyucuZoom > 1) return
-    const startX = dokunusBaslangicXRef.current
-    const startY = dokunusBaslangicYRef.current
-    const touch = e.changedTouches?.[0]
-
-    dokunusBaslangicXRef.current = null
-    dokunusBaslangicYRef.current = null
-
-    if (startX == null || startY == null || !touch) return
-
-    const deltaX = touch.clientX - startX
-    const deltaY = touch.clientY - startY
-
-    if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return
-
-    if (deltaX < 0) sonrakiSayfayaGit()
-    else oncekiSayfayaGit()
-  }
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'ArrowRight') {
-      if (okumaModu === 'flip' && ozelOkuyucuVar) sonrakiSayfayaGit()
-      else if (siradakiBolum?.sayi) router.push(`/oku/${slug}/${siradakiBolum.sayi}`)
-    }
-    if (e.key === 'ArrowLeft') {
-      if (okumaModu === 'flip' && ozelOkuyucuVar) oncekiSayfayaGit()
-      else if (oncekiBolum?.sayi) router.push(`/oku/${slug}/${oncekiBolum.sayi}`)
-    }
-  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, flipGecisi, aktifSayfa, aktifYayilimBaslangici, toplamSayfa, siradakiBolum, oncekiBolum, slug, router])
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
-
-  useEffect(() => {
-    if (!ozelOkuyucuVar || okumaModu !== 'scroll') return
-
-    const hesaplaAktifSayfa = () => {
-      const stageNode = stageRef.current
-      if (!stageNode) return
-
-      const stageRect = stageNode.getBoundingClientRect()
-      const viewportH = window.innerHeight
-      const hudAktif = stageRect.top < viewportH - 120 && stageRect.bottom > 140
-      setProgressGorunsun(hudAktif)
-
-      const hedefY = viewportH * 0.48
-      let enIyiIndex = 0
-      let enIyiUzaklik = Number.POSITIVE_INFINITY
-
-      sayfaRefleri.current.forEach((node, index) => {
-        if (!node) return
-        const rect = node.getBoundingClientRect()
-        const merkez = rect.top + rect.height / 2
-        const uzaklik = Math.abs(merkez - hedefY)
-        if (uzaklik < enIyiUzaklik) {
-          enIyiUzaklik = uzaklik
-          enIyiIndex = index
-        }
-      })
-
-      setAktifSayfa(enIyiIndex + 1)
-    }
-
-    hesaplaAktifSayfa()
-    window.addEventListener('scroll', hesaplaAktifSayfa, { passive: true })
-    const viewport = readerViewportRef.current
-    viewport?.addEventListener('scroll', hesaplaAktifSayfa, { passive: true })
-    window.addEventListener('resize', hesaplaAktifSayfa)
-
-    return () => {
-      window.removeEventListener('scroll', hesaplaAktifSayfa)
-      viewport?.removeEventListener('scroll', hesaplaAktifSayfa)
-      window.removeEventListener('resize', hesaplaAktifSayfa)
-    }
-  }, [ozelOkuyucuVar, okumaSayfalari, okumaModu, tamEkranAktif])
-
-  useEffect(() => {
-    if (!ozelOkuyucuVar) return
-    if (gorunenSayfaSayisi >= okumaSayfalari.length) return
-    if (aktifSayfa < Math.max(1, gorunenSayfaSayisi - 2)) return
-
-    setGorunenSayfaSayisi(prev => Math.min(prev + PAGE_BATCH_SIZE, okumaSayfalari.length))
-  }, [aktifSayfa, gorunenSayfaSayisi, okumaSayfalari.length, ozelOkuyucuVar])
-
-  useEffect(() => {
-    if (!ozelOkuyucuVar || okumaModu !== 'flip') return
-
-    const preloadKaynaklari = masaustuCizgiRomanModu
-      ? [
-          ...aktifYayilimSayfalari.map(item => item.url),
-          ...getYayilimSayfalari(aktifYayilimBaslangici === 1 ? 2 : aktifYayilimBaslangici + 2, true, okumaSayfalari, toplamSayfa).map(item => item.url),
-          ...getYayilimSayfalari(aktifYayilimBaslangici <= 2 ? 1 : aktifYayilimBaslangici - 2, true, okumaSayfalari, toplamSayfa).map(item => item.url),
-        ]
-      : [aktifSayfaUrl, okumaSayfalari[aktifSayfaIndex + 1], okumaSayfalari[aktifSayfaIndex - 1]]
-
-    ;preloadKaynaklari
-      .filter(Boolean)
-      .forEach((src) => {
-        const img = new window.Image()
-        img.decoding = 'async'
-        img.src = src
-      })
-  }, [okumaModu, ozelOkuyucuVar, masaustuCizgiRomanModu, aktifSayfaIndex, aktifSayfaUrl, aktifYayilimBaslangici, aktifYayilimSayfalari, okumaSayfalari, toplamSayfa])
 
   if (loading) {
     return (
@@ -653,22 +297,6 @@ export default function Okuyucu() {
 
   return (
     <>
-      {bagimsizOkuyucuAcik && <ReaderOverlay
-        key={bolumData.id}
-        pages={okumaSayfalari}
-        title={bolumData.baslik}
-        initialPage={aktifSayfa}
-        initialMode={okumaModu}
-        onClose={({ page, mode }) => {
-          setBagimsizOkuyucuAcik(false)
-          setOkumaModu(mode)
-          setAktifSayfa(page)
-          setGorunenSayfaSayisi(current => Math.max(current, page + 2))
-          if (mode === 'scroll') {
-            requestAnimationFrame(() => requestAnimationFrame(() => sayfaRefleri.current[page - 1]?.scrollIntoView({ block: 'start', behavior: 'instant' })))
-          }
-        }}
-      />}
       <Navbar />
 
       <main style={{ background: '#050505', minHeight: '100vh' }}>
@@ -1583,45 +1211,6 @@ export default function Okuyucu() {
                     CBR İndir
                   </a>
                 )}
-                {ozelOkuyucuVar && (
-                  <div className="reader-mode-toggle">
-                    <button type="button" className={okumaModu === 'scroll' ? 'is-active' : ''} onClick={() => setOkumaModu('scroll')}>
-                      Dikey Oku
-                    </button>
-                    <button type="button" className={okumaModu === 'flip' ? 'is-active' : ''} onClick={() => setOkumaModu('flip')}>
-                      Sayfa Çevir
-                    </button>
-                  </div>
-                )}
-                {ozelOkuyucuVar && (
-                  <div className="reader-view-actions">
-                    <div className="reader-zoom-controls" aria-label="Yakınlaştırma kontrolleri">
-                      <button
-                        type="button"
-                        onClick={() => zoomGuncelle(okuyucuZoom - READER_ZOOM_STEP)}
-                        disabled={okuyucuZoom <= MIN_READER_ZOOM}
-                        title="Uzaklaştır"
-                        aria-label="Uzaklaştır"
-                      >
-                        <ZoomOut aria-hidden="true" />
-                      </button>
-                      <span className="reader-zoom-value">%{Math.round(okuyucuZoom * 100)}</span>
-                      <button
-                        type="button"
-                        onClick={() => zoomGuncelle(okuyucuZoom + READER_ZOOM_STEP)}
-                        disabled={okuyucuZoom >= MAX_READER_ZOOM}
-                        title="Yakınlaştır"
-                        aria-label="Yakınlaştır"
-                      >
-                        <ZoomIn aria-hidden="true" />
-                      </button>
-                    </div>
-                    <button type="button" className="reader-flip-fullscreen" onClick={toggleTamEkran} title="Tam ekran">
-                      <Maximize2 aria-hidden="true" />
-                      <span>Tam Ekran</span>
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
             )}
@@ -1634,191 +1223,16 @@ export default function Okuyucu() {
             </div>
             )}
 
-            <div
-              className={`reader-frame mode-${okumaModu} ${tamEkranAktif ? 'is-fullscreen' : ''}`}
-              ref={readerFrameRef}
-              onTouchStart={handleReaderTouchStart}
-              onTouchMove={handleReaderTouchMove}
-              onTouchEnd={handleReaderTouchEnd}
-              onTouchCancel={handleReaderTouchEnd}
-              style={{ touchAction: 'pan-x pan-y' }}
-            >
-              {tamEkranAktif && (
-                <div className="reader-fullscreen-controls">
-                  <button
-                    type="button"
-                    onClick={() => zoomGuncelle(okuyucuZoom - READER_ZOOM_STEP)}
-                    disabled={okuyucuZoom <= MIN_READER_ZOOM}
-                    title="Uzaklaştır"
-                    aria-label="Uzaklaştır"
-                  >
-                    <ZoomOut aria-hidden="true" />
-                  </button>
-                  <span className="reader-zoom-value">%{Math.round(okuyucuZoom * 100)}</span>
-                  <button
-                    type="button"
-                    onClick={() => zoomGuncelle(okuyucuZoom + READER_ZOOM_STEP)}
-                    disabled={okuyucuZoom >= MAX_READER_ZOOM}
-                    title="Yakınlaştır"
-                    aria-label="Yakınlaştır"
-                  >
-                    <ZoomIn aria-hidden="true" />
-                  </button>
-                  <button type="button" onClick={toggleTamEkran} title="Tam ekrandan çık" aria-label="Tam ekrandan çık">
-                    <Minimize2 aria-hidden="true" />
-                    <span>Çık</span>
-                  </button>
-                </div>
-              )}
-              {tamEkranAktif && okumaModu === 'flip' && (
-                <div className="reader-flip-mobile-controls">
-                  <button type="button" onClick={oncekiSayfayaGit} disabled={aktifSayfa === 1 && !oncekiBolum} aria-label="Önceki sayfa"><ChevronLeft size={20} /> Önceki</button>
-                  <button type="button" onClick={sonrakiSayfayaGit} disabled={aktifSayfa === toplamSayfa && !siradakiBolum} aria-label="Sonraki sayfa">Sonraki <ChevronRight size={20} /></button>
-                </div>
-              )}
-              <div className="reader-viewport" ref={readerViewportRef}>
-              {ozelOkuyucuVar ? (
-                okumaModu === 'flip' ? (
-                  <div className="reader-stage">
-                    <div className="reader-flip-shell">
-                      <button
-                        type="button"
-                        className="reader-flip-nav"
-                        onClick={oncekiSayfayaGit}
-                        disabled={aktifSayfa === 1 && !oncekiBolum}
-                        aria-label="Önceki sayfa"
-                      >
-                        ←
-                      </button>
-                      <div
-                        className="reader-flip-stage"
-                        style={okuyucuZoom > 1 ? {
-                          width: `${okuyucuZoom * 100}%`,
-                          maxWidth: `${1180 * okuyucuZoom}px`,
-                        } : undefined}
-                      >
-                        <div
-                          className={`reader-flip-book ${masaustuCizgiRomanModu && gosterilenFlipSayfalari.length > 1 ? 'is-spread' : ''}`}
-                          onTouchStart={handleFlipTouchStart}
-                          onTouchEnd={handleFlipTouchEnd}
-                        >
-                          <div className={`reader-flip-spread ${gosterilenFlipSayfalari.length === 1 ? 'is-single' : ''}`}>
-                            {gosterilenFlipSayfalari.map((sayfa, index) => (
-                              <div
-                                key={`${sayfa.url}-${sayfa.number}`}
-                                className={`reader-flip-page ${gosterilenFlipSayfalari.length === 1 ? 'is-cover' : index === 0 ? 'is-left' : 'is-right'}`}
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`Sayfa ${sayfa.number} okuma ekranını aç`}
-                                onClick={() => { setAktifSayfa(sayfa.number); setBagimsizOkuyucuAcik(true) }}
-                                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setAktifSayfa(sayfa.number); setBagimsizOkuyucuAcik(true) } }}
-                              >
-                                <img
-                                  src={sayfa.url}
-                                  alt={`${bolumData.baslik} sayfa ${sayfa.number}`}
-                                  loading="eager"
-                                  decoding="async"
-                                  fetchPriority={index === 0 ? 'high' : 'auto'}
-                                />
-                                <span className="reader-flip-page-number">{sayfa.number}</span>
-                              </div>
-                            ))}
-                          </div>
-                          {flipGecisi && (
-                            <div
-                              className={`reader-flip-turn-layer is-${flipGecisi.direction} ${flipGecisi.cevrilenSayfa && flipGecisi.ciftSayfa ? '' : 'is-single'}`}
-                            >
-                              <div className="reader-flip-turn-sheet">
-                                <img
-                                  src={flipGecisi.cevrilenSayfa.url}
-                                  alt={`${bolumData.baslik} sayfa ${flipGecisi.cevrilenSayfa.number}`}
-                                  loading="eager"
-                                  decoding="async"
-                                  fetchPriority="high"
-                                />
-                                <div className="reader-flip-turn-back">
-                                  <img
-                                    src={flipGecisi.cevrilenSayfa.url}
-                                    alt=""
-                                    aria-hidden="true"
-                                  />
-                                </div>
-                                <span className="reader-flip-page-number">{flipGecisi.cevrilenSayfa.number}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {!tamEkranAktif && (
-                        <div className="reader-flip-caption">
-                          <span>Sayfa {aktifYayilimEtiketi} / {toplamSayfa}</span>
-                          <span>{masaustuCizgiRomanModu ? 'Çift sayfa spread görünümü aktif.' : 'Oklarla, kaydırarak veya butonlarla gezebilirsin.'}</span>
-                        </div>
-                        )}
-                        {!tamEkranAktif && <div className="reader-flip-mobile-controls">
-                          <button
-                            type="button"
-                            onClick={oncekiSayfayaGit}
-                            disabled={aktifSayfa === 1 && !oncekiBolum}
-                          >
-                            <ChevronLeft size={20} aria-hidden="true" /> Önceki
-                          </button>
-                          <button
-                            type="button"
-                            onClick={sonrakiSayfayaGit}
-                            disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
-                          >
-                            Sonraki <ChevronRight size={20} aria-hidden="true" />
-                          </button>
-                        </div>}
-                      </div>
-                      <button
-                        type="button"
-                        className="reader-flip-nav"
-                        onClick={sonrakiSayfayaGit}
-                        disabled={aktifSayfa === toplamSayfa && !siradakiBolum}
-                        aria-label="Sonraki sayfa"
-                      >
-                        →
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="reader-stage" ref={stageRef}>
-                    <div className="reader-pages" style={{ width: `${okuyucuZoom * 100}%` }}>
-                      {gorunenSayfalar.map((sayfaUrl, index) => (
-                        <div
-                          key={`${sayfaUrl}-${index}`}
-                          className="reader-page"
-                          ref={(node) => { sayfaRefleri.current[index] = node }}
-                          data-page-index={index}
-                          style={{ width: '100%', maxWidth: `${980 * okuyucuZoom}px` }}
-                        >
-                          <div className="reader-page-inner"
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Sayfa ${index + 1} okuma ekranını aç`}
-                            onClick={() => { setAktifSayfa(index + 1); setBagimsizOkuyucuAcik(true) }}
-                            onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setAktifSayfa(index + 1); setBagimsizOkuyucuAcik(true) } }}
-                          >
-                            <img
-                              src={sayfaUrl}
-                              alt={`${bolumData.baslik} sayfa ${index + 1}`}
-                              loading={index < 2 ? 'eager' : 'lazy'}
-                              decoding="async"
-                              fetchPriority={index === 0 ? 'high' : 'auto'}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      {gorunenSayfaSayisi < okumaSayfalari.length && (
-                        <div className="reader-load-note">
-                          Sonraki sayfalar ilerledikçe otomatik yüklenir. Şu an {gorunenSayfaSayisi} / {okumaSayfalari.length} sayfa hazır.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              ) : embedUrl && !iframeHata ? (
+            {ozelOkuyucuVar ? <ReaderOverlay
+              key={bolumData.id}
+              embedded
+              chapterKey={`konsey-reader-chapter:${bolumData.id}`}
+              pages={okumaSayfalari}
+              title={bolumData.baslik}
+              nextChapter={siradakiBolum ? { href: `/oku/${slug}/${siradakiBolum.sayi}`, title: siradakiBolum.baslik } : null}
+            /> : <div className="reader-frame">
+              <div className="reader-viewport">
+              {embedUrl && !iframeHata ? (
                 <div className="reader-stage">
                   <iframe
                     src={embedUrl}
@@ -1860,6 +1274,7 @@ export default function Okuyucu() {
               )}
 
               </div>
+            </div>}
               {!tamEkranAktif && (
               <div className="reader-bottom">
                 {oncekiBolum ? (
@@ -1976,19 +1391,6 @@ export default function Okuyucu() {
                 )}
               </div>
               )}
-            </div>
-
-            {ozelOkuyucuVar && okumaModu === 'scroll' && (
-              <div className={`reader-floating-progress ${progressGorunsun ? 'is-visible' : ''}`} aria-hidden="true">
-                <div className="reader-floating-progress-pill">
-                  <span>Sayfa {gosterilenAktifSayfa} / {toplamSayfa}</span>
-                  <div className="reader-floating-progress-bar">
-                    <span style={{ width: `${sayfaYuzdesi}%` }} />
-                  </div>
-                  <span>%{sayfaYuzdesi}</span>
-                </div>
-              </div>
-            )}
 
             {!tamEkranAktif && (
             <section className="reader-after">

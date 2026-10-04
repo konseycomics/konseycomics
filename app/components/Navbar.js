@@ -46,7 +46,6 @@ export default function Navbar() {
 
   const linkler = [
     { label: 'Seriler', href: '/seriler' },
-    { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
     { label: 'Yerli Eserler', href: '/yerli-eserler', featured: true, flag: true },
     { label: 'Hakkımızda', href: '/hakkimizda' },
     { label: 'İletişim', href: '/iletisim' },

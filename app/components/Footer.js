@@ -2,8 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 const kesfet = [
-  { label: 'Tüm Seriler', href: '/seriler' },
-  { label: 'Çizgi Roman', href: '/kategori/cizgi-roman' },
+  { label: 'Seriler', href: '/seriler' },
   { label: 'Yerli Eserler', href: '/yerli-eserler' },
   { label: 'Forum', href: '/forum' },
 ]

@@ -42,6 +42,7 @@ const bosForm = {
   yeni_seri_ozet: '',
   yeni_seri_kapak_url: '',
   yeni_seri_kategori_id: '',
+  yeni_seri_format: 'seri',
   eser_sahibi_id: '',
   yeni_seri_yil: String(new Date().getFullYear()),
   sayi: '',
@@ -246,8 +247,8 @@ export function YayinMerkeziSayfasi() {
           kategori_id: form.yeni_seri_kategori_id,
           eser_sahibi_id: form.eser_sahibi_id || null,
           kategori: kategoriler.find(item => item.id === form.yeni_seri_kategori_id)?.isim || 'Çizgi Roman',
-          tur: 'seri',
-          durum: 'Devam Eden',
+          tur: form.yeni_seri_format,
+          durum: form.yeni_seri_format === 'tek' ? 'Tek Sayılık' : 'Devam Eden',
           yil: Number(form.yeni_seri_yil) || null,
           one_cikan: false,
           yayin_durumu: yayinDurumu,
@@ -342,6 +343,7 @@ export function YayinMerkeziSayfasi() {
                 <ResimYukle onizleme={seriKapakOnizleme || form.yeni_seri_kapak_url} onChange={(url,preview)=>{setForm(current=>({...current,yeni_seri_kapak_url:url}));setSeriKapakOnizleme(preview)}} />
                 <div style={{ display:'grid',gap:'12px' }}>
                   <div><div style={LB}>Seri Başlığı</div><input value={form.yeni_seri_baslik} onChange={e=>setForm(current=>({...current,yeni_seri_baslik:e.target.value,yeni_seri_slug:slugOlustur(e.target.value)}))} style={I} /></div>
+                  <div><div style={LB}>Eser Biçimi</div><select value={form.yeni_seri_format} onChange={e=>setForm(current=>({...current,yeni_seri_format:e.target.value}))} style={S}><option value="seri">Seri</option><option value="tek">Tek Sayılık</option></select></div>
                   <div style={{ display:'grid',gridTemplateColumns:'1fr 130px',gap:'10px' }}>
                     <div><div style={LB}>Kategori</div><select value={form.yeni_seri_kategori_id} onChange={e=>setForm(current=>({...current,yeni_seri_kategori_id:e.target.value,eser_sahibi_id:''}))} style={S}><option value="">Kategori seç</option>{kategoriler.map(item=><option key={item.id} value={item.id}>{item.isim}</option>)}</select></div>
                     <div><div style={LB}>Yıl</div><input type="number" value={form.yeni_seri_yil} onChange={e=>setForm(current=>({...current,yeni_seri_yil:e.target.value}))} style={I} /></div>

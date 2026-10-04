@@ -1735,7 +1735,7 @@ function SerilerSayfasi() {
           <div style={{ marginBottom:'12px' }}><div style={LB}>Başlık</div><input value={form.baslik} onChange={e=>setForm(f=>({...f,baslik:e.target.value,slug:slugOlustur(e.target.value)}))} style={I} /></div>
           <div style={{ marginBottom:'12px' }}><div style={LB}>Slug</div><input value={form.slug} onChange={e=>setForm(f=>({...f,slug:e.target.value}))} style={I} /></div>
           <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px' }}>
-            <div><div style={LB}>Tür</div><select value={form.tur} onChange={e=>setForm(f=>({...f,tur:e.target.value}))} style={S}><option value="seri">Seri</option><option value="tek">Tek Sayılık</option></select></div>
+            <div><div style={LB}>Eser Biçimi</div><select value={form.tur} onChange={e=>setForm(f=>({...f,tur:e.target.value,durum:e.target.value==='tek'?'Tek Sayılık':f.durum==='Tek Sayılık'?'Devam Eden':f.durum}))} style={S}><option value="seri">Seri</option><option value="tek">Tek Sayılık</option></select></div>
             <div><div style={LB}>Yıl</div><input value={form.yil} onChange={e=>setForm(f=>({...f,yil:e.target.value}))} style={I} type="number" placeholder="2024" /></div>
           </div>
         </div>

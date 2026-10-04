@@ -72,6 +72,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/kategori/cizgi-roman',
+        destination: '/seriler',
+        permanent: true,
+      },
+      {
         source: '/kategori/manga',
         destination: '/seriler',
         permanent: true,

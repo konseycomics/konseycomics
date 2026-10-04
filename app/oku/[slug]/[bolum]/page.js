@@ -1,6 +1,6 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
@@ -41,6 +41,14 @@ export default function Okuyucu() {
   const [iframeHata, setIframeHata] = useState(false)
   const tamEkranAktif = false
   const okumaTakipRef = useRef(null)
+  const gorulenSayfalarRef = useRef({ bolum: null, sayfalar: new Set() })
+  const okumaKonumu = useCallback(({ page, lastVisible }) => {
+    if (document.visibilityState !== 'visible' || !bolumData?.id) return
+    if (gorulenSayfalarRef.current.bolum !== bolumData.id) {
+      gorulenSayfalarRef.current = { bolum: bolumData.id, sayfalar: new Set() }
+    }
+    for (let n = page; n <= (lastVisible || page); n++) gorulenSayfalarRef.current.sayfalar.add(n)
+  }, [bolumData?.id])
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
   const [kullanici, setKullanici] = useState(null)
   const [listeDurumu, setListeDurumu] = useState(null)
@@ -196,42 +204,38 @@ export default function Okuyucu() {
     }
   }, [bolumData?.id])
 
-  useEffect(() => {
-    if (!bolumData?.id || !seriData?.id) return
-    if (okumaTakipRef.current === `${seriData.id}:${bolumData.id}`) return
 
+  useEffect(() => {
+    if (!bolumData?.id || !seriData?.id || !okumaSayfalari.length) return
+    let visibleSeconds = 0
+    let pending = false
+    let retryAt = 0
     let cancelled = false
-    const timer = window.setTimeout(async () => {
+    const key = `${seriData.id}:${bolumData.id}`
+    const timer = window.setInterval(async () => {
+      if (document.visibilityState !== 'visible') return
+      visibleSeconds += 2
+      const seen = gorulenSayfalarRef.current
+      const ratio = seen.bolum === bolumData.id ? seen.sayfalar.size / okumaSayfalari.length : 0
+      if (visibleSeconds < 16 || visibleSeconds < retryAt || ratio < 0.7 || pending || okumaTakipRef.current === key) return
+      pending = true
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.user || cancelled) return
-
-        const unlocked = await trackIssueReadAndUnlock({
-          userId: session.user.id,
-          seriId: seriData.id,
-          bolumId: bolumData.id,
-          completionRatio: 1,
-          readingTimeSec: 20,
-        })
-
-        if (!cancelled && unlocked.length > 0) {
+        const unlocked = await trackIssueReadAndUnlock({ userId: session.user.id, bolumId: bolumData.id, completionRatio: ratio, readingTimeSec: visibleSeconds })
+        if (cancelled) return
+        okumaTakipRef.current = key
+        if (unlocked.length) {
           setAcilanUnvanlar(unlocked)
-          window.setTimeout(() => {
-            setAcilanUnvanlar(current => (current === unlocked ? [] : current))
-          }, 5200)
+          window.setTimeout(() => setAcilanUnvanlar(current => current === unlocked ? [] : current), 5200)
         }
-
-        okumaTakipRef.current = `${seriData.id}:${bolumData.id}`
       } catch (error) {
-        console.warn('Okuma unvan takibi atlandi:', error?.message || error)
-      }
-    }, 18000)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [bolumData?.id, seriData?.id])
+        retryAt = visibleSeconds + 30
+        console.warn('Okuma kaydi tamamlanamadi:', error.message)
+      } finally { pending = false }
+    }, 2000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [bolumData?.id, seriData?.id, okumaSayfalari.length])
 
   useEffect(() => {
     let active = true
@@ -1226,6 +1230,7 @@ export default function Okuyucu() {
             {ozelOkuyucuVar ? <ReaderOverlay
               key={bolumData.id}
               embedded
+              onPosition={okumaKonumu}
               chapterKey={`konsey-reader-chapter:${bolumData.id}`}
               pages={okumaSayfalari}
               title={bolumData.baslik}

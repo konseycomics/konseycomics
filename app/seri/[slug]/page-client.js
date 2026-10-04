@@ -83,7 +83,8 @@ export default function SeriDetay() {
             .maybeSingle(),
           supabase.from('unvan_tanimlari')
             .select('*')
-            .or(`seri_id.eq.${seriData.id}${seriData.character_group ? `,character_group.eq.${seriData.character_group}` : ''}`)
+            .eq('seri_id', seriData.id)
+            .eq('kazanma_tipi', 'series')
             .eq('aktif', true)
             .order('siralama'),
           seriData.eser_sahibi_id
@@ -622,7 +623,7 @@ export default function SeriDetay() {
                             </span>
                           </div>
                           <div style={{ color: 'rgba(255,255,255,0.62)', fontSize: '13px', lineHeight: 1.65 }}>
-                            {unvan.aciklama || 'Bu seriyle veya ayni karakter evreniyle ilgili bir kilometre tasi.'}
+                            Yayımlanmış tüm bölümleri okuyarak kazanılır.
                           </div>
                         </div>
                       )

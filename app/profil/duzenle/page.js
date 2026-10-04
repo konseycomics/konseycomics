@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import { useRouter } from 'next/navigation'
 import TurnstileWidget from '../../components/TurnstileWidget'
+import { syncTitles } from '../../lib/unvanClient'
 
 function parseBannerMeta(url) {
   if (!url) return { src: '', x: 50, y: 50, z: 1.12 }
@@ -273,6 +274,7 @@ export default function ProfilDuzenle() {
   const [sifreForm, setSifreForm] = useState({ mevcut: '', yeni: '', tekrar: '' })
   const [emailForm, setEmailForm] = useState({ yeni: '', sifre: '' })
   const [acilanUnvanlar, setAcilanUnvanlar] = useState([])
+  const [seviyeUnvanlari, setSeviyeUnvanlari] = useState([])
   const [seciliUnvanId, setSeciliUnvanId] = useState(null)
   const [acilanRozetler, setAcilanRozetler] = useState([])
   const [seciliRozetler, setSeciliRozetler] = useState([])
@@ -305,7 +307,8 @@ export default function ProfilDuzenle() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/giris'); return }
       setSessionUser(session.user)
-      const [{ data }, { data: unvanlar }, { data: rozetler }, { data: liste }] = await Promise.all([
+      await syncTitles().catch(error => console.warn('Unvan senkronu tamamlanamadi:', error.message))
+      const [{ data }, { data: unvanlar }, { data: rozetler }, { data: liste }, { data: seviyeler }] = await Promise.all([
         supabase.from('profiller').select('*').eq('id', session.user.id).single(),
         supabase
           .from('kullanici_unvanlari')
@@ -322,6 +325,7 @@ export default function ProfilDuzenle() {
           .select('seri_id, updated_at, seriler(id, baslik, slug, kapak_url, kategori)')
           .eq('kullanici_id', session.user.id)
           .order('updated_at', { ascending: false }),
+        supabase.from('unvan_tanimlari').select('id, isim, gereken_seviye').eq('kazanma_tipi', 'level').eq('aktif', true).order('gereken_seviye'),
       ])
       if (data) {
         const parsedBanner = parseBannerMeta(data.banner_url)
@@ -335,6 +339,7 @@ export default function ProfilDuzenle() {
         setVitrinAyarlari(normalizeVitrinAyarlari(data.profil_vitrin_ayarlari))
       }
       setAcilanUnvanlar(unvanlar || [])
+      setSeviyeUnvanlari(seviyeler || [])
       setAcilanRozetler(rozetler || [])
       const benzersizSeriler = uniqById((liste || []).map(item => item.seriler).filter(item => item?.id))
       setSeriHavuzu(benzersizSeriler)
@@ -460,33 +465,11 @@ export default function ProfilDuzenle() {
       return
     }
 
-    const seciliSatirIds = acilanUnvanlar.map(item => item.id)
-    if (seciliSatirIds.length) {
-      const { error: resetError } = await supabase
-        .from('kullanici_unvanlari')
-        .update({ one_cikarildi: false })
-        .eq('kullanici_id', profil.id)
-        .in('id', seciliSatirIds)
-
-      if (resetError) {
-        setHata(resetError.message)
-        setYukleniyor(false)
-        return
-      }
-
-      if (seciliUnvanId) {
-        const { error: secimError } = await supabase
-          .from('kullanici_unvanlari')
-          .update({ one_cikarildi: true })
-          .eq('kullanici_id', profil.id)
-          .eq('unvan_id', seciliUnvanId)
-
-        if (secimError) {
-          setHata(secimError.message)
-          setYukleniyor(false)
-          return
-        }
-      }
+    const { error: secimError } = await supabase.rpc('unvan_v2_sec', { p_unvan: seciliUnvanId })
+    if (secimError) {
+      setHata(secimError.message)
+      setYukleniyor(false)
+      return
     }
 
     setMesaj('Profil güncellendi!')
@@ -1601,7 +1584,10 @@ export default function ProfilDuzenle() {
                   </div>
 
                   <div style={{ display: 'grid', gap: '12px' }}>
-                    <label style={L}>Aktif Unvan</label>
+                    <label style={L}>Ünvanım</label>
+                    {seviyeUnvanlari.find(t => t.gereken_seviye > (profil.seviye || 1)) && <div style={{ color: '#ccc', fontSize: '14px' }}>
+                      Sıradaki: {seviyeUnvanlari.find(t => t.gereken_seviye > (profil.seviye || 1)).isim} · Seviye {seviyeUnvanlari.find(t => t.gereken_seviye > (profil.seviye || 1)).gereken_seviye}
+                    </div>}
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
                       Seçtiğin ünvan profilinde kullanıcı adının altında, yorumlarda ise kullanıcı adının hemen altında görünür.
                       Sadece <strong style={{ color: '#fff' }}>1</strong> unvan aktif olabilir.
@@ -1631,7 +1617,7 @@ export default function ProfilDuzenle() {
                             >
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.46)', fontSize: '10px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                                  {item.unvan_tanimlari?.nadirlik || 'common'}
+                                  Kazanıldı
                                 </span>
                                 <span
                                   style={{

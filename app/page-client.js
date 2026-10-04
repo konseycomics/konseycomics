@@ -863,7 +863,7 @@ function MiniGorevKutusu() {
                   Takip, ilk bolum ve ilk puan; bu uc adimdan sonra site senin icin daha kisilesmis calismaya baslar.
                 </div>
                 <div style={{ color: '#8f8f89', fontSize: '12px', lineHeight: 1.6, marginTop: '8px' }}>
-                  Tamamlayana: <strong style={{ color: '#fff' }}>Konsey Yolcusu</strong> unvani.
+                  Ünvanlarını profilinden seçebilirsin.
                 </div>
               </div>
 

@@ -92,32 +92,6 @@ async function ensureUserBadge(adminClient, { userId, badgeId, reason }) {
   return !error
 }
 
-async function ensureUserTitle(adminClient, { userId, titleId, reason }) {
-  if (!userId || !titleId) return false
-
-  const exists = await hasExistingRow(adminClient, 'kullanici_unvanlari', {
-    kullanici_id: userId,
-    unvan_id: titleId,
-  })
-
-  if (exists) return false
-
-  const activeTitleExists = await hasExistingRow(adminClient, 'kullanici_unvanlari', {
-    kullanici_id: userId,
-    one_cikarildi: true,
-  })
-
-  const { error } = await adminClient
-    .from('kullanici_unvanlari')
-    .insert({
-      kullanici_id: userId,
-      unvan_id: titleId,
-      acilma_nedeni: reason,
-      one_cikarildi: !activeTitleExists,
-    })
-
-  return !error
-}
 
 async function createNotification(adminClient, { userId, title, message }) {
   if (!userId || !title) return false
@@ -145,12 +119,7 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
       'haftanin_en_iyi_okuyucusu',
       'tum_zamanlarin_en_iyi_okuyucusu',
     ]
-    const titleCodes = ['konsey_maratoncusu', 'konsey_efsanesi']
-
-    const [badgeMap, titleMap] = await Promise.all([
-      fetchDefinitionMap(adminClient, 'rozet_tanimlari', badgeCodes),
-      fetchDefinitionMap(adminClient, 'unvan_tanimlari', titleCodes),
-    ])
+    const badgeMap = await fetchDefinitionMap(adminClient, 'rozet_tanimlari', badgeCodes)
 
     const nowIso = new Date().toISOString()
     const gunlukKazanan = pickWinner(leaderboards.gunluk, 2)
@@ -202,7 +171,6 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
         kullanici_id: haftalikKazanan.id,
         okuma_sayisi: haftalikKazanan.okumaSayisi,
         rozet_id: badgeMap.get('haftanin_en_iyi_okuyucusu'),
-        unvan_id: titleMap.get('konsey_maratoncusu') || null,
         created_at: nowIso,
       })
 
@@ -212,17 +180,10 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
           badgeId: badgeMap.get('haftanin_en_iyi_okuyucusu'),
           reason,
         })
-        if (titleMap.get('konsey_maratoncusu')) {
-          await ensureUserTitle(adminClient, {
-            userId: haftalikKazanan.id,
-            titleId: titleMap.get('konsey_maratoncusu'),
-            reason,
-          })
-        }
         await createNotification(adminClient, {
           userId: haftalikKazanan.id,
           title: 'Haftanın En İyi Okuyucusu',
-          message: `Son 7 günde ${haftalikKazanan.okumaSayisi} okuma ile haftanın lideri oldun. Konsey Maratoncusu unvanı hesabına işlendi.`,
+          message: `Son 7 günde ${haftalikKazanan.okumaSayisi} okuma ile haftanın lideri oldun. Haftanın En İyi Okuyucusu rozeti hesabına işlendi.`,
         })
       }
     }
@@ -250,13 +211,6 @@ export async function syncLeaderboardAwards({ adminClient, leaderboards }) {
         }
       }
 
-      if (titleMap.get('konsey_efsanesi')) {
-        await ensureUserTitle(adminClient, {
-          userId: tumZamanlarKazanan.id,
-          titleId: titleMap.get('konsey_efsanesi'),
-          reason,
-        })
-      }
     }
   } catch {
     return

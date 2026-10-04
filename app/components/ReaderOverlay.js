@@ -68,10 +68,10 @@ export default function ReaderOverlay({ pages, title, initialPage = 1, initialMo
   useEffect(() => {
     if (!ready) return
     positionRef.current = { ...positionRef.current, page, mode, spread: spreadPreference }
-    onPosition?.({ page, mode })
+    onPosition?.({ page: mode === 'flip' ? spreadStart : page, lastVisible, mode })
     const timer = window.setTimeout(() => saveReaderState(browserReaderStorage(), chapterKey, positionRef.current), 300)
     return () => window.clearTimeout(timer)
-  }, [ready, page, mode, spreadPreference, chapterKey, onPosition])
+  }, [ready, page, mode, spreadPreference, chapterKey, onPosition, spreadStart, lastVisible])
 
   useEffect(() => {
     if (!ready) return

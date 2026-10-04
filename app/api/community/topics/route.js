@@ -1,3 +1,4 @@
+import { canUseStaffPrivileges } from '../../../lib/roles'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { slugifyTopicTitle } from '../../../lib/communityData'
@@ -94,11 +95,11 @@ export async function POST(req) {
     }
 
     const { data: requesterProfile } = await adminClient
-      .from('public_profiller')
-      .select('id, rol')
+      .from('profiller')
+      .select('id, rol, askiya_alindi')
       .eq('id', userData.user.id)
       .maybeSingle()
-    const isStaff = ['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())
+    const isStaff = canUseStaffPrivileges(requesterProfile)
     if (selectedForum?.slug === 'duyurular' && !isStaff) {
       return NextResponse.json({ error: 'Duyurular forumunda yalnızca yönetim konu açabilir.' }, { status: 403 })
     }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { isTeamRole, roleLabel, ROLES } from '../lib/roles'
 
 function normalizeText(value) {
   return String(value || '')
@@ -34,17 +35,15 @@ export default function Hakkimizda() {
   }, [])
 
   const ekipKartlari = useMemo(() => {
-    return ekip.map(uye => {
-      const eslesenProfil =
-        profiller.find(profil => normalizeText(profil.kullanici_adi) === normalizeText(uye.isim)) ||
-        profiller.find(profil => normalizeText(profil.kullanici_adi).includes(normalizeText(uye.isim))) ||
-        null
-
+    return profiller.filter(profil => isTeamRole(profil.rol)).sort((a,b) => ROLES.findIndex(r=>r.value===a.rol)-ROLES.findIndex(r=>r.value===b.rol) || a.kullanici_adi.localeCompare(b.kullanici_adi,'tr')).map(eslesenProfil => {
+      const uye = ekip.find(item => item.profil_id === eslesenProfil.id)
       return {
-        ...uye,
+        id: eslesenProfil.id,
+        isim: eslesenProfil.kullanici_adi,
+        unvan: roleLabel(eslesenProfil.rol),
         profil: eslesenProfil,
-        profilHref: eslesenProfil ? `/profil/${eslesenProfil.kullanici_adi}` : null,
-        gorsel: eslesenProfil?.avatar_url || uye.avatar_url || null,
+        profilHref: `/profil/${encodeURIComponent(eslesenProfil.kullanici_adi)}`,
+        gorsel: eslesenProfil.avatar_url || uye?.avatar_url || null,
       }
     })
   }, [ekip, profiller])
@@ -370,7 +369,7 @@ export default function Hakkimizda() {
           <header className="about-hero">
             <div className="site-shell about-hero-shell">
               <div className="about-kicker">Konsey Arşivi</div>
-              <h1>Hakkımızda</h1>
+              <h1>Hakkımızda &amp; Ekip</h1>
             </div>
           </header>
 
@@ -466,7 +465,7 @@ export default function Hakkimizda() {
                         <div className="about-team-content">
                           <div className="about-team-profile-meta">
                             <div className="about-team-role">Konsey Üyesi</div>
-                            {uye.profil?.rol && <div className="about-team-profile-chip">{uye.profil.rol}</div>}
+                            {uye.profil?.rol && <div className="about-team-profile-chip">{roleLabel(uye.profil.rol)}</div>}
                           </div>
                           <h3>{uye.isim}</h3>
                           <p>

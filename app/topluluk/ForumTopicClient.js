@@ -1,4 +1,5 @@
 'use client'
+import { canAccessPanel } from '../lib/roles'
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -206,7 +207,7 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
   }
 
   const isOwner = Boolean(user?.id && user.id === topic?.profil?.id)
-  const isAdmin = ['admin', 'yonetici', 'moderator'].includes(String(profile?.rol || '').toLowerCase())
+  const isAdmin = canAccessPanel(String(profile?.rol || '').toLowerCase())
   const isOfficialGuide = Boolean(topic.sistem_profil_id)
   const forum = getForumForCategory(topic?.kategori)
 

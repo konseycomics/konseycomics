@@ -2,7 +2,7 @@ import HakkimizdaClient from './page-client'
 import { absoluteUrl, buildMetadata, jsonLdScript } from '../lib/seo'
 
 export const metadata = buildMetadata({
-  title: 'Hakkımızda',
+  title: 'Hakkımızda & Ekip',
   description: 'KonseyComics ekibini, yayın vizyonunu ve arkasındaki topluluk yaklaşımını keşfet.',
   path: '/hakkimizda',
   keywords: ['KonseyComics', 'hakkimizda', 'ekip', 'topluluk'],
@@ -12,7 +12,7 @@ export default function HakkimizdaPage() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'AboutPage',
-    name: 'KonseyComics Hakkımızda',
+    name: 'KonseyComics Hakkımızda & Ekip',
     url: absoluteUrl('/hakkimizda'),
     description: 'KonseyComics ekibini, yayın vizyonunu ve arkasındaki topluluk yaklaşımını keşfet.',
   }

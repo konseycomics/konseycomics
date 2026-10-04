@@ -8,7 +8,7 @@ const kesfet = [
 ]
 
 const kurumsal = [
-  { label: 'Hakkımızda', href: '/hakkimizda' },
+  { label: 'Hakkımızda & Ekip', href: '/hakkimizda' },
   { label: 'İletişim', href: '/iletisim' },
   { label: 'Kullanım Koşulları', href: '/kullanim-kosullari' },
   { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },

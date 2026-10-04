@@ -10,6 +10,7 @@ import { YayinMerkeziSayfasi } from './sections/publishing'
 import { UnvanlarSayfasi } from './sections/titles'
 import { SeriesTitleField } from './sections/series-title-field'
 import { saveSeriesTitle, validateSeriesTitle } from '../lib/seriesTitle'
+import { canManageSection, canUseStaffPrivileges, isFounder } from '../lib/roles'
 
 function BarChart({ data, renk = '#111', yukseklik = 160 }) {
   if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
@@ -103,6 +104,7 @@ function GlobalArama({ seriler, bolumler, kullanicilar, onSec }) {
 
 export default function Admin() {
   const [giris, setGiris] = useState(false)
+  const [rol, setRol] = useState('okuyucu')
   const [yukleniyor, setYukleniyor] = useState(true)
   const [aktif, setAktif] = useState('istatistik')
   const [bildirimSayisi, setBildirimSayisi] = useState(0)
@@ -120,11 +122,13 @@ export default function Admin() {
         setYukleniyor(false)
         return
       }
-      const { data: profil } = await supabase.from('profiller').select('rol').eq('id', session.user.id).single()
-      if (profil?.rol === 'admin' || profil?.rol === 'yonetici') {
+      const { data: profil } = await supabase.from('profiller').select('rol, askiya_alindi').eq('id', session.user.id).single()
+      if (canUseStaffPrivileges(profil)) {
+        setRol(profil.rol)
+        if (!isFounder(profil.rol)) setAktif('yayin')
         setGiris(true)
         yukleGlobal()
-        fetch('/api/leaderboard/sync', {
+        if (isFounder(profil.rol)) fetch('/api/leaderboard/sync', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -180,7 +184,8 @@ export default function Admin() {
     ] },
   ]
 
-  const aktifMeta = menu.flatMap(group => group.items).find(item => item.key === aktif)
+  const gorunenMenu = menu.map(group => ({ ...group, items: group.items.filter(item => canManageSection(rol, item.key)) })).filter(group => group.items.length)
+  const aktifMeta = gorunenMenu.flatMap(group => group.items).find(item => item.key === aktif)
 
   return (
     <div style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, rgba(139,92,246,0.12), transparent 24%), radial-gradient(circle at 20% 20%, rgba(255,255,255,0.04), transparent 18%), #050505', fontFamily: "'DM Sans', sans-serif", color: '#fff' }}>
@@ -191,7 +196,7 @@ export default function Admin() {
             <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '36px', lineHeight: 0.9, color: '#fff' }}>Admin Paneli</div>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <GlobalArama seriler={globalSeriler} bolumler={globalBolumler} kullanicilar={globalKullanicilar} onSec={setAktif} />
+          <GlobalArama seriler={globalSeriler} bolumler={globalBolumler} kullanicilar={isFounder(rol) ? globalKullanicilar : []} onSec={key => { if (canManageSection(rol, key)) setAktif(key) }} />
           <div style={{ position: 'relative' }}>
             <button onClick={() => setBildirimAcik(!bildirimAcik)} style={{ background: PANEL_BG, border: PANEL_BORDER, color: '#fff', padding: '10px 14px', borderRadius: '999px', fontSize: '16px', cursor: 'pointer', position: 'relative' }}>
               🔔{bildirimSayisi > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#dc2626', color: '#fff', borderRadius: '100px', fontSize: '10px', padding: '1px 5px', fontWeight: 700 }}>{bildirimSayisi}</span>}
@@ -217,7 +222,7 @@ export default function Admin() {
         <div style={{ padding: '24px 18px 32px 24px', borderRight: PANEL_BORDER }}>
           <div style={{ ...CARD, padding: '16px' }}>
             <div style={{ ...LB, marginBottom: '14px' }}>Navigasyon</div>
-            {menu.map(group => (
+            {gorunenMenu.map(group => (
               <div key={group.title} style={{ marginBottom: '18px' }}>
                 <div style={{ ...LB, marginBottom: '8px' }}>{group.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -238,23 +243,23 @@ export default function Admin() {
           </div>
         </div>
         <div style={{ padding: '28px 28px 48px', overflow: 'auto' }}>
-          {aktif === 'istatistik' && <IstatistikSayfasi />}
-          {aktif === 'okuma' && <OkumaSayilariSayfasi />}
-          {aktif === 'yayin' && <YayinMerkeziSayfasi />}
+          {aktif === 'istatistik' && isFounder(rol) && <IstatistikSayfasi />}
+          {aktif === 'okuma' && isFounder(rol) && <OkumaSayilariSayfasi />}
+          {aktif === 'yayin' && <YayinMerkeziSayfasi canManageInstagram={isFounder(rol)} />}
           {aktif === 'seriler' && <SerilerSayfasi />}
           {aktif === 'bolumler' && <BolumlerSayfasi />}
-          {aktif === 'konsey' && <KonseySayfasi />}
+          {aktif === 'konsey' && isFounder(rol) && <KonseySayfasi />}
           {aktif === 'yazarcizerler' && <YazarCizerSayfasi />}
           {aktif === 'kategoriler' && <KategoriSayfasi />}
           {aktif === 'turler' && <TurlerSayfasi />}
-          {aktif === 'kullanicilar' && <KullanicilarSayfasi />}
+          {aktif === 'kullanicilar' && isFounder(rol) && <KullanicilarSayfasi />}
           {aktif === 'forum' && <ForumModerasyonSayfasi />}
           {aktif === 'yorumlar' && <YorumlarSayfasi />}
           {aktif === 'planet' && <PlanetSayfasi />}
           {aktif === 'unvanlar' && <UnvanlarSayfasi />}
-          {aktif === 'anasayfa' && <AnaSayfaSayfasi />}
-          {aktif === 'sayfalar' && <SayfalarSayfasi />}
-          {aktif === 'sosyalmedya' && <SosyalMedyaSayfasi />}
+          {aktif === 'anasayfa' && isFounder(rol) && <AnaSayfaSayfasi />}
+          {aktif === 'sayfalar' && isFounder(rol) && <SayfalarSayfasi />}
+          {aktif === 'sosyalmedya' && isFounder(rol) && <SosyalMedyaSayfasi />}
         </div>
       </div>
     </div>

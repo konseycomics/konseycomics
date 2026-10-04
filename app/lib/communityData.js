@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from './leaderboardData'
+import { isTeamRole, roleLabel } from './roles'
 
 function truncate(value, max = 220) {
   const text = String(value || '').trim()
@@ -15,29 +16,21 @@ export function slugifyTopicTitle(value) {
     .slice(0, 72)
 }
 
-function normalizeName(value) {
-  return String(value || '').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
-}
-
-function mapProfiles(rows, titles, teamRows = []) {
+function mapProfiles(rows, titles) {
   const titleMap = new Map((titles || []).map((row) => [
     row.kullanici_id,
     Array.isArray(row.unvan_tanimlari) ? row.unvan_tanimlari[0]?.isim : row.unvan_tanimlari?.isim || '',
   ]))
 
-  const teamByProfile = new Map((teamRows || []).filter((row) => row.profil_id).map((row) => [row.profil_id, row]))
-  const teamByName = new Map((teamRows || []).map((row) => [normalizeName(row.isim), row]))
-
   return new Map((rows || []).map((row) => {
-    const team = teamByProfile.get(row.id) || teamByName.get(normalizeName(row.kullanici_adi))
     return [row.id, {
       id: row.id,
       kullanici_adi: row.kullanici_adi,
       avatar_url: row.avatar_url || '',
       unvan: titleMap.get(row.id) || '',
       rol: row.rol || 'okuyucu',
-      ekip_uyesi: Boolean(team),
-      ekip_rolu: team?.unvan || '',
+      ekip_uyesi: isTeamRole(row.rol),
+      ekip_rolu: isTeamRole(row.rol) ? roleLabel(row.rol) : '',
     }]
   }))
 }
@@ -48,7 +41,7 @@ function mapSystemProfiles(rows) {
     kullanici_adi: row.gorunen_ad || row.kullanici_adi,
     avatar_url: row.avatar_url || '',
     unvan: '',
-    rol: 'moderator',
+    rol: 'yonetici',
     ekip_uyesi: true,
     ekip_rolu: row.ekip_rolu || 'Topluluk Yöneticisi',
     system_slug: row.slug,
@@ -137,7 +130,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 
   const userIds = [...new Set((topicRows || []).map((row) => row.kullanici_id).filter(Boolean))]
   const systemIds = [...new Set((topicRows || []).map((row) => row.sistem_profil_id).filter(Boolean))]
-  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }, { data: systemRows }] = await Promise.all([
+  const [{ data: profileRows }, { data: titleRows }, { data: systemRows }] = await Promise.all([
     userIds.length > 0
       ? admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds)
       : Promise.resolve({ data: [] }),
@@ -148,15 +141,12 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
         .in('kullanici_id', userIds)
         .eq('one_cikarildi', true)
       : Promise.resolve({ data: [] }),
-    userIds.length > 0
-      ? admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`)
-      : Promise.resolve({ data: [] }),
     systemIds.length > 0
       ? admin.from('topluluk_sistem_profilleri').select('id, slug, kullanici_adi, gorunen_ad, avatar_url, bio, ekip_rolu').in('id', systemIds)
       : Promise.resolve({ data: [] }),
   ])
 
-  const profileMap = mapProfiles(profileRows, titleRows, teamRows)
+  const profileMap = mapProfiles(profileRows, titleRows)
   const systemProfileMap = mapSystemProfiles(systemRows)
   const topicIds = (topicRows || []).map((row) => row.id).filter(Boolean)
   const pollStatsMap = new Map()
@@ -268,7 +258,7 @@ export async function getCommunityTopicBySlug(slug) {
 
   const userIds = [...new Set([topicRow.kullanici_id, ...(replyRows || []).map((row) => row.kullanici_id)].filter(Boolean))]
 
-  const [{ data: profileRows }, { data: titleRows }, { data: teamRows }] = userIds.length > 0
+  const [{ data: profileRows }, { data: titleRows }] = userIds.length > 0
     ? await Promise.all([
         admin.from('public_profiller').select('id, kullanici_adi, avatar_url, rol').in('id', userIds),
         admin
@@ -276,11 +266,10 @@ export async function getCommunityTopicBySlug(slug) {
           .select('kullanici_id, unvan_tanimlari(isim)')
           .in('kullanici_id', userIds)
           .eq('one_cikarildi', true),
-        admin.from('ekip').select('profil_id, isim, unvan').or(`profil_id.in.(${userIds.join(',')}),profil_id.is.null`),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }]
+    : [{ data: [] }, { data: [] }]
 
-  const profileMap = mapProfiles(profileRows, titleRows, teamRows)
+  const profileMap = mapProfiles(profileRows, titleRows)
   let systemProfile = null
   if (topicRow.sistem_profil_id) {
     const { data } = await admin

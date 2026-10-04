@@ -1,4 +1,5 @@
 'use client'
+import { canAccessPanel } from '../lib/roles'
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
@@ -413,7 +414,7 @@ export default function ToplulukKonuDetayClient({ topic, initialReplies = [] }) 
 
   const avatarLetter = topic?.profil?.kullanici_adi?.[0]?.toUpperCase() || 'K'
   const isOwner = Boolean(sessionUser?.id && sessionUser.id === topic?.profil?.id)
-  const isAdmin = ['admin', 'yonetici'].includes(String(profile?.rol || '').toLowerCase())
+  const isAdmin = canAccessPanel(String(profile?.rol || '').toLowerCase())
   const replyTree = useMemo(() => {
     const byParent = new Map()
     for (const reply of replies) {

@@ -7,15 +7,14 @@ import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import TakipButonu from '../../components/TakipButonu'
 import Link from 'next/link'
+import { roleLabel } from '../../lib/roles'
 
 const ROL_RENK = {
   okuyucu: { bg: '#f0f0f0', text: '#555' },
   cevirmeni: { bg: '#dbeafe', text: '#1e40af' },
   cizer: { bg: '#fee2e2', text: '#b91c1c' },
-  grafik: { bg: '#fce7f3', text: '#9d174d' },
-  editor: { bg: '#d1fae5', text: '#065f46' },
-  moderator: { bg: '#fef3c7', text: '#92400e' },
-  admin: { bg: '#fee2e2', text: '#991b1b' },
+  balonlamaci: { bg: '#d1fae5', text: '#065f46' },
+  kurucu: { bg: '#fee2e2', text: '#991b1b' },
   yonetici: { bg: '#ede9fe', text: '#5b21b6' },
 }
 
@@ -40,10 +39,7 @@ const DEFAULT_VITRIN_AYARLARI = {
 }
 
 function formatRol(rol) {
-  if (!rol) return 'Okuyucu'
-  return String(rol)
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
+  return roleLabel(rol)
 }
 
 function parseBannerMeta(url) {

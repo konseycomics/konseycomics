@@ -1,3 +1,4 @@
+import { canUseStaffPrivileges, isFounder } from '../../../lib/roles'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -19,8 +20,8 @@ async function moderator(req) {
   const { data } = await auth.auth.getUser(token)
   const userId = data?.user?.id
   if (!userId) return null
-  const { data: profile } = await admin.from('public_profiller').select('id, rol').eq('id', userId).maybeSingle()
-  if (!['admin', 'yonetici', 'moderator'].includes(String(profile?.rol || '').toLowerCase())) return null
+  const { data: profile } = await admin.from('profiller').select('id, rol, askiya_alindi').eq('id', userId).maybeSingle()
+  if (!canUseStaffPrivileges(profile)) return null
   return { admin, userId, role: String(profile.rol).toLowerCase() }
 }
 
@@ -73,7 +74,7 @@ export async function POST(req) {
     }
 
     if (action === 'hard_delete_reply') {
-      if (!['admin', 'yonetici'].includes(role)) return NextResponse.json({ error: 'Bu işlem yalnızca yöneticilere açık.' }, { status: 403 })
+      if (!isFounder(role)) return NextResponse.json({ error: 'Bu işlem yalnızca Kurucuya açık.' }, { status: 403 })
       await admin.from('topluluk_moderasyon_loglari').insert({ moderator_id: userId, eylem: action, yanit_id: replyId })
       const { error } = await admin.from('topluluk_yanitlari').delete().eq('id', replyId)
       if (error) throw error

@@ -1,3 +1,4 @@
+import { canUseStaffPrivileges } from '../../../lib/roles'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -65,8 +66,8 @@ export async function POST(req) {
     if (topicRow.sistem_profil_id) {
       return NextResponse.json({ error: 'Resmi rehber konuları yanıtlara kapalıdır.' }, { status: 423 })
     }
-    const { data: requesterProfile } = await adminClient.from('public_profiller').select('rol').eq('id', userData.user.id).maybeSingle()
-    const isStaff = ['admin', 'yonetici', 'moderator'].includes(String(requesterProfile?.rol || '').toLowerCase())
+    const { data: requesterProfile } = await adminClient.from('profiller').select('rol, askiya_alindi').eq('id', userData.user.id).maybeSingle()
+    const isStaff = canUseStaffPrivileges(requesterProfile)
     if (topicRow.kilitli) {
       if (!isStaff) {
         return NextResponse.json({ error: 'Bu konu yeni yanıtlara kapatılmış.' }, { status: 423 })

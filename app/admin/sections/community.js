@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { AramaSecimTek, BS, BP, BD, CARD_INNER, I, LB, Msg, ResimYukle, S, SectionTitle, Surface, TABLE_ROW, TABLE_WRAP, TEXT_SOFT, TEXT_SUBTLE } from '../ui'
 import { FORUMS } from '../../lib/forumConfig'
+import { ROLES, canAccessPanel } from '../../lib/roles'
 
 function slugOlustur(value='') {
   return String(value || '')
@@ -109,7 +110,7 @@ export function KullanicilarSayfasi() {
     .filter(k => durumFiltre === 'tumu' || (durumFiltre === 'banli' ? k.askiya_alindi : !k.askiya_alindi))
 
   const banliSayi = kullanicilar.filter(k => k.askiya_alindi).length
-  const adminSayi = kullanicilar.filter(k => ['admin', 'yonetici'].includes(k.rol)).length
+  const adminSayi = kullanicilar.filter(k => canAccessPanel(k.rol)).length
 
   return (
     <div>
@@ -126,7 +127,7 @@ export function KullanicilarSayfasi() {
             <div style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:'42px', lineHeight:0.9 }}>{banliSayi}</div>
           </div>
           <div style={{ ...CARD_INNER, padding:'16px' }}>
-            <div style={LB}>Admin / Yonetici</div>
+            <div style={LB}>Kurucu / Yönetici</div>
             <div style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:'42px', lineHeight:0.9 }}>{adminSayi}</div>
           </div>
         </div>
@@ -134,14 +135,7 @@ export function KullanicilarSayfasi() {
           <input value={aramaMetni} onChange={e=>setAramaMetni(e.target.value)} placeholder="Kullanıcı ara..." style={I} />
           <select value={rolFiltre} onChange={e=>setRolFiltre(e.target.value)} style={S}>
             <option value="tumu">Tum Roller</option>
-            <option value="okuyucu">Okuyucu</option>
-            <option value="cevirmeni">Çevirmen</option>
-            <option value="cizer">Çizer</option>
-            <option value="grafik">Grafik</option>
-            <option value="editor">Editör</option>
-            <option value="moderator">Moderatör</option>
-            <option value="admin">Admin</option>
-            <option value="yonetici">Yönetici</option>
+            {ROLES.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
           </select>
           <select value={durumFiltre} onChange={e=>setDurumFiltre(e.target.value)} style={S}>
             <option value="tumu">Tum Durumlar</option>
@@ -158,7 +152,7 @@ export function KullanicilarSayfasi() {
                 <div style={{ fontSize:'12px',color:TEXT_SUBTLE }}>Seviye {k.seviye} · {k.xp} XP · {new Date(k.created_at).toLocaleDateString('tr-TR')}</div>
               </div>
               <select value={k.rol} onChange={e=>rolDegistir(k.id,e.target.value)} style={{...S,width:'auto',fontSize:'12px',padding:'4px 8px'}}>
-                <option value="okuyucu">Okuyucu</option><option value="cevirmeni">Çevirmen</option><option value="cizer">Çizer</option><option value="grafik">Grafik</option><option value="editor">Editör</option><option value="moderator">Moderatör</option><option value="admin">Admin</option><option value="yonetici">Yönetici</option>
+                {ROLES.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
               </select>
               <button onClick={()=>banToggle(k.id,k.askiya_alindi)} style={k.askiya_alindi?BS:BD}>{k.askiya_alindi?'Banı Kaldır':'Banla'}</button>
             </div>

@@ -1,3 +1,4 @@
+import { canUseStaffPrivileges, isFounder } from '../../../lib/roles'
 import { createHmac, createHash, randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -89,15 +90,12 @@ async function getRequester(req) {
   }
 
   const userId = userData.user.id
-  const [{ data: privateProfile }, { data: publicProfile }] = await Promise.all([
-    adminClient.from('profiller').select('rol').eq('id', userId).maybeSingle(),
-    adminClient.from('public_profiller').select('rol').eq('id', userId).maybeSingle(),
-  ])
-  const role = String(privateProfile?.rol || publicProfile?.rol || '').toLowerCase()
+  const { data: privateProfile } = await adminClient.from('profiller').select('rol, askiya_alindi').eq('id', userId).maybeSingle()
 
   return {
     userId,
-    isAdmin: ['admin', 'yonetici'].includes(role),
+    isAdmin: canUseStaffPrivileges(privateProfile),
+    isFounder: isFounder(privateProfile?.rol) && !privateProfile?.askiya_alindi,
   }
 }
 
@@ -162,6 +160,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Geçersiz bucket.' }, { status: 400 })
     }
 
+    if (bucket === 'instagram' && !requester.isFounder) {
+      return NextResponse.json({ error: 'Bu işlem yalnızca Kurucuya açık.' }, { status: 403 })
+    }
     const isUserUpload = (bucket === 'avatarlar' && USER_AVATAR_PREFIXES.has(prefix)) || bucket === 'forum'
     if (!requester.isAdmin && !isUserUpload) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })

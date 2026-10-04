@@ -1,3 +1,4 @@
+import { isFounder } from '../../../lib/roles'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getLeaderboards } from '../../../lib/leaderboardData'
@@ -40,11 +41,11 @@ export async function POST(req) {
 
     const { data: profil, error: profilError } = await adminClient
       .from('profiller')
-      .select('rol')
+      .select('rol, askiya_alindi')
       .eq('id', userData.user.id)
       .maybeSingle()
 
-    if (profilError || !['admin', 'yonetici'].includes(String(profil?.rol || ''))) {
+    if (profilError || !isFounder(profil?.rol) || profil?.askiya_alindi) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
     }
 

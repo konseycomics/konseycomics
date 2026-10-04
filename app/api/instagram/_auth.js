@@ -1,3 +1,4 @@
+import { isFounder } from '../../lib/roles'
 import { createClient } from '@supabase/supabase-js'
 
 export function instagramClients() {
@@ -17,7 +18,7 @@ export async function requireInstagramAdmin(req) {
   const { publicClient, adminClient } = instagramClients()
   const { data } = await publicClient.auth.getUser(token)
   if (!data?.user?.id) return null
-  const { data: profile } = await adminClient.from('profiller').select('rol').eq('id', data.user.id).maybeSingle()
-  if (!['admin', 'yonetici'].includes(String(profile?.rol || '').toLowerCase())) return null
+  const { data: profile } = await adminClient.from('profiller').select('rol, askiya_alindi').eq('id', data.user.id).maybeSingle()
+  if (!isFounder(profile?.rol) || profile?.askiya_alindi) return null
   return { user: data.user, adminClient }
 }

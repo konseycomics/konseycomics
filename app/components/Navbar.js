@@ -1,4 +1,5 @@
 'use client'
+import { canAccessPanel } from '../lib/roles'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -47,7 +48,7 @@ export default function Navbar() {
   const linkler = [
     { label: 'Seriler', href: '/seriler' },
     { label: 'Yerli Eserler', href: '/yerli-eserler', featured: true, flag: true },
-    { label: 'Hakkımızda', href: '/hakkimizda' },
+    { label: 'Hakkımızda & Ekip', href: '/hakkimizda' },
     { label: 'İletişim', href: '/iletisim' },
   ]
 
@@ -75,7 +76,7 @@ export default function Navbar() {
           <Link href="/forum" className="desktop-only" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 14px', border: `1px solid ${forumModu ? '#e0b74c' : '#59491f'}`, borderRadius: '8px', background: forumModu ? '#e0b74c' : '#18140b', color: forumModu ? '#0b0b0b' : '#e0b74c', fontSize: '13px', fontWeight: 800, textDecoration: 'none', boxShadow: '0 8px 24px rgba(224,183,76,.10)' }}><Users size={16} /> Foruma Git</Link>
           {kullanici && profil ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="desktop-only">
-              {(profil.rol === 'admin' || profil.rol === 'yonetici') && (
+              {canAccessPanel(profil.rol) && (
                 <Link href="/admin" style={{ fontSize: '12px', padding: '6px 10px', background: '#111', color: '#fff', borderRadius: '8px', textDecoration: 'none', fontWeight: 500 }}>
                   Admin
                 </Link>

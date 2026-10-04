@@ -1,3 +1,4 @@
+import { canUseStaffPrivileges } from '../../../../lib/roles'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getForumBySlug } from '../../../../lib/forumConfig'
@@ -52,8 +53,8 @@ export async function POST(req) {
         .eq('id', konuId)
         .maybeSingle(),
       adminClient
-        .from('public_profiller')
-        .select('id, rol')
+        .from('profiller')
+        .select('id, rol, askiya_alindi')
         .eq('id', userId)
         .maybeSingle(),
     ])
@@ -63,7 +64,7 @@ export async function POST(req) {
     }
 
     const isOwner = topicRow.kullanici_id === userId
-    const isAdmin = ['admin', 'yonetici', 'moderator'].includes(String(profileRow?.rol || '').toLowerCase())
+    const isAdmin = canUseStaffPrivileges(profileRow)
 
     if (action === 'delete' && !isOwner && !isAdmin) {
       return NextResponse.json({ error: 'Bu konuyu silme yetkin yok.' }, { status: 403 })

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarClock, Camera, Check, Clock3, Eye, ImagePlus, Library, PenLine, Plus, Send, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { saveSeriesTitle, validateSeriesTitle } from '../../lib/seriesTitle'
+import { SeriesTitleField } from './series-title-field'
 import { BP, BS, CARD_INNER, CokluResimYukle, I, LB, Msg, PANEL_BORDER, ResimYukle, S, SectionTitle, Surface, TEXT_SOFT, TEXT_SUBTLE, AramaSecimTek } from '../ui'
 
 function slugOlustur(value) {
@@ -35,6 +37,8 @@ function tarihYaz(value) {
 }
 
 const bosForm = {
+  unvan_ekle: false,
+  unvan_adi: '',
   seri_tipi: 'mevcut',
   seri_id: '',
   yeni_seri_baslik: '',
@@ -219,7 +223,12 @@ export function YayinMerkeziSayfasi() {
   }
 
   async function yayiniKaydet() {
+    if (kaydediliyor) return
     setMsg('')
+    if (form.seri_tipi === 'yeni') {
+      try { validateSeriesTitle(form.unvan_ekle, form.unvan_adi) }
+      catch (error) { setMsg(error.message); return }
+    }
     if (form.seri_tipi === 'mevcut' && !form.seri_id) return setMsg('❌ Bir seri seçmelisin.')
     if (form.seri_tipi === 'yeni' && (!form.yeni_seri_baslik || !form.yeni_seri_kategori_id)) return setMsg('❌ Yeni seri başlığı ve kategorisi zorunlu.')
     if (yerliEserAkisi && !form.eser_sahibi_id) return setMsg('❌ Yerli eser için kayıtlı bir eser sahibi seçmelisin.')
@@ -234,6 +243,7 @@ export function YayinMerkeziSayfasi() {
     setKaydediliyor(true)
     let olusturulanSeriId = null
     let olusturulanBolumId = null
+    let olusturulanUnvanId = null
     try {
       const yayinDurumu = form.yayin_sekli === 'taslak' ? 'taslak' : form.yayin_sekli === 'planla' ? 'planlandi' : 'yayinda'
       let seri = seciliSeri
@@ -258,6 +268,7 @@ export function YayinMerkeziSayfasi() {
         if (error) throw error
         seri = data
         olusturulanSeriId = data.id
+        olusturulanUnvanId = await saveSeriesTitle(supabase, data.id, form.unvan_ekle, form.unvan_adi)
       }
 
       if (form.seri_tipi === 'mevcut' && yerliEserAkisi && form.eser_sahibi_id !== (seri.eser_sahibi_id || '')) {
@@ -311,6 +322,7 @@ export function YayinMerkeziSayfasi() {
       await instagramVerileriniYukle()
     } catch (error) {
       if (olusturulanBolumId) await supabase.from('bolumler').delete().eq('id', olusturulanBolumId)
+      if (olusturulanUnvanId) await supabase.from('unvan_tanimlari').delete().eq('id', olusturulanUnvanId)
       if (olusturulanSeriId) await supabase.from('seriler').delete().eq('id', olusturulanSeriId)
       setMsg(`❌ ${error?.message || 'Yayın kaydedilemedi.'}`)
     } finally {
@@ -352,6 +364,7 @@ export function YayinMerkeziSayfasi() {
                 </div>
               </div>
             )}
+            {form.seri_tipi === 'yeni' && <SeriesTitleField enabled={form.unvan_ekle} name={form.unvan_adi} onChange={values=>setForm(current=>({...current,...values}))} />}
             {yerliEserAkisi && (
               <div style={{ marginTop:'14px' }}>
                 <div style={LB}>Eser Sahibi (Kayıtlı Kullanıcı)</div>

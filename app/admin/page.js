@@ -8,6 +8,8 @@ import { ForumModerasyonSayfasi, KonseySayfasi, KullanicilarSayfasi, PlanetSayfa
 import { SayfalarSayfasi, SosyalMedyaSayfasi } from './sections/vitrin'
 import { YayinMerkeziSayfasi } from './sections/publishing'
 import { UnvanlarSayfasi } from './sections/titles'
+import { SeriesTitleField } from './sections/series-title-field'
+import { saveSeriesTitle, validateSeriesTitle } from '../lib/seriesTitle'
 
 function BarChart({ data, renk = '#111', yukseklik = 160 }) {
   if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
@@ -973,7 +975,7 @@ function SerilerSayfasi() {
   const [durumFiltre, setDurumFiltre] = useState('tumu')
   const [oneCikanFiltre, setOneCikanFiltre] = useState('tumu')
   const detayPreviewRef = useRef(null)
-  const bos = { baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',eser_sahibi_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false, detay_arka_plan_url:'', detay_arka_plan_fit:'cover', detay_arka_plan_pozisyon:'center center', detay_arka_plan_x:50, detay_arka_plan_y:50 }
+  const bos = { unvan_ekle:false,unvan_adi:'',baslik:'',slug:'',tur:'seri',kategori:'manga',kategori_id:'',eser_sahibi_id:'',ozet:'',durum:'Devam Eden',kapak_url:'',turler:[],yazar_ids:[],cizer_ids:[],yil:'',one_cikan:false, detay_arka_plan_url:'', detay_arka_plan_fit:'cover', detay_arka_plan_pozisyon:'center center', detay_arka_plan_x:50, detay_arka_plan_y:50 }
   const [form, setForm] = useState(bos)
 
   useEffect(() => { fetchHepsi() }, [])
@@ -1018,13 +1020,26 @@ function SerilerSayfasi() {
   }
 
   async function kaydet() {
+    if (yukleniyor) return
     if (!form.baslik) { setMsg('❌ Başlık zorunlu!'); return }
+    try { validateSeriesTitle(form.unvan_ekle, form.unvan_adi) }
+    catch (error) { setMsg(error.message); return }
     setYukleniyor(true)
+    try {
     const payload = { baslik:form.baslik, slug:form.slug||slugOlustur(form.baslik), tur:form.tur, kategori:form.kategori, kategori_id:form.kategori_id||null, eser_sahibi_id:form.eser_sahibi_id||null, ozet:form.ozet, durum:form.tur==='tek'?'Tek Sayılık':form.durum, kapak_url:form.kapak_url, turler:form.turler, yil:form.yil?parseInt(form.yil):null, one_cikan:form.one_cikan }
     let seriId = duzenleId
-    if (duzenleId) { await supabase.from('seriler').update(payload).eq('id',duzenleId) }
-    else { const { data } = await supabase.from('seriler').insert([payload]).select().single(); seriId = data?.id }
+    if (duzenleId) {
+      const { error } = await supabase.from('seriler').update(payload).eq('id',duzenleId).select('id').single()
+      if (error) throw error
+    } else {
+      const { data, error } = await supabase.from('seriler').insert([payload]).select().single()
+      if (error) throw error
+      seriId = data.id
+      // Sonraki adim basarisiz olursa yeniden kaydet ayni seriyi kullanir.
+      setDuzenleId(seriId)
+    }
     if (seriId) {
+      await saveSeriesTitle(supabase, seriId, form.unvan_ekle, form.unvan_adi)
       await supabase.from('seri_yazarlar').delete().eq('seri_id',seriId)
       if (form.yazar_ids.length>0) await supabase.from('seri_yazarlar').insert(form.yazar_ids.map(id=>({seri_id:seriId,yazar_id:id})))
       await supabase.from('seri_cizerler').delete().eq('seri_id',seriId)
@@ -1033,6 +1048,9 @@ function SerilerSayfasi() {
     }
     setMsg(duzenleId?'✅ Güncellendi!':'✅ Seri eklendi!')
     setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setDetayArkaOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
+    } catch (error) {
+      setMsg(`Kayıt tamamlanamadı: ${error.message}. Formu yeniden kaydedebilirsin.`)
+    } finally { setYukleniyor(false) }
   }
 
   async function sil(id) {
@@ -1045,6 +1063,8 @@ function SerilerSayfasi() {
   }
 
   async function duzenle(s) {
+    const { data: unvan, error } = await supabase.from('unvan_tanimlari').select('isim, aktif').eq('seri_id',s.id).eq('kazanma_tipi','series').maybeSingle()
+    if (error) { setMsg(error.message); return }
     setDuzenleId(s.id); setKapakOnizleme(s.kapak_url)
     const detayAyar = detayVitrinAyarMap[String(s.id)] || {}
     setDetayArkaOnizleme(detayAyar.arka_plan_url || null)
@@ -1052,6 +1072,8 @@ function SerilerSayfasi() {
     setForm({
       ...bos,
       ...s,
+      unvan_ekle: unvan?.aktif || false,
+      unvan_adi: unvan?.isim || '',
       detay_arka_plan_url: detayAyar.arka_plan_url || '',
       detay_arka_plan_fit: detayAyar.arka_plan_fit || 'cover',
       detay_arka_plan_pozisyon: detayAyar.arka_plan_pozisyon || 'center center',
@@ -1104,6 +1126,7 @@ function SerilerSayfasi() {
       </div>
       <Msg text={msg} />
       <Surface style={{ padding:'24px', marginBottom:'18px' }}>
+      <SeriesTitleField enabled={form.unvan_ekle} name={form.unvan_adi} onChange={values=>setForm(f=>({...f,...values}))} />
       <div style={{ display:'flex',gap:'20px',marginBottom:'20px' }}>
         <ResimYukle onizleme={kapakOnizleme} onChange={(url,prev)=>{setForm(f=>({...f,kapak_url:url}));setKapakOnizleme(prev)}} />
         <div style={{ flex:1 }}>
@@ -1220,6 +1243,7 @@ function SerilerSayfasi() {
           </div>
         }
       />
+      <Msg text={msg} />
       <Surface style={{ padding:'18px', marginBottom:'18px' }}>
       <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))',gap:'12px',marginBottom:'16px' }}>
         <div style={{ ...CARD_INNER, padding:'16px' }}>

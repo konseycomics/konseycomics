@@ -55,8 +55,12 @@ export async function getPlanetPosts({ limit = 12, onlyPublished = true } = {}) 
 
 export async function getPlanetPostBySlug(slug) {
   noStore()
-  const posts = await getPlanetPosts({ limit: 50, onlyPublished: true })
-  return posts.find((item) => item.slug === slug) || null
+  const supabase = createSupabaseServerClient()
+  const { data, error } = await supabase.from('konsey_planet_yazilari')
+    .select('id, baslik, slug, ozet, icerik, kapak_url, tip, one_cikan, yayinlandi, created_at, updated_at')
+    .eq('slug', slug).eq('yayinlandi', true).maybeSingle()
+  if (error) throw error
+  return formatPlanetRow(data)
 }
 
 export function buildPlanetView(posts = []) {

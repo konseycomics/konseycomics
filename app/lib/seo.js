@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { safeJsonLd } from './seoRules'
 
 export function normalizeSiteUrl(value) {
   if (!value) return 'https://www.konseycomics.com'
@@ -72,6 +73,6 @@ export function buildMetadata({
 
 export function jsonLdScript(data) {
   return {
-    __html: JSON.stringify(data),
+    __html: safeJsonLd(data),
   }
 }

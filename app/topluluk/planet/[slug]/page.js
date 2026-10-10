@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
-import { buildMetadata, createSeoDescription } from '../../../lib/seo'
+import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '../../../lib/seo'
 import { getPlanetPostBySlug } from '../../../lib/planetData'
 import { notFound } from 'next/navigation'
 
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
   }
 
   return buildMetadata({
-    title: `${post.baslik} | Konsey Planet | KonseyComics`,
+    title: `${post.baslik} | Konsey Planet`,
     description: createSeoDescription(post.ozet || post.icerik, 'Konsey Planet manşetleri, duyuruları ve editör notları.'),
     path: `/forum/planet/${slug}`,
     keywords: ['Konsey Planet', post.tip, ...(post.baslik ? [post.baslik] : [])].filter(Boolean),
@@ -44,6 +44,14 @@ export default async function KonseyPlanetDetayPage({ params }) {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript({
+        '@context': 'https://schema.org', '@type': 'Article',
+        headline: post.baslik, description: createSeoDescription(post.ozet || post.icerik, post.baslik),
+        url: absoluteUrl(`/forum/planet/${slug}`), mainEntityOfPage: absoluteUrl(`/forum/planet/${slug}`),
+        datePublished: post.created_at, dateModified: post.updated_at || post.created_at,
+        image: post.kapak_url || undefined, inLanguage: 'tr-TR',
+        publisher: { '@id': absoluteUrl('/#organization') },
+      })} />
       <Navbar />
       <main style={{ background: '#050505', minHeight: '100vh' }}>
         <section className="site-shell" style={{ paddingTop: '34px', paddingBottom: '40px' }}>

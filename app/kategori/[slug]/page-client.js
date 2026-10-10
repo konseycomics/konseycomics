@@ -123,15 +123,15 @@ function SeriKarti({ seri }) {
   )
 }
 
-export default function KategoriSayfasi({ categorySlug = '' }) {
+export default function KategoriSayfasi({ categorySlug = '', initialData }) {
   const params = useParams()
   const slug = categorySlug || params.slug
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [seriler, setSeriler] = useState([])
-  const [turler, setTurler] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [seriler, setSeriler] = useState(initialData?.series || [])
+  const [turler, setTurler] = useState(initialData?.genres || [])
+  const [loading, setLoading] = useState(!initialData)
   const [gorunenAdet, setGorunenAdet] = useState(ILK_GORUNEN_KART)
 
   const kategoriAyar = KATEGORI_AYARLARI[slug] || {
@@ -153,8 +153,8 @@ export default function KategoriSayfasi({ categorySlug = '' }) {
         supabase.from('turler').select('id, isim').order('isim')
       ])
 
-      setSeriler(seriRes.data || [])
-      setTurler(turRes.data || [])
+      if (!seriRes.error) setSeriler(seriRes.data || [])
+      if (!turRes.error) setTurler(turRes.data || [])
       setLoading(false)
     }
 

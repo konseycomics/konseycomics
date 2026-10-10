@@ -1,16 +1,19 @@
 import ProfilSayfasiClient from './page-client'
+import { cache } from 'react'
+import { notFound } from 'next/navigation'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from '../../lib/seo'
 
-async function getProfileSeoData(kullaniciAdi) {
+const getProfileSeoData = cache(async (kullaniciAdi) => {
   const supabase = createSupabaseServerClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('public_profiller')
     .select('id, kullanici_adi, avatar_url, bio, rol, seviye, banner_url')
     .eq('kullanici_adi', kullaniciAdi)
     .maybeSingle()
 
+  if (error) throw new Error(`Public profile query failed: ${error.code}`)
   return data
-}
+})
 
 export async function generateMetadata({ params }) {
   const { kullaniciAdi } = await params
@@ -41,6 +44,7 @@ export async function generateMetadata({ params }) {
 export default async function ProfilPage({ params }) {
   const { kullaniciAdi } = await params
   const profil = await getProfileSeoData(kullaniciAdi)
+  if (!profil) notFound()
 
   const structuredData = profil
     ? {

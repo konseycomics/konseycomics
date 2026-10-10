@@ -1,20 +1,13 @@
 import SeriDetayClient from './page-client'
-import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, getSiteUrl, jsonLdScript } from '../../lib/seo'
-
-async function getSeriesSeoData(slug) {
-  const supabase = createSupabaseServerClient()
-  const { data } = await supabase
-    .from('seriler')
-    .select('id, baslik, slug, ozet, kapak_url, arkaplan_url, arkaplan_pozisyon, durum, yil, ortalama_puan, goruntuleme_sayisi, kategoriler(isim)')
-    .eq('slug', slug)
-    .maybeSingle()
-
-  return data
-}
+import { notFound } from 'next/navigation'
+import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '../../lib/seo'
+import { getPublicSeries } from '../../lib/publicCatalog'
+import { ratingSchema } from '../../lib/seoRules'
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const seri = await getSeriesSeoData(slug)
+  const payload = await getPublicSeries(slug)
+  const seri = payload?.series
 
   if (!seri) {
     return buildMetadata({
@@ -37,13 +30,15 @@ export async function generateMetadata({ params }) {
     path: `/seri/${seri.slug}`,
     image: seri.arkaplan_url || seri.kapak_url,
     type: 'article',
-    keywords: [seri.baslik, category, seri.durum, 'cizgi roman', 'manga', 'webtoon'].filter(Boolean),
+    keywords: [seri.baslik, category, seri.durum, 'cizgi roman'].filter(Boolean),
   })
 }
 
 export default async function SeriDetayPage({ params }) {
   const { slug } = await params
-  const seri = await getSeriesSeoData(slug)
+  const payload = await getPublicSeries(slug)
+  if (!payload) notFound()
+  const seri = payload.series
 
   const structuredData = seri
     ? {
@@ -54,19 +49,12 @@ export default async function SeriDetayPage({ params }) {
         genre: seri.kategoriler?.isim || undefined,
         url: absoluteUrl(`/seri/${seri.slug}`),
         image: seri.kapak_url || seri.arkaplan_url || undefined,
-        aggregateRating: Number(seri.ortalama_puan || 0) > 0
-          ? {
-              '@type': 'AggregateRating',
-              ratingValue: Number(seri.ortalama_puan || 0).toFixed(1),
-              bestRating: '10',
-              ratingCount: Math.max(1, Number(seri.goruntuleme_sayisi || 1)),
-            }
-          : undefined,
-        publisher: {
-          '@type': 'Organization',
-          name: 'KonseyComics',
-          url: getSiteUrl(),
-        },
+        inLanguage: 'tr-TR',
+        aggregateRating: ratingSchema(seri),
+        author: payload.authors.map(name => ({ '@type': 'Person', name })),
+        contributor: payload.artists.map(name => ({ '@type': 'Person', name })),
+        creator: payload.owner ? { '@type': 'Person', name: payload.owner.kullanici_adi, url: absoluteUrl(`/profil/${encodeURIComponent(payload.owner.kullanici_adi)}`) } : undefined,
+        isPartOf: { '@type': 'CollectionPage', name: 'KonseyComics Arşivi', url: absoluteUrl('/seriler') },
       }
     : null
 
@@ -78,7 +66,7 @@ export default async function SeriDetayPage({ params }) {
           dangerouslySetInnerHTML={jsonLdScript(structuredData)}
         />
       ) : null}
-      <SeriDetayClient />
+      <SeriDetayClient key={seri.id} initialData={payload} />
     </>
   )
 }

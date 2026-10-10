@@ -71,6 +71,10 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: '/cizgi-roman', destination: '/seriler', permanent: true },
+      { source: '/manga', destination: '/seriler', permanent: true },
+      { source: '/webtoon', destination: '/seriler', permanent: true },
+      { source: '/favicon.ico', destination: '/icon.png', permanent: true },
       {
         source: '/kategori/cizgi-roman',
         destination: '/seriler',

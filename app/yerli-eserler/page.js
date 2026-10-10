@@ -1,6 +1,9 @@
 import { Suspense } from 'react'
 import KategoriSayfasiClient from '../kategori/[slug]/page-client'
 import { absoluteUrl, buildMetadata, jsonLdScript } from '../lib/seo'
+import { getPublicCatalog } from '../lib/publicCatalog'
+
+export const dynamic = 'force-dynamic'
 
 const PAGE_PATH = '/yerli-eserler'
 const DESCRIPTION = 'Türkiye’den bağımsız üreticilerin yerli çizgi romanlarını keşfet ve Konsey Comics üzerinde oku.'
@@ -12,7 +15,8 @@ export const metadata = buildMetadata({
   keywords: ['yerli çizgi roman', 'Türk çizgi romanı', 'bağımsız çizgi roman', 'çizgi roman yayınlatmak', 'KonseyComics'],
 })
 
-export default function YerliEserlerPage() {
+export default async function YerliEserlerPage() {
+  const initialData = await getPublicCatalog()
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -26,7 +30,7 @@ export default function YerliEserlerPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript(structuredData)} />
-      <Suspense fallback={null}><KategoriSayfasiClient categorySlug="yerli-eserler" /></Suspense>
+      <Suspense fallback={null}><KategoriSayfasiClient categorySlug="yerli-eserler" initialData={initialData} /></Suspense>
     </>
   )
 }

@@ -11,7 +11,7 @@ const SITE_URL = normalizeSiteUrl(
 
 export default function robots() {
   return {
-    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/admin/'] }],
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/admin/', '/api/', '/auth/'] }],
     sitemap: `${SITE_URL}/sitemap.xml`,
   }
 }

@@ -10,6 +10,7 @@ import Footer from '../components/Footer'
 import { supabase } from '../lib/supabase'
 import { ARCHIVE_FORMATS, archiveCategory, archiveFormat, archiveFilters, filterArchive, isArchiveSeries } from '../lib/seriesArchive'
 import { isRecentlyAddedSeries } from '../lib/seriesBadges'
+import { isPublished } from '../lib/seoRules'
 import './series-archive.css'
 
 const PAGE_SIZE = 24
@@ -39,17 +40,18 @@ function SeriesCard({ series }) {
   </Link>
 }
 
-export default function SeriesArchive() {
+export default function SeriesArchive({ initialData }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const filters = archiveFilters(searchParams)
-  const [data, setData] = useState({ series: [], genres: [] })
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(initialData || { series: [], genres: [] })
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState(false)
   const [retry, setRetry] = useState(0)
   const [visible, setVisible] = useState(PAGE_SIZE)
   const [search, setSearch] = useState(filters.query)
   const searchParamsRef = useRef(searchParams)
+  const hasPublicData = useRef(Boolean(initialData))
 
   useEffect(() => { searchParamsRef.current = searchParams }, [searchParams])
 
@@ -57,12 +59,15 @@ export default function SeriesArchive() {
     let active = true
     async function load() {
       const [series, genres] = await Promise.all([
-        supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, tur, turler, kategori, durum, yil, created_at, ortalama_puan, puan_sayisi, goruntuleme_sayisi, kategoriler(isim), bolumler(count)').order('created_at', { ascending: false }),
+        supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, tur, turler, kategori, durum, yil, created_at, ortalama_puan, puan_sayisi, goruntuleme_sayisi, yayin_durumu, yayin_tarihi, kategoriler(isim), bolumler(count)').order('created_at', { ascending: false }),
         supabase.from('turler').select('id, isim').order('isim'),
       ])
       if (!active) return
-      setError(!!(series.error || genres.error))
-      setData({ series: (series.data || []).filter(isArchiveSeries), genres: genres.data || [] })
+      setError(!!(series.error || genres.error) && !hasPublicData.current)
+      if (!series.error && !genres.error) {
+        setData({ series: (series.data || []).filter(row => isPublished(row) && isArchiveSeries(row)), genres: genres.data || [] })
+        hasPublicData.current = true
+      }
       setLoading(false)
     }
     load()

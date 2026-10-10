@@ -29,15 +29,15 @@ function formatBolumEkip(chapter) {
   ].filter(Boolean).join(' · ')
 }
 
-export default function SeriDetay() {
+export default function SeriDetay({ initialData }) {
   const { slug } = useParams()
-  const [seri, setSeri] = useState(null)
-  const [bolumler, setBolumler] = useState([])
-  const [yazarlar, setYazarlar] = useState([])
-  const [cizerler, setCizerler] = useState([])
-  const [eserSahibi, setEserSahibi] = useState(null)
-  const [turler, setTurler] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [seri, setSeri] = useState(initialData?.series || null)
+  const [bolumler, setBolumler] = useState(initialData?.chapters || [])
+  const [yazarlar, setYazarlar] = useState(initialData?.authors || [])
+  const [cizerler, setCizerler] = useState(initialData?.artists || [])
+  const [eserSahibi, setEserSahibi] = useState(initialData?.owner || null)
+  const [turler, setTurler] = useState(initialData?.genres || [])
+  const [loading, setLoading] = useState(!initialData)
   const [listeDurumu, setListeDurumu] = useState(null)
   const [kullanici, setKullanici] = useState(null)
   const [listeYukleniyor, setListeYukleniyor] = useState(false)

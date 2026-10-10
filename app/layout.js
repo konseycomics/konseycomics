@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import ZiyaretTracker from './components/ZiyaretTracker'
+import { jsonLdScript } from './lib/seo'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -68,6 +69,16 @@ export default function RootLayout({ children }) {
   return (
     <html lang="tr" className={`${dmSans.variable} ${bebasNeue.variable}`}>
       <body style={{ fontFamily: "var(--font-dm-sans, 'DM Sans', sans-serif)", margin: 0, padding: 0, background: '#000' }}>
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript({
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          '@id': `${SITE_URL}/#organization`,
+          name: 'KonseyComics',
+          url: SITE_URL,
+          logo: `${SITE_URL}/konseycomics.jpg`,
+          sameAs: ['https://www.instagram.com/konseycomics/'],
+          description: 'Kâr amacı gütmeyen Türkçe çizgi roman fansub platformu. Bağımsız yerli eserleri, eser sahiplerinin üretimi olarak dijital ortamda yayımlar.',
+        })} />
         <ZiyaretTracker />
         {children}
         <Analytics />

@@ -1,62 +1,29 @@
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient, absoluteUrl } from './lib/seo'
+import { fetchAllRows, isPublished, validDate } from './lib/seoRules'
 
-function normalizeSiteUrl(value) {
-  if (!value) return 'https://www.konseycomics.com'
-  const normalized = value.startsWith('http') ? value : `https://${value}`
-  return normalized.replace('https://konseycomics.com', 'https://www.konseycomics.com')
-}
-
-const SITE_URL = normalizeSiteUrl(
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
-)
+export const revalidate = 300
 
 export default async function sitemap() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_KEY
-  )
-
-  const now = new Date()
-
-  const staticPages = [
-    { url: SITE_URL, lastModified: now, changeFrequency: 'daily', priority: 1 },
-    { url: `${SITE_URL}/seriler`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
-    { url: `${SITE_URL}/yerli-eserler`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/forum`, lastModified: now, changeFrequency: 'daily', priority: 0.85 },
-    { url: `${SITE_URL}/giris`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${SITE_URL}/hakkimizda`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${SITE_URL}/iletisim`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${SITE_URL}/gizlilik-politikasi`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${SITE_URL}/kullanim-kosullari`, lastModified: now, changeFrequency: 'yearly', priority: 0.2 },
-  ]
-
-  const { data: seriler } = await supabase
-    .from('seriler')
-    .select('slug, updated_at')
-    .order('updated_at', { ascending: false })
-
-  const seriPages = (seriler || []).map((seri) => ({
-    url: `${SITE_URL}/seri/${seri.slug}`,
-    lastModified: new Date(seri.updated_at || now),
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  const { data: bolumler } = await supabase
-    .from('bolumler')
-    .select('sayi, updated_at, seriler(slug)')
-    .order('updated_at', { ascending: false })
-    .limit(200)
-
-  const bolumPages = (bolumler || [])
-    .filter((bolum) => bolum.seriler?.slug)
-    .map((bolum) => ({
-      url: `${SITE_URL}/oku/${bolum.seriler.slug}/${bolum.sayi}`,
-      lastModified: new Date(bolum.updated_at || now),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    }))
-
-  return [...staticPages, ...seriPages, ...bolumPages]
+  const db = createSupabaseServerClient()
+  const [series, chapters, topics, forums, articles] = await Promise.all([
+    fetchAllRows(db.from('seriler').select('id, slug, created_at, yayin_durumu, yayin_tarihi').order('id')),
+    fetchAllRows(db.from('bolumler').select('seri_id, sayi, created_at, yayin_durumu, yayin_tarihi').order('id')),
+    fetchAllRows(db.from('topluluk_konulari').select('slug, created_at, updated_at').eq('aktif', true).order('id')),
+    fetchAllRows(db.from('topluluk_forumlari').select('slug, created_at, updated_at').eq('aktif', true).order('id')),
+    fetchAllRows(db.from('konsey_planet_yazilari').select('slug, created_at, updated_at').eq('yayinlandi', true).order('id')),
+  ])
+  const publishedSeries = new Map(series.filter(row => isPublished(row) && row.slug).map(row => [row.id, row]))
+  const publishedChapters = chapters.filter(row => isPublished(row) && publishedSeries.has(row.seri_id))
+  const entries = ['/', '/seriler', '/yerli-eserler', '/forum', '/hakkimizda', '/iletisim', '/gizlilik-politikasi', '/kullanim-kosullari'].map(path => ({ url: absoluteUrl(path) }))
+  for (const row of publishedSeries.values()) {
+    const dates = [row.created_at, row.yayin_tarihi, ...publishedChapters.filter(chapter => chapter.seri_id === row.id).flatMap(chapter => [chapter.created_at, chapter.yayin_tarihi])].map(validDate).filter(Boolean)
+    entries.push({ url: absoluteUrl(`/seri/${encodeURIComponent(row.slug)}`), lastModified: dates.length ? new Date(Math.max(...dates.map(date => date.getTime()))) : undefined })
+  }
+  for (const row of publishedChapters) {
+    entries.push({ url: absoluteUrl(`/oku/${encodeURIComponent(publishedSeries.get(row.seri_id).slug)}/${row.sayi}`), lastModified: validDate(row.yayin_tarihi || row.created_at) })
+  }
+  for (const [rows, prefix] of [[forums, '/forum/'], [topics, '/forum/konu/'], [articles, '/forum/planet/']]) {
+    for (const row of rows.filter(row => row.slug)) entries.push({ url: absoluteUrl(`${prefix}${encodeURIComponent(row.slug)}`), lastModified: validDate(row.updated_at || row.created_at) })
+  }
+  return [...new Map(entries.map(entry => [entry.url, entry])).values()]
 }

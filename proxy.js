@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { checkSupabaseHealth } from './app/lib/supabaseHealth'
 
 const MAINTENANCE_ENABLED = false
 const AUTO_MAINTENANCE_ENABLED = true
@@ -24,39 +25,11 @@ async function isSupabaseHealthy() {
     return supabaseHealth.pending
   }
 
-  supabaseHealth.pending = (async () => {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS)
-
-    try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY
-
-      if (!supabaseUrl || !supabaseKey) {
-        return false
-      }
-
-      const healthUrl = new URL('/rest/v1/kategoriler', supabaseUrl)
-      healthUrl.searchParams.set('select', 'id')
-      healthUrl.searchParams.set('limit', '1')
-
-      const response = await fetch(healthUrl, {
-        method: 'GET',
-        headers: {
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-        cache: 'no-store',
-        signal: controller.signal,
-      })
-
-      return response.ok
-    } catch {
-      return false
-    } finally {
-      clearTimeout(timeout)
-    }
-  })()
+  supabaseHealth.pending = checkSupabaseHealth({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NEXT_PUBLIC_SUPABASE_KEY,
+    timeoutMs: HEALTH_CHECK_TIMEOUT_MS,
+  })
 
   try {
     supabaseHealth.healthy = await supabaseHealth.pending

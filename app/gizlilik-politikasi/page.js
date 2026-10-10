@@ -1,12 +1,15 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { buildMetadata } from '../lib/seo'
+
+export const metadata = buildMetadata({ title: 'Gizlilik Politikası', description: 'KonseyComics gizlilik politikası: toplanan veriler, çerezler ve iletişim bilgileri.', path: '/gizlilik-politikasi' })
 
 export default function GizlilikPolitikasi() {
   return (
     <>
       <Navbar />
       <div style={{ maxWidth: '680px', margin: '48px auto', padding: '0 24px 60px' }}>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '40px', marginBottom: '32px' }}>GİZLİLİK POLİTİKASI</div>
+        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '40px', margin: '0 0 32px', fontWeight: 'inherit' }}>GİZLİLİK POLİTİKASI</h1>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px' }}>Son güncelleme: Ocak 2026</div>
         {[
           ['Toplanan Veriler', 'Sitemizi ziyaret ettiğinizde IP adresiniz ve tarayıcı bilgileriniz kaydedilebilir.'],

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, absoluteUrl } from './lib/seo'
 import { fetchAllRows, isPublished, validDate } from './lib/seoRules'
+import { getForumBySlug } from './lib/forumConfig'
 
 export const revalidate = 300
 
@@ -22,7 +23,7 @@ export default async function sitemap() {
   for (const row of publishedChapters) {
     entries.push({ url: absoluteUrl(`/oku/${encodeURIComponent(publishedSeries.get(row.seri_id).slug)}/${row.sayi}`), lastModified: validDate(row.yayin_tarihi || row.created_at) })
   }
-  for (const [rows, prefix] of [[forums, '/forum/'], [topics, '/forum/konu/'], [articles, '/forum/planet/']]) {
+  for (const [rows, prefix] of [[forums.filter(row => getForumBySlug(row.slug)), '/forum/'], [topics, '/forum/konu/'], [articles, '/forum/planet/']]) {
     for (const row of rows.filter(row => row.slug)) entries.push({ url: absoluteUrl(`${prefix}${encodeURIComponent(row.slug)}`), lastModified: validDate(row.updated_at || row.created_at) })
   }
   return [...new Map(entries.map(entry => [entry.url, entry])).values()]

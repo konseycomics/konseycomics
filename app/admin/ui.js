@@ -127,7 +127,7 @@ export function CokluResimYukle({ gorseller = [], onChange, bucket = 'kapaklar',
         while (siradaki < files.length) {
           const index = siradaki
           siradaki += 1
-          yuklenenler[index] = await uploadAdminImage(files[index], { bucket, prefix: bucket === 'instagram' ? 'post' : 'sayfa', format })
+          yuklenenler[index] = await uploadAdminImage(files[index], { bucket, prefix: 'sayfa', format })
           setIlerleme(current => ({ ...current, tamamlanan: current.tamamlanan + 1 }))
         }
       }

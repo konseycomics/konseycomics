@@ -10,6 +10,14 @@ export function createSupabaseAdminClient() {
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init = {}) => fetch(input, {
+        ...init,
+        signal: init.signal
+          ? AbortSignal.any([init.signal, AbortSignal.timeout(8000)])
+          : AbortSignal.timeout(8000),
+      }),
+    },
   })
 }
 
@@ -22,7 +30,8 @@ async function fetchAllRows(queryBuilderFactory) {
     const query = queryBuilderFactory().range(offset, offset + pageSize - 1)
     const { data, error } = await query
 
-    if (error || !data?.length) break
+    if (error) throw error
+    if (!data?.length) break
     rows.push(...data)
     if (data.length < pageSize) break
     offset += pageSize

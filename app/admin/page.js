@@ -245,7 +245,7 @@ export default function Admin() {
         <div style={{ padding: '28px 28px 48px', overflow: 'auto' }}>
           {aktif === 'istatistik' && isFounder(rol) && <IstatistikSayfasi />}
           {aktif === 'okuma' && isFounder(rol) && <OkumaSayilariSayfasi />}
-          {aktif === 'yayin' && <YayinMerkeziSayfasi canManageInstagram={isFounder(rol)} />}
+          {aktif === 'yayin' && <YayinMerkeziSayfasi />}
           {aktif === 'seriler' && <SerilerSayfasi />}
           {aktif === 'bolumler' && <BolumlerSayfasi />}
           {aktif === 'konsey' && isFounder(rol) && <KonseySayfasi />}

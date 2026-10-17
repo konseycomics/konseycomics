@@ -1,44 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
-import { checkSupabaseHealth } from './app/lib/supabaseHealth'
+import { createHealthMonitor, probeSupabaseHealth } from './app/lib/supabaseHealth'
 
 const MAINTENANCE_ENABLED = false
 const AUTO_MAINTENANCE_ENABLED = true
 const MAINTENANCE_BYPASS_PATHS = ['/admin', '/api', '/auth']
-const HEALTH_CHECK_TTL_MS = 60_000
-const HEALTH_CHECK_TIMEOUT_MS = 2_500
-
-let supabaseHealth = {
-  checkedAt: 0,
-  healthy: true,
-  pending: null,
-}
-
-async function isSupabaseHealthy() {
-  const now = Date.now()
-
-  if (now - supabaseHealth.checkedAt < HEALTH_CHECK_TTL_MS) {
-    return supabaseHealth.healthy
-  }
-
-  if (supabaseHealth.pending) {
-    return supabaseHealth.pending
-  }
-
-  supabaseHealth.pending = checkSupabaseHealth({
+const isSupabaseHealthy = createHealthMonitor({
+  probe: () => probeSupabaseHealth({
     url: process.env.NEXT_PUBLIC_SUPABASE_URL,
     key: process.env.NEXT_PUBLIC_SUPABASE_KEY,
-    timeoutMs: HEALTH_CHECK_TIMEOUT_MS,
-  })
-
-  try {
-    supabaseHealth.healthy = await supabaseHealth.pending
-    supabaseHealth.checkedAt = Date.now()
-    return supabaseHealth.healthy
-  } finally {
-    supabaseHealth.pending = null
-  }
-}
+    timeoutMs: 2500,
+  }),
+  onFailure: details => console.warn('[supabase-health]', JSON.stringify(details)),
+})
 
 function maintenanceResponse() {
   return new NextResponse(`<!doctype html>
@@ -283,7 +257,7 @@ function maintenanceResponse() {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store, max-age=0',
-      'Retry-After': '3600',
+      'Retry-After': '30',
     },
   })
 }
@@ -322,6 +296,11 @@ export async function proxy(req) {
   let res = NextResponse.next({
     request: { headers: req.headers },
   })
+
+  // Anonymous visitors and static assets do not need session refresh work.
+  if (!req.cookies.getAll().some(cookie => /^sb-.*-auth-token(?:\.\d+)?$/.test(cookie.name))) {
+    return res
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

@@ -1,37 +1,55 @@
 import HomeClient from './page-client'
 import { cache } from 'react'
 import { absoluteUrl, buildMetadata, createSeoDescription, createSupabaseServerClient, jsonLdScript } from './lib/seo'
-import { getLeaderboards } from './lib/leaderboardData'
+import { getPublicLeaderboards } from './lib/publicLeaderboard'
 import { getCommunityTopics } from './lib/communityData'
-import { unstable_noStore as noStore } from 'next/cache'
+import { unstable_cache } from 'next/cache'
+import { isPublished } from './lib/seoRules'
+
+export const dynamic = 'force-dynamic'
 
 const HOME_DATA_TIMEOUT_MS = 4500
 
-function withTimeout(promise, fallback) {
-  return Promise.race([
-    Promise.resolve(promise).catch(() => fallback),
-    new Promise(resolve => setTimeout(() => resolve(fallback), HOME_DATA_TIMEOUT_MS)),
-  ])
+async function withTimeout(promise, fallback) {
+  let timer
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Home data timeout')), HOME_DATA_TIMEOUT_MS) }),
+    ])
+  } catch {
+    console.warn('[home-data] Public data unavailable; using page fallback')
+    return fallback
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
-const getHomePageData = cache(async function getHomePageData() {
-  noStore()
+const getHomeCatalog = unstable_cache(async () => {
   const supabase = createSupabaseServerClient()
-
-  const [seriRes, bolumRes, ayarRes, liderlik, forumData] = await Promise.all([
-    withTimeout(supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }), { data: [] }),
-    withTimeout(supabase
-      .from('bolumler')
-      .select('id, baslik, sayi, kapak_url, created_at, seri_id, seriler(baslik, slug, kapak_url)')
-      .order('created_at', { ascending: false })
-      .limit(10), { data: [] }),
-    withTimeout(supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']), { data: [] }),
-    withTimeout(getLeaderboards(), {}),
-    withTimeout(getCommunityTopics({ limit: 16 }), { topics: [] }),
+  const results = await Promise.all([
+    supabase.from('seriler').select('*, kategoriler(isim)').order('created_at', { ascending: false }),
+    supabase.from('bolumler')
+      .select('id, baslik, sayi, kapak_url, created_at, seri_id, yayin_durumu, yayin_tarihi, seriler(baslik, slug, kapak_url)')
+      .order('created_at', { ascending: false }).limit(10),
+    supabase.from('site_ayarlari').select('anahtar, deger').in('anahtar', ['anasayfa_hero_slider', 'meta_baslik', 'meta_aciklama', 'anahtar_kelimeler']),
   ])
-  const seriler = seriRes.data || []
-  const bolumler = bolumRes.data || []
-  const ayarData = ayarRes.data || []
+  // Throw on failed refresh so a valid cache entry is not replaced by empty data.
+  for (const result of results) if (result.error) throw result.error
+  return { seriler: results[0].data || [], bolumler: results[1].data || [], ayarlar: results[2].data || [] }
+}, ['home-public-catalog-v1'], { revalidate: 60 })
+
+const getHomeTopics = unstable_cache(
+  () => getCommunityTopics({ limit: 16 }), ['home-forum-topics-v1'], { revalidate: 60 }
+)
+
+const getHomePageData = cache(async function getHomePageData() {
+  const [catalog, liderlik, forumData] = await Promise.all([
+    withTimeout(getHomeCatalog(), { seriler: [], bolumler: [], ayarlar: [] }),
+    withTimeout(getPublicLeaderboards(), {}),
+    withTimeout(getHomeTopics(), { topics: [] }),
+  ])
+  const { seriler, bolumler, ayarlar: ayarData } = catalog
 
   const siteAyarlari = {}
   ayarData?.forEach((item) => {
@@ -39,12 +57,12 @@ const getHomePageData = cache(async function getHomePageData() {
   })
 
   const gizliKategoriler = new Set(['manga', 'webtoon'])
-  const gorunenSeriler = (seriler || []).filter((seri) => !gizliKategoriler.has(String(seri.kategoriler?.isim || seri.kategori || '').toLocaleLowerCase('tr-TR')))
+  const gorunenSeriler = (seriler || []).filter((seri) => isPublished(seri) && !gizliKategoriler.has(String(seri.kategoriler?.isim || seri.kategori || '').toLocaleLowerCase('tr-TR')))
   const gorunenSeriIdleri = new Set(gorunenSeriler.map((seri) => String(seri.id)))
 
   return {
     seriler: gorunenSeriler,
-    bolumler: (bolumler || []).filter((bolum) => gorunenSeriIdleri.has(String(bolum.seri_id))),
+    bolumler: (bolumler || []).filter((bolum) => isPublished(bolum) && gorunenSeriIdleri.has(String(bolum.seri_id))),
     siteAyarlari,
     liderlik,
     forumTopics: forumData.topics || [],

@@ -32,10 +32,21 @@ export function createSeoDescription(value, fallback) {
   return source.length > 160 ? `${source.slice(0, 157).trim()}...` : source
 }
 
-export function createSupabaseServerClient() {
+export function createSupabaseServerClient({ timeoutMs = 8000 } = {}) {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_KEY,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input, init = {}) => fetch(input, {
+          ...init,
+          signal: init.signal
+            ? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)])
+            : AbortSignal.timeout(timeoutMs),
+        }),
+      },
+    }
   )
 }
 

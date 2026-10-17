@@ -6,7 +6,7 @@ import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
-const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site', 'forum', 'instagram'])
+const ALLOWED_BUCKETS = new Set(['avatarlar', 'bolum-kapaklari', 'kapaklar', 'site', 'forum'])
 const USER_AVATAR_PREFIXES = new Set(['avatar', 'banner'])
 
 function getClients() {
@@ -63,7 +63,6 @@ function optimizeSettings(storageKey) {
   if (bucket === 'bolum-kapaklari') return { width: 900, quality: 78 }
   if (bucket === 'site') return { width: 1920, quality: 80 }
   if (bucket === 'forum') return { width: 1600, quality: 78 }
-  if (bucket === 'instagram') return { width: 1080, quality: 88 }
   if (bucket === 'kapaklar' && filename?.startsWith('sayfa-')) return { width: 1600, quality: 78 }
   if (bucket === 'kapaklar') return { width: 1100, quality: 80 }
   return { width: 1400, quality: 78 }
@@ -160,9 +159,6 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Geçersiz bucket.' }, { status: 400 })
     }
 
-    if (bucket === 'instagram' && !requester.isFounder) {
-      return NextResponse.json({ error: 'Bu işlem yalnızca Kurucuya açık.' }, { status: 403 })
-    }
     const isUserUpload = (bucket === 'avatarlar' && USER_AVATAR_PREFIXES.has(prefix)) || bucket === 'forum'
     if (!requester.isAdmin && !isUserUpload) {
       return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })

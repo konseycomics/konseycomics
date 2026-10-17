@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { ChevronLeft, ChevronRight, Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { browserReaderStorage, loadReaderState, saveReaderState } from '../lib/readerPreferences'
-import ReaderBook from './ReaderBook'
 import './ReaderOverlay.css'
+
+const ReaderBook = dynamic(() => import('./ReaderBook'), { ssr: false })
 
 const zoomKeys = keys => keys.includes('Control') || keys.includes('Meta')
 

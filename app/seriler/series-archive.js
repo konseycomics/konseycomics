@@ -56,6 +56,7 @@ export default function SeriesArchive({ initialData }) {
   useEffect(() => { searchParamsRef.current = searchParams }, [searchParams])
 
   useEffect(() => {
+    if (initialData && retry === 0) return
     let active = true
     async function load() {
       const [series, genres] = await Promise.all([
@@ -72,7 +73,7 @@ export default function SeriesArchive({ initialData }) {
     }
     load()
     return () => { active = false }
-  }, [retry])
+  }, [initialData, retry])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setSearch(filters.query))

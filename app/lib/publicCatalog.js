@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache'
 import { createSupabaseServerClient } from './seo'
 import { fetchAllRows, isPublished } from './seoRules'
 import { isArchiveSeries } from './seriesArchive'
+import { loadPublicReaderData } from './publicReaderData'
 
 const SERIES_FIELDS = 'id, baslik, slug, ozet, kapak_url, tur, turler, kategori, kategori_id, durum, yil, created_at, ortalama_puan, puan_sayisi, goruntuleme_sayisi, arkaplan_url, arkaplan_pozisyon, eser_sahibi_id, yayin_durumu, yayin_tarihi, kategoriler(isim), bolumler(count)'
 
@@ -30,3 +31,8 @@ export const getPublicSeries = cache(unstable_cache(async (slug) => {
   if (ownerError) throw new Error(`Public creator query failed: ${ownerError.code}`)
   return { series, chapters: chapters.filter(row => isPublished(row)), authors: authors.map(row => row.yazarlar?.isim).filter(Boolean), artists: artists.map(row => row.cizerler?.isim).filter(Boolean), genres: genres.map(row => row.isim), owner }
 }, ['public-series-detail-v1'], { revalidate: 60 }))
+
+export const getPublicReader = cache(unstable_cache(async (slug, number) => {
+  const payload = await getPublicSeries(slug)
+  return loadPublicReaderData(createSupabaseServerClient(), payload, number)
+}, ['public-reader-v1'], { revalidate: 60 }))

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Hero({ seriler = [], slides = [] }) {
   const fallbackSeri = seriler.find(s => s.one_cikan) || seriler[0]
@@ -171,9 +172,12 @@ export default function Hero({ seriler = [], slides = [] }) {
       `}</style>
 
       {heroBackground && (
-        <img
+        <Image
+          fill
+          sizes="100vw"
           src={heroBackground}
           alt=""
+          loading="eager"
           fetchPriority="high"
           draggable={false}
           className="hero-main-bg"
@@ -215,7 +219,7 @@ export default function Hero({ seriler = [], slides = [] }) {
                   boxShadow: '0 18px 45px rgba(0,0,0,0.34)',
                   background: 'rgba(255,255,255,0.06)'
                 }}>
-                  <img src={seri.kapak_url} alt={`${baslik} kapak`} fetchPriority="high" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={seri.kapak_url} alt={`${baslik} kapak`} fill sizes="(max-width: 900px) 132px, (max-width: 1667px) 18vw, 300px" style={{ objectFit: 'cover' }} />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.22), transparent 36%)' }} />
                 </div>
               </Link>

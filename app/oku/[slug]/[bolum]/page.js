@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import ReaderClient from './page-client'
-import { getPublicSeries } from '../../../lib/publicCatalog'
+import { getPublicReader, getPublicSeries } from '../../../lib/publicCatalog'
 import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '../../../lib/seo'
 
 async function getChapter(slug, number) {
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
 
 export default async function ReaderPage({ params }) {
   const { slug, bolum } = await params
-  const data = await getChapter(slug, bolum)
+  const data = await getPublicReader(slug, bolum)
   if (!data) notFound()
   const { series, chapter } = data
   return <>

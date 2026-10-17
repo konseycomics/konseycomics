@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import ReaderOverlay from '../../../components/ReaderOverlay'
-import YorumSistemi from '../../../components/YorumSistemi'
+import ReaderComments from '../../../components/ReaderComments'
 import { trackIssueDownloadAndUnlock, trackIssueReadAndUnlock, trackSeriesFavoriteAndUnlock } from '../../../lib/unvanClient'
 
 function driveEmbedUrl(link) {
@@ -32,12 +32,11 @@ function bolumKrediSatirlari(chapter) {
 export default function Okuyucu({ initialData }) {
   const { slug, bolum } = useParams()
   const router = useRouter()
-  const [bolumData, setBolumData] = useState(initialData?.chapter || null)
-  const [seriData, setSeriData] = useState(initialData?.series || null)
-  const [detayAyar, setDetayAyar] = useState({})
-  const [okumaSayfalari, setOkumaSayfalari] = useState([])
-  const [tumBolumler, setTumBolumler] = useState(initialData?.chapters || [])
-  const [loading, setLoading] = useState(!initialData)
+  const bolumData = initialData.chapter
+  const seriData = initialData.series
+  const detayAyar = initialData.settings
+  const okumaSayfalari = initialData.pages
+  const tumBolumler = initialData.chapters
   const [iframeHata, setIframeHata] = useState(false)
   const tamEkranAktif = false
   const okumaTakipRef = useRef(null)
@@ -73,71 +72,33 @@ export default function Okuyucu({ initialData }) {
   }
 
   useEffect(() => {
-    async function fetchData() {
-      setOkumaSayfalari([])
-      setBolumData(null)
-      setLoading(true)
-      const { data: seri } = await supabase
-        .from('seriler')
-        .select('*, kategoriler(isim)')
-        .eq('slug', slug)
-        .single()
-
-      if (!seri) {
-        setLoading(false)
-        return
-      }
-
-      setSeriData(seri)
-
-      const { data: detay } = await supabase
-        .from('site_ayarlari')
-        .select('deger')
-        .eq('anahtar', 'seri_detay_vitrin')
-        .maybeSingle()
-
-      setDetayAyar(detay.data?.deger?.[String(seri.id)] || {})
-
-      const { data: tumBolumlerData } = await supabase
-        .from('bolumler')
-        .select('*, cevirmen:ekip!cevirmen_id(isim), balonlama:ekip!balonlama_id(isim), grafik:ekip!grafik_id(isim)')
-        .eq('seri_id', seri.id)
-        .order('sayi')
-
-      const bolumKaydi = (tumBolumlerData || []).find(item => String(item.sayi) === String(bolum))
-
-      if (bolumKaydi) {
-        setBolumData({ ...bolumKaydi, seriBaslik: seri.baslik })
-
+    let active = true
+    async function loadAccount() {
+      try {
         const { data: { session } } = await supabase.auth.getSession()
+        if (!active) return
         if (session?.user) {
           setKullanici(session.user)
-          await supabase.from('okuma_gecmisi').upsert([{
-            kullanici_id: session.user.id,
-            bolum_id: bolumKaydi.id,
-            seri_id: seri.id,
-          }], { onConflict: 'kullanici_id,bolum_id' })
-
-          const { data: liste } = await supabase
-            .from('okuma_listesi')
-            .select('durum')
-            .eq('kullanici_id', session.user.id)
-            .eq('seri_id', seri.id)
-            .maybeSingle()
-
-          setListeDurumu(liste?.durum || null)
+          const [, { data: liste }] = await Promise.all([
+            supabase.from('okuma_gecmisi').upsert([{
+              kullanici_id: session.user.id,
+              bolum_id: bolumData.id,
+              seri_id: seriData.id,
+            }], { onConflict: 'kullanici_id,bolum_id' }),
+            supabase.from('okuma_listesi').select('durum').eq('kullanici_id', session.user.id).eq('seri_id', seriData.id).maybeSingle(),
+          ])
+          if (active) setListeDurumu(liste?.durum || null)
         } else {
           setKullanici(null)
           setListeDurumu(null)
         }
+      } catch {
+        // Account features must not block the public reader.
       }
-
-      setTumBolumler(tumBolumlerData || [])
-      setLoading(false)
     }
-
-    fetchData()
-  }, [slug, bolum])
+    loadAccount()
+    return () => { active = false }
+  }, [seriData.id, bolumData.id])
 
   async function listeGuncelle(durum) {
     if (!kullanici || !seriData) return
@@ -237,23 +198,6 @@ export default function Okuyucu({ initialData }) {
     return () => { cancelled = true; window.clearInterval(timer) }
   }, [bolumData?.id, seriData?.id, okumaSayfalari.length])
 
-  useEffect(() => {
-    let active = true
-    async function fetchOkumaSayfalari() {
-      if (!bolumData?.id) return
-      const { data } = await supabase
-        .from('bolum_sayfalari')
-        .select('gorsel_url')
-        .eq('bolum_id', bolumData.id)
-        .order('sira', { ascending: true })
-
-      if (active) setOkumaSayfalari((data || []).map(item => item.gorsel_url).filter(Boolean))
-    }
-
-    fetchOkumaSayfalari()
-    return () => { active = false }
-  }, [bolumData?.id])
-
   const mevcutSayi = parseInt(bolum)
   const embedUrl = driveEmbedUrl(bolumData?.drive_link)
   const pdfIndirmeLink = bolumData?.pdf_indirme_link || bolumData?.indirme_link || ''
@@ -267,17 +211,6 @@ export default function Okuyucu({ initialData }) {
   const heroBackgroundPosition = `${detayAyar?.arka_plan_x ?? 50}% ${detayAyar?.arka_plan_y ?? 50}%`
   const ozelOkuyucuVar = okumaSayfalari.length > 0
   const bolumKredileri = bolumKrediSatirlari(bolumData)
-
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '14px', fontFamily: "'DM Sans', sans-serif" }}>Bölüm hazırlanıyor...</div>
-        </div>
-      </>
-    )
-  }
 
   if (!bolumData || !seriData) {
     return (
@@ -1406,7 +1339,7 @@ export default function Okuyucu({ initialData }) {
                 <div style={{ color: 'rgba(255,255,255,0.58)', fontSize: '14px', lineHeight: 1.7, marginBottom: '20px' }}>
                   Bolumu bitirdikten sonra yorumlari burada okumak daha dogal hissettiriyor. Okurlar bu alanda bolumu tartisabilir.
                 </div>
-                <YorumSistemi bolumId={bolumData.id} seriId={bolumData.seri_id} />
+                <ReaderComments bolumId={bolumData.id} seriId={bolumData.seri_id} />
               </div>
 
               <aside style={{ display: 'grid', gap: '18px' }}>

@@ -61,6 +61,7 @@ const getHomePageData = cache(async function getHomePageData() {
   const gorunenSeriIdleri = new Set(gorunenSeriler.map((seri) => String(seri.id)))
 
   return {
+    renderedAt: Date.now(),
     seriler: gorunenSeriler,
     bolumler: (bolumler || []).filter((bolum) => isPublished(bolum) && gorunenSeriIdleri.has(String(bolum.seri_id))),
     siteAyarlari,

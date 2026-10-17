@@ -7,6 +7,7 @@ import Hero from './components/Hero'
 import Footer from './components/Footer'
 import Link from 'next/link'
 import { isRecentlyAddedSeries } from './lib/seriesBadges'
+import { relativeTime } from './lib/relativeTime'
 import { supabase } from './lib/supabase'
 import { ArrowRight, BookOpen, Eye, MessageSquare, Pin, Users } from 'lucide-react'
 
@@ -42,17 +43,6 @@ const SERI_TURLERI = [
     large: false,
   },
 ]
-
-function zaman(dateStr) {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = Math.floor((now - d) / 1000)
-  if (diff < 60) return 'Az önce'
-  if (diff < 3600) return `${Math.floor(diff/60)}dk önce`
-  if (diff < 86400) return `${Math.floor(diff/3600)}s önce`
-  if (diff < 604800) return `${Math.floor(diff/86400)}g önce`
-  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
-}
 
 function formatCount(value) {
   const count = Number(value || 0)
@@ -263,7 +253,7 @@ function PopulerSeriKart({ seri, sira }) {
   )
 }
 
-function BolumKart({ bolum }) {
+function BolumKart({ bolum, now }) {
   const [hover, setHover] = useState(false)
   const seri = bolum.seriler
   if (!seri) return null
@@ -300,7 +290,7 @@ function BolumKart({ bolum }) {
           {seri.baslik}
         </div>
         <div style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 500 }}>
-          {zaman(bolum.created_at)}
+          {relativeTime(bolum.created_at, now)}
         </div>
       </div>
     </Link>
@@ -980,7 +970,7 @@ function IndependentWorksSection() {
   )
 }
 
-export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [] }) {
+export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [], renderedAt = null }) {
   const [currentTime, setCurrentTime] = useState(null)
   useEffect(() => {
     const updateTime = () => setCurrentTime(Date.now())
@@ -1579,7 +1569,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
           </div>
           {loading
             ? <LoadingGrid count={6} className="grid-bolumler-6" />
-            : <div className="grid-bolumler-6">{sonBolumlerVitrin.map(b => <BolumKart key={b.id} bolum={b} />)}</div>
+            : <div className="grid-bolumler-6">{sonBolumlerVitrin.map(b => <BolumKart key={b.id} bolum={b} now={currentTime ?? renderedAt} />)}</div>
           }
         </section>
       )}

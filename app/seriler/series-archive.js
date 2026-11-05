@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, startTransition } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Search, X, ArrowDown, RotateCcw, BookOpen, Star, Clock3, TrendingUp, MessageSquare, Eye } from 'lucide-react'
@@ -41,8 +40,7 @@ function SeriesCard({ series }) {
 }
 
 export default function SeriesArchive({ initialData }) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const [searchParams, setSearchParams] = useState(() => new URLSearchParams())
   const filters = archiveFilters(searchParams)
   const [data, setData] = useState(initialData || { series: [], genres: [] })
   const [loading, setLoading] = useState(!initialData)
@@ -54,6 +52,20 @@ export default function SeriesArchive({ initialData }) {
   const hasPublicData = useRef(Boolean(initialData))
 
   useEffect(() => { searchParamsRef.current = searchParams }, [searchParams])
+
+  useEffect(() => {
+    const sync = () => setSearchParams(new URLSearchParams(window.location.search))
+    sync()
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [])
+
+  function navigate(params, push) {
+    const url = `/seriler${params.size ? `?${params}` : ''}`
+    window.history[push ? 'pushState' : 'replaceState'](null, '', url)
+    searchParamsRef.current = params
+    setSearchParams(params)
+  }
 
   useEffect(() => {
     if (initialData && retry === 0) return
@@ -92,7 +104,7 @@ export default function SeriesArchive({ initialData }) {
       if (!value || (key === 'sirala' && value === 'yeni')) params.delete(key)
       else params.set(key, value)
     }
-    startTransition(() => { router[push ? 'push' : 'replace'](`/seriler${params.size ? `?${params}` : ''}`, { scroll: false }) })
+    navigate(params, push)
     setVisible(PAGE_SIZE)
   }
 
@@ -102,10 +114,10 @@ export default function SeriesArchive({ initialData }) {
       const params = new URLSearchParams(searchParamsRef.current.toString())
       if (search.trim()) params.set('q', search.trim())
       else params.delete('q')
-      startTransition(() => router.replace(`/seriler${params.size ? `?${params}` : ''}`, { scroll: false }))
+      navigate(params, false)
     }, 300)
     return () => clearTimeout(timer)
-  }, [search, filters.query, router])
+  }, [search, filters.query])
 
   const statuses = [...new Set(data.series.map(item => item.durum).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'))
   const results = filterArchive(data.series, filters)
@@ -117,7 +129,7 @@ export default function SeriesArchive({ initialData }) {
     filters.local && { key: 'yerli', label: 'Yerli Eserler' },
   ].filter(Boolean)
 
-  function reset() { setSearch(''); router.push('/seriler', { scroll: false }); setVisible(PAGE_SIZE) }
+  function reset() { setSearch(''); navigate(new URLSearchParams(), true); setVisible(PAGE_SIZE) }
 
   return <><Navbar /><main className="archive-page site-shell">
     <header className="archive-heading"><h1>Seriler</h1></header>

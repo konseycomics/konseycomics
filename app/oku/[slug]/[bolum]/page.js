@@ -1,7 +1,19 @@
 import { notFound } from 'next/navigation'
 import ReaderClient from './page-client'
-import { getPublicReader, getPublicSeries } from '../../../lib/publicCatalog'
+import { getPublicReader, getPublicSeries, getPublicCatalog } from '../../../lib/publicCatalog'
 import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '../../../lib/seo'
+
+export const revalidate = 3600
+
+export async function generateStaticParams() {
+  const { series } = await getPublicCatalog()
+  const result = []
+  for (const { slug } of series) {
+    const payload = await getPublicSeries(slug)
+    for (const chapter of payload?.chapters || []) result.push({ slug, bolum: String(chapter.sayi) })
+  }
+  return result
+}
 
 async function getChapter(slug, number) {
   const payload = await getPublicSeries(slug)

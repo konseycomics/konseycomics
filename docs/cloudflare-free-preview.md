@@ -59,3 +59,37 @@ The CLI tail session was stopped after measurements. Local preview server may re
 4. Repeat real-edge CPU measurements after architectural changes, without increasing the plan or attaching paid services. Production cutover requires a separate readiness review.
 
 Reference for CPU interpretation: https://developers.cloudflare.com/workers/platform/limits/#cpu-time .
+# Static HTML experiment (2026-11-05)
+
+The isolated preview now prerenders published public catalog/series/chapter routes
+with vinext's Static Assets adapter. The latest build rendered 107 routes with no
+render errors, including 100 home/archive/local/series/reader HTML snapshots.
+`generateStaticParams` only uses currently published series and chapters. Drafts
+and future schedules are excluded by the existing public data loaders.
+
+The native adapter still incurred excessive CPU on some cache hits. A narrow HTML
+fast path therefore streams the framework-generated public HTML from ASSETS before
+loading the renderer. It excludes RSC/navigation requests and requests carrying
+cookies or Authorization. It reuses the existing security headers. Private snapshot
+URLs are denied externally. Public immutable index metadata is the only isolate
+cache; no user state is stored there.
+
+Archive filters use client-side URL history and initialize after hydration, so
+query URLs can share the same public HTML without rendering every search. Initial
+structured data describes the canonical unfiltered archive. Reload tests cover
+search state; broader back/forward and authenticated navigation checks remain.
+
+`npm run build:vinext` now validates required pages/no private snapshots/no render
+errors and prepares the direct-delivery index. This is NOT automatic publication:
+Static Assets ignores runtime invalidations. A fresh build and preview deployment
+is required after new publications, unpublishing/deletion, ratings changes, or a
+scheduled release. An automated update pipeline has NOT been enabled. Do not
+cut over production until publication scheduling and removals are reliable.
+
+Preview version: `d87825a6-c882-4b0b-8764-93ed7d6f7de0`.
+Initial direct HTML edge samples recorded CPU rounded to 0 ms for the home,
+archive, example series and reader. This is a small sample, not a capacity
+guarantee. Native RSC navigation still reached 30 ms, and forum HTML 68-86 ms.
+Consequently the complete application still does NOT meet the Free CPU budget.
+Login, uploads, account actions and moderation remain deliberately blocked.
+No new paid bindings, billing changes, domain changes or production pushes.

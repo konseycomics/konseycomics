@@ -4,7 +4,7 @@ import SeriesArchive from './series-archive'
 import { getPublicCatalog } from '../lib/publicCatalog'
 import { archiveFilters, filterArchive } from '../lib/seriesArchive'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export const metadata = buildMetadata({
   title: 'Seriler ve Tek Sayılıklar',
@@ -13,10 +13,9 @@ export const metadata = buildMetadata({
   keywords: ['Türkçe çizgi roman', 'seriler', 'tek sayılıklar', 'yerli çizgi roman'],
 })
 
-export default async function SerilerPage({ searchParams }) {
+export default async function SerilerPage() {
   const initialData = await getPublicCatalog()
-  const params = await searchParams
-  const query = new URLSearchParams(Object.entries(params || {}).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]))
+  const query = new URLSearchParams()
   const visibleSeries = filterArchive(initialData.series, archiveFilters(query)).slice(0, 24)
   return <>
     <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdScript({

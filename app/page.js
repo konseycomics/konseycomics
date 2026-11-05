@@ -6,7 +6,7 @@ import { getCommunityTopics } from './lib/communityData'
 import { unstable_cache } from 'next/cache'
 import { isPublished } from './lib/seoRules'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 const HOME_DATA_TIMEOUT_MS = 4500
 

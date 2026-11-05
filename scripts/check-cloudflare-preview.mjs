@@ -29,6 +29,10 @@ try {
         await page.getByRole('textbox', { name: 'Arşivde ara' }).fill('Daredevil')
         await page.waitForURL(/q=Daredevil/)
         assert.ok(await page.locator('a.archive-card').count())
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await page.waitForTimeout(1200)
+        assert.equal(await page.getByRole('textbox', { name: 'Arşivde ara' }).inputValue(), 'Daredevil')
+        assert.ok(await page.locator('a.archive-card').count())
       }
       if (path.startsWith('/oku/')) {
         const reader = page.locator('.isolated-reader')

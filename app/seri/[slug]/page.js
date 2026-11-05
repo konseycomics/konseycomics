@@ -1,8 +1,15 @@
 import SeriDetayClient from './page-client'
 import { notFound } from 'next/navigation'
 import { absoluteUrl, buildMetadata, createSeoDescription, jsonLdScript } from '../../lib/seo'
-import { getPublicSeries } from '../../lib/publicCatalog'
+import { getPublicSeries, getPublicCatalog } from '../../lib/publicCatalog'
 import { ratingSchema } from '../../lib/seoRules'
+
+export const revalidate = 3600
+
+export async function generateStaticParams() {
+  const { series } = await getPublicCatalog()
+  return series.map(({ slug }) => ({ slug }))
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params

@@ -3,7 +3,7 @@ import KategoriSayfasiClient from '../kategori/[slug]/page-client'
 import { absoluteUrl, buildMetadata, jsonLdScript } from '../lib/seo'
 import { getPublicCatalog } from '../lib/publicCatalog'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 const PAGE_PATH = '/yerli-eserler'
 const DESCRIPTION = 'Türkiye’den bağımsız üreticilerin yerli çizgi romanlarını keşfet ve Konsey Comics üzerinde oku.'

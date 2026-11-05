@@ -9,7 +9,6 @@
   "main": "cloudflare/free-preview/entry.js",
   "workers_dev": true,
   "preview_urls": false,
-  "limits": { "cpu_ms": 10 },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "assets": {
     "directory": "dist/client",

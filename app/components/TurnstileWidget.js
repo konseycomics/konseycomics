@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 let turnstileScriptPromise
@@ -28,6 +28,11 @@ function loadTurnstileScript() {
     document.head.appendChild(script)
   })
 
+  turnstileScriptPromise = turnstileScriptPromise.catch((error) => {
+    turnstileScriptPromise = undefined
+    document.querySelector('script[data-turnstile-script="true"]')?.remove()
+    throw error
+  })
   return turnstileScriptPromise
 }
 
@@ -39,6 +44,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
   const widgetIdRef = useRef(null)
   const onVerifyRef = useRef(onVerify)
   const onExpireRef = useRef(onExpire)
+  const [status, setStatus] = useState('loading')
 
   useEffect(() => {
     onVerifyRef.current = onVerify
@@ -50,31 +56,59 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
 
     if (!SITE_KEY || !containerRef.current) return undefined
 
+    const timeout = setTimeout(() => { if (active) setStatus('error') }, 20000)
+
     loadTurnstileScript()
       .then((turnstile) => {
         if (!active || !turnstile || !containerRef.current) return
 
-        containerRef.current.innerHTML = ''
-        widgetIdRef.current = turnstile.render(containerRef.current, {
+        const render = () => {
+          if (!active || !containerRef.current) return
+          containerRef.current.innerHTML = ''
+          widgetIdRef.current = turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           theme,
           action,
-          callback: (token) => onVerifyRef.current?.(token),
+          size: 'flexible',
+          appearance: 'always',
+          callback: (token) => {
+            if (!active) return
+            clearTimeout(timeout)
+            setStatus('verified')
+            onVerifyRef.current?.(token)
+          },
+          'before-interactive-callback': () => {
+            if (!active) return
+            clearTimeout(timeout)
+            setStatus('ready')
+          },
           'expired-callback': () => {
+            if (!active) return
+            setStatus('loading')
             onVerifyRef.current?.('')
             onExpireRef.current?.()
           },
           'error-callback': () => {
+            if (!active) return
+            clearTimeout(timeout)
+            setStatus('error')
             onVerifyRef.current?.('')
           },
-        })
+          })
+        }
+        if (typeof turnstile.ready === 'function') turnstile.ready(render)
+        else render()
       })
       .catch(() => {
+        if (!active) return
+        clearTimeout(timeout)
+        setStatus('error')
         onVerifyRef.current?.('')
       })
 
     return () => {
       active = false
+      clearTimeout(timeout)
       if (window.turnstile && widgetIdRef.current !== null) {
         window.turnstile.remove(widgetIdRef.current)
         widgetIdRef.current = null
@@ -84,6 +118,7 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
 
   useImperativeHandle(ref, () => ({
     reset() {
+      setStatus('loading')
       if (window.turnstile && widgetIdRef.current !== null) {
         window.turnstile.reset(widgetIdRef.current)
       }
@@ -95,7 +130,10 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
 
   return (
     <div style={{ display: 'grid', gap: '8px' }}>
-      <div ref={containerRef} />
+      <div ref={containerRef} style={{ minHeight: '65px' }} />
+      {status === 'loading' && <div role="status" style={{ fontSize: '12px', color: '#aaa' }}>Güvenlik doğrulaması yükleniyor...</div>}
+      {status === 'verified' && <div role="status" style={{ fontSize: '12px', color: '#86efac' }}>Güvenlik doğrulandı.</div>}
+      {status === 'error' && <div role="alert" style={{ fontSize: '12px', color: '#fca5a5' }}>Güvenlik doğrulaması yüklenemedi. Lütfen sayfayı yenileyip tekrar dene.</div>}
       <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.42)', lineHeight: 1.6 }}>
         Bu form spam koruması için güvenlik doğrulaması kullanır.
       </div>

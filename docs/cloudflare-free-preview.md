@@ -156,3 +156,20 @@ total). The rebuilt artifact includes the key, but is NOT deployed yet: adding
 only the exact preview hostname to the existing widget requires the requested
 user confirmation. Do not claim login is fixed until this is saved, the artifact
 is deployed, the real widget renders, and the user retries login.
+
+User subsequently approved the exact preview hostname. The existing widget was
+saved with three hostnames, managed mode and no pre-clearance unchanged. No widget
+secret was viewed, rotated, or copied; Supabase CAPTCHA remains enabled.
+Deployment `56c74dda-0526-4d1a-a0a3-b800f07fcbb6` includes the public site key and
+widget readiness/error feedback. The local mock loader test passes both delayed
+API readiness and script failure, without tokens or auth submissions. Remote
+unauthenticated boundary/HTML checks pass.
+
+Real CAPTCHA verification remains pending: the controlled Chrome session reports
+Cloudflare error 300030 (generic challenge failure/bot detection). Do not bypass
+this with test keys or disabling protection. Ask the user to retry manually in a
+normal browser or on their phone. During repeated preview deployments, the same
+controlled tab also reported a failed dynamic import, although the referenced
+asset exists locally and returns HTTP 200 remotely. A clean-browser test and
+deployment asset-cache/version checks are still required; do not call the full
+login flow verified.

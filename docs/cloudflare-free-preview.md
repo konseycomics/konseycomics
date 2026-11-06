@@ -140,3 +140,19 @@ The trial login handler no longer falls back to listing up to 2,000 auth users
 for unknown usernames. Email login remains available to legacy accounts whose
 profile username is missing. The deployment bundle is near the Free compressed
 script-size ceiling; any additional server modules require renewed size checks.
+
+### CAPTCHA failure found during real login
+
+The user encountered the Turkish CAPTCHA verification error. The account trial
+was built without `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, so Supabase correctly rejected
+password login while the frontend did not render Turnstile. The existing widget
+was found in the Cloudflare dashboard; it currently allows only the two production
+hostnames. Its public site key was added to ignored trial environment files, but
+its secret and the Supabase protection configuration were NOT changed.
+
+An account-enabled build now fails before bundling when the public CAPTCHA key is
+missing. Three regression tests cover this boundary (34 focused tests pass in
+total). The rebuilt artifact includes the key, but is NOT deployed yet: adding
+only the exact preview hostname to the existing widget requires the requested
+user confirmation. Do not claim login is fixed until this is saved, the artifact
+is deployed, the real widget renders, and the user retries login.

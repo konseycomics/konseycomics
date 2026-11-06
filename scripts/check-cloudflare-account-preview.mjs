@@ -18,7 +18,11 @@ for (const [path, method, expected, body = {}] of checks) {
   assert.equal(response.status, expected, `${method} ${path}`)
   assert.match(response.headers.get('x-robots-tag'), /noindex/)
   assert.equal(response.headers.get('cache-control'), 'no-store')
-  await response.body?.cancel()
+  if (path === '/giris') {
+    assert.match(await response.text(), /Bu form spam koruması/, 'Login HTML must include the configured CAPTCHA widget')
+  } else {
+    await response.body?.cancel()
+  }
   console.log(`${method} ${path}: ${response.status}`)
 }
 console.log('Unauthenticated boundaries passed. Real sign-in and uploads are NOT verified by this check.')

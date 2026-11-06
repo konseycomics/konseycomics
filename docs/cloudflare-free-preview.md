@@ -126,3 +126,17 @@ Remaining blockers: real Google/password login and panel verification, compatibl
 upload optimization (native sharp is disabled on Workers), and an automated
 publication/removal/scheduling pipeline. Static snapshots do not update themselves.
 No full-production migration or main-domain cutover is approved by these tests.
+
+Account-test deployment: `052c941e-47cd-4bbd-80a0-c09578f99806`.
+The restored/updated build passed 31 focused Node tests, desktop/mobile public
+browser checks (including real topic navigation), and unauthenticated account
+boundary checks. Missing login fields return 400; missing profile token returns
+400; an invalid profile token returns 401. Uploads and forum publishing return
+403; internal snapshot files return 404. These checks do not establish successful
+authenticated login or upload support. The user was handed the login screen for
+their own Google/account sign-in; no authenticated session has been verified yet.
+
+The trial login handler no longer falls back to listing up to 2,000 auth users
+for unknown usernames. Email login remains available to legacy accounts whose
+profile username is missing. The deployment bundle is near the Free compressed
+script-size ceiling; any additional server modules require renewed size checks.

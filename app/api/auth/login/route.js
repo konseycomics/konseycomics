@@ -64,55 +64,19 @@ async function resolveEmailFromIdentifier(adminClient, identifier) {
   }
 
   if (profileError) {
-    return await resolveEmailFromUserMetadata(adminClient, identifier)
+    return null
   }
 
   if (!profile?.id) {
-    return await resolveEmailFromUserMetadata(adminClient, identifier)
+    return null
   }
 
   const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(profile.id)
   if (userError || !userData?.user?.email) {
-    return await resolveEmailFromUserMetadata(adminClient, identifier)
+    return null
   }
 
   return userData.user.email.toLowerCase()
-}
-
-async function resolveEmailFromUserMetadata(adminClient, identifier) {
-  const normalizedIdentifier = normalizeUsername(identifier)
-  let page = 1
-  const perPage = 200
-
-  while (page <= 10) {
-    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage })
-    if (error) return null
-
-    const users = data?.users || []
-    if (!users.length) return null
-
-    const matchedUser = users.find((user) => {
-      const candidates = [
-        user.user_metadata?.kullanici_adi,
-        user.user_metadata?.username,
-        user.raw_user_meta_data?.kullanici_adi,
-        user.raw_user_meta_data?.username,
-      ]
-        .filter(Boolean)
-        .map((value) => String(value).trim().toLowerCase())
-
-      return candidates.includes(normalizedIdentifier)
-    })
-
-    if (matchedUser?.email) {
-      return matchedUser.email.toLowerCase()
-    }
-
-    if (users.length < perPage) return null
-    page += 1
-  }
-
-  return null
 }
 
 export async function POST(req) {

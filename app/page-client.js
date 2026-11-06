@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import Footer from './components/Footer'
@@ -978,7 +977,6 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
     const timer = window.setInterval(updateTime, 30000)
     return () => window.clearInterval(timer)
   }, [])
-  const router = useRouter()
   const loading = false
   const [arama, setArama] = useState('')
   const [aramaAcik, setAramaAcik] = useState(false)
@@ -1088,7 +1086,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
   function aramayaGit() {
     const deger = arama.trim()
     setAramaAcik(false)
-    router.push(deger ? `/seriler?q=${encodeURIComponent(deger)}` : '/seriler')
+    window.location.assign(deger ? `/seriler?q=${encodeURIComponent(deger)}` : '/seriler')
   }
 
   function handleHizliArama(e) {
@@ -1221,7 +1219,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
               type="button"
               onClick={() => {
                 setAuthBildirimKapali(true)
-                router.replace('/')
+                window.location.replace('/')
               }}
               style={{
                 flexShrink: 0,
@@ -1533,7 +1531,7 @@ export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, l
                 </Link>
                 <button
                   type="button"
-                  onClick={() => router.push('/seriler?sirala=okunan')}
+                  onClick={() => window.location.assign('/seriler?sirala=okunan')}
                   style={{
                     minHeight: '42px',
                     borderRadius: '14px',

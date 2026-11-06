@@ -9,6 +9,7 @@
   "main": "cloudflare/free-preview/entry.js",
   "workers_dev": true,
   "preview_urls": false,
+  "vars": { "KONSEY_PREVIEW_ACCOUNTS": "1" },
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "assets": {
     "directory": "dist/client",
@@ -18,7 +19,14 @@
     "run_worker_first": [
       "/*",
       "!/_next/static/*",
-      "!/*/_next/static/*"
+      "!/*/_next/static/*",
+      "!/*.png",
+      "!/*.jpg",
+      "!/*.jpeg",
+      "!/*.webp",
+      "!/*.svg",
+      "!/*.ico",
+      "!/*.woff2"
     ]
   }
 }

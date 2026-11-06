@@ -1,5 +1,5 @@
 'use client'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
@@ -31,7 +31,6 @@ function bolumKrediSatirlari(chapter) {
 
 export default function Okuyucu({ initialData }) {
   const { slug, bolum } = useParams()
-  const router = useRouter()
   const bolumData = initialData.chapter
   const seriData = initialData.series
   const detayAyar = initialData.settings
@@ -1128,7 +1127,7 @@ export default function Okuyucu({ initialData }) {
 
               <div className="reader-topbar-actions">
                 <div style={{ minWidth: '180px' }}>
-                  <select value={bolum} onChange={e => router.push(`/oku/${slug}/${e.target.value}`)} style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '12px', padding: '11px 14px', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer' }}>
+                  <select value={bolum} onChange={e => window.location.assign(`/oku/${slug}/${e.target.value}`)} style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', borderRadius: '12px', padding: '11px 14px', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer' }}>
                     {tumBolumler.map(item => (
                       <option key={item.sayi} value={item.sayi} style={{ background: '#111' }}>
                         #{item.sayi} - {item.baslik}

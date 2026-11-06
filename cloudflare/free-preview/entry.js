@@ -10,7 +10,20 @@ export default {
     if (pathname.startsWith('/_vinext/static-cache/')) {
       return new Response('Not found', { status: 404, headers })
     }
-    const blocked = /^\/(api|admin|auth|giris|sifre-sifirla)(\/|$)/.test(pathname) || pathname === '/profil/duzenle'
+    const accountTests = env?.KONSEY_PREVIEW_ACCOUNTS === '1'
+    if (accountTests && request.method === 'POST' && !request.headers.has('next-action')) {
+      let handler
+      if (pathname === '/api/auth/login') handler = (await import('../../app/api/auth/login/route.js')).POST
+      if (pathname === '/api/auth/sync-profile') handler = (await import('../../app/api/auth/sync-profile/route.js')).POST
+      if (handler) {
+        const result = await handler(request)
+        const response = new Response(result.body, result)
+        for (const [key, value] of Object.entries(headers)) response.headers.set(key, value)
+        response.headers.set('X-Konsey-Preview', 'account-test-no-publishing')
+        return response
+      }
+    }
+    const blocked = /^\/api(\/|$)/.test(pathname) || (!accountTests && (/^\/(admin|auth|giris|sifre-sifirla)(\/|$)/.test(pathname) || pathname === '/profil/duzenle'))
     if (blocked || !['GET', 'HEAD'].includes(request.method) || request.headers.has('next-action')) {
       return new Response('This read-only free-tier preview does not allow account changes or uploads.', { status: 403, headers })
     }

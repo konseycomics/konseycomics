@@ -46,6 +46,20 @@ try {
         assert.ok(!(await reader.getByRole('button', { name: 'Önceki sayfa', exact: true }).isDisabled()))
         await reader.getByRole('button', { name: 'Okuma ekranından çık', exact: true }).click()
       }
+      if (path === '/forum') {
+        const topics = page.locator('.forum-topic-copy > a')
+        assert.ok(await topics.count(), 'Forum must contain real topics')
+        const title = await topics.first().innerText()
+        const destination = await topics.first().getAttribute('href')
+        const navigation = page.waitForNavigation({ waitUntil: 'domcontentloaded' })
+        await topics.first().click()
+        const topicResponse = await navigation
+        assert.equal(topicResponse.status(), 200)
+        await page.locator('h1').filter({ hasText: title }).waitFor()
+        assert.equal(new URL(page.url()).pathname, destination)
+        await page.goBack({ waitUntil: 'domcontentloaded' })
+        await page.locator('.forum-topic-copy > a').first().waitFor()
+      }
       await page.screenshot({ path: `${output}/${width}-${path.replaceAll('/', '_') || 'home'}.png` })
       results.push({ width, path, status: response.status() })
     }

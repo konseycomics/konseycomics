@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
+import { previewSupabaseFetch } from '../../cloudflare/free-preview/browser-read-only'
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_KEY,
+  { global: { fetch: previewSupabaseFetch } }
 )
 
 function normalizeSiteUrl(value) {
@@ -18,7 +20,7 @@ export function getAuthRedirectUrl(path = '/') {
 
   if (typeof window !== 'undefined') {
     const { origin, hostname } = window.location
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
       return `${origin}${safePath}`
     }
   }

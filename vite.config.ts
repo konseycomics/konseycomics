@@ -7,6 +7,7 @@ import { staticAssetsAdapter } from "@vinext/cloudflare/cache/static-assets-adap
 export default defineConfig({
   resolve: {
     alias: {
+      "next/link": fileURLToPath(new URL("./cloudflare/free-preview/link.jsx", import.meta.url)),
       sharp: fileURLToPath(new URL("./cloudflare/free-preview/sharp-disabled.js", import.meta.url)),
     },
   },

@@ -19,27 +19,27 @@
     "@supabase/supabase-js": "^2.49.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "@vinext/cloudflare": "latest",
     "lucide-react": "^1.25.0",
-    "next": "16.2.0",
+    "next": "^16.4.5",
     "page-flip": "^2.0.7",
     "react": "latest",
     "react-dom": "latest",
-    "react-zoom-pan-pinch": "^4.2.0",
-    "sharp": "^0.34.5",
-    "vinext": "latest",
     "react-server-dom-webpack": "latest",
-    "@vinext/cloudflare": "latest"
+    "react-zoom-pan-pinch": "^4.2.0",
+    "sharp": "^0.35.5",
+    "vinext": "latest"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1",
     "@tailwindcss/postcss": "^4",
+    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-rsc": "latest",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "tailwindcss": "^4",
-    "wrangler": "^4.123.0",
     "vite": "latest",
-    "@vitejs/plugin-react": "latest",
-    "@vitejs/plugin-rsc": "latest",
-    "@cloudflare/vite-plugin": "1"
+    "wrangler": "^4.123.0"
   },
   "type": "module"
 }

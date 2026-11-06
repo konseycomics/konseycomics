@@ -3,7 +3,7 @@ import { canAccessPanel } from '../lib/roles'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import BildirimZili from './BildirimZili'
 import { Users } from 'lucide-react'
@@ -12,7 +12,6 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [kullanici, setKullanici] = useState(null)
   const [profil, setProfil] = useState(null)
-  const router = useRouter()
   const pathname = usePathname()
   const forumModu = pathname.startsWith('/forum')
 
@@ -42,7 +41,7 @@ export default function Navbar() {
 
   async function handleCikis() {
     await supabase.auth.signOut()
-    router.push('/')
+    window.location.assign('/')
   }
 
   const linkler = [

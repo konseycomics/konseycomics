@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from './leaderboardData'
+import { createSupabaseServerClient } from './seo'
 import { isTeamRole, roleLabel } from './roles'
 
 function truncate(value, max = 220) {
@@ -93,7 +94,7 @@ function formatReplyRow(row, profil) {
 }
 
 export async function getCommunityTopics({ limit = 12 } = {}) {
-  const admin = createSupabaseAdminClient()
+  const admin = createSupabaseAdminClient() || createSupabaseServerClient()
   if (!admin) {
     return { available: false, topics: [] }
   }
@@ -197,7 +198,7 @@ export async function getCommunityTopics({ limit = 12 } = {}) {
 }
 
 export async function getCommunityTopicBySlug(slug) {
-  const admin = createSupabaseAdminClient()
+  const admin = createSupabaseAdminClient() || createSupabaseServerClient()
   if (!admin) return { available: false, topic: null, replies: [] }
 
   let topicRow
@@ -295,7 +296,7 @@ export async function getCommunityTopicBySlug(slug) {
 }
 
 export async function getCommunitySystemProfileBySlug(slug) {
-  const admin = createSupabaseAdminClient()
+  const admin = createSupabaseAdminClient() || createSupabaseServerClient()
   if (!admin) return null
 
   const { data: profile, error } = await admin

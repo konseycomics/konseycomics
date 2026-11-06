@@ -93,3 +93,36 @@ guarantee. Native RSC navigation still reached 30 ms, and forum HTML 68-86 ms.
 Consequently the complete application still does NOT meet the Free CPU budget.
 Login, uploads, account actions and moderation remain deliberately blocked.
 No new paid bindings, billing changes, domain changes or production pushes.
+
+## Follow-up: forum and account trial (2026-11-06)
+
+The temporary worktree was removed outside this task. Work was recovered in
+`/Users/keremcemsacli/.codex/worktrees/konseycomics-cloudflare-free`; production
+worktree remains unchanged. Forum changes that were already running in preview
+were restored from the recorded patch and verified again.
+
+- Public forum loaders can use the anonymous server client when no admin key is
+  present. They retain explicit active/published predicates and public projections.
+- Forum home, categories, topics, Planet articles and the official profile now
+  generate snapshots. The previous verified build contained 133 rendered routes
+  and 126 directly served public HTML pages, including real forum topics.
+- Trial `next/link` uses document navigation instead of RSC/prefetch; home search,
+  logout and reader chapter selection also use document navigation.
+- Common static assets bypass the renderer, and the application icon is copied
+  into the assets bundle rather than invoking a dynamic metadata image route.
+- User explicitly approved storing the existing Supabase service-role key only
+  as a Worker secret, and adding the exact preview `/auth/callback` redirect. The
+  secret and callback entry were confirmed on resume; no secret is in Git.
+- `KONSEY_PREVIEW_ACCOUNTS=1` permits account pages and only the login/profile-sync
+  POST handlers. Other API mutations, media uploads and server actions stay blocked.
+  The shared browser Supabase client additionally rejects trial REST writes, to
+  prevent accidental live content edits during panel inspection. This guard is
+  not a replacement for database RLS or server-side role checks.
+- Next and sharp were updated in this trial branch; production-package audit now
+  reports zero high/critical findings, but seven low/moderate findings remain.
+  Do not describe the project as vulnerability-free or production approved.
+
+Remaining blockers: real Google/password login and panel verification, compatible
+upload optimization (native sharp is disabled on Workers), and an automated
+publication/removal/scheduling pipeline. Static snapshots do not update themselves.
+No full-production migration or main-domain cutover is approved by these tests.

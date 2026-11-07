@@ -341,3 +341,13 @@ uploads no artifacts. There is no schedule, fork trigger or default-branch chang
 52 focused local tests pass. A successful remote run is still required before
 claiming the pipeline works. Database-triggered rebuilds and scheduling remain
 separate unfinished work; a push-only workflow does not implement them.
+
+First verified remote run: https://github.com/konseycomics/konseycomics/actions/runs/42371380203
+for a0e5538 on the trial branch. Conclusion Success, duration 1m35s; 52 tests,
+prerender, scoped-token deploy and remote account boundaries completed. Cloudflare
+deployment 5286186b-7d3a-4dad-a5a7-66474bcfd746 is active; compressed size 3060.77
+KiB. npm and public-asset caches were saved; cross-run restore remains unverified.
+The same remote unauthenticated checks passed again from the workspace. No paid
+budget, main branch, domain or DNS changes were made. No Actions schedule is active.
+Token expiration requires renewal after the selected 90-day period. The current
+pipeline is code-push deployment only, NOT automatic database-content publication.

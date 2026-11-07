@@ -53,25 +53,34 @@ export async function runPreviewRebuild(env, force = false, fetcher = fetch) {
 }
 
 export async function previewRebuildRoute(request, env, fetcher = fetch) {
+  let phase = 'authorization'
   try {
     const access = await authorizePreviewStaff(request, env, fetcher)
     if (access.error) return access.error
     if (env.KONSEY_PREVIEW_REBUILD !== '1' || !env.GITHUB_PREVIEW_ACTIONS_TOKEN) return reply('Yenileme kurulumu hazir degil.', 503)
     if (request.method === 'POST') {
+      phase = 'request_body'
       await boundedBody(request, 1024)
+      phase = 'request_revision'
       const response = await fetcher(`${access.base}/rest/v1/rpc/konsey_preview_request_rebuild`, {
         method: 'POST', redirect: 'error', headers: { ...access.headers, 'Content-Type': 'application/json' }, body: '{}',
       })
       if (!response.ok) return reply('Yenileme istegi kaydedilemedi.', 503)
-      await response.body?.cancel()
+      phase = 'revision_response'
+      const requestedRevision = await response.json()
+      if (!/^\d+$/.test(String(requestedRevision))) return reply('Yenileme kuyrugu gecersiz yanit verdi.', 502)
+      phase = 'workflow_trigger'
       const result = await runPreviewRebuild(env, true, fetcher)
       return Response.json(result, { status: 202 })
     }
+    phase = 'status_query'
     const response = await fetcher(`${access.base}/rest/v1/konsey_preview_rebuild?id=eq.true&select=revision,deployed_revision,status,attempts,last_run_id,last_error`, {
       redirect: 'error', headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
     })
     if (!response.ok) return reply('Yenileme durumu okunamadi.', 503)
+    phase = 'status_response'
     const state = (await response.json())[0] || {}
+    phase = 'snapshot_status'
     const asset = await env.ASSETS?.fetch('https://vinext.invalid/_vinext/static-cache/public-pages.json')
     if (asset?.ok) {
       const manifest = await asset.json()
@@ -81,5 +90,8 @@ export async function previewRebuildRoute(request, env, fetcher = fetch) {
       }
     }
     return Response.json(state)
-  } catch (error) { return reply(error instanceof RangeError ? 'Istek cok buyuk.' : 'Yenileme islemi tamamlanamadi.', error instanceof RangeError ? 413 : 503) }
+  } catch (error) {
+    console.warn(`[preview-rebuild-route] ${phase}: ${error instanceof TypeError ? 'TypeError' : error instanceof SyntaxError ? 'SyntaxError' : 'request_failed'}`)
+    return Response.json({ error: error instanceof RangeError ? 'Istek cok buyuk.' : 'Yenileme islemi tamamlanamadi.', code: `REFRESH_${phase.toUpperCase()}` }, { status: error instanceof RangeError ? 413 : 503 })
+  }
 }

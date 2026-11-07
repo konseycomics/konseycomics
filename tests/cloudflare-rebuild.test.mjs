@@ -88,6 +88,16 @@ test('build revision reads only the anonymous RPC and fails on broken refresh', 
   await assert.rejects(getContentRevision(env, async () => Response.json('invalid')))
 })
 
+test('refresh failures identify their phase without exposing error details or credentials', async () => {
+  const { env, fetcher } = fixture()
+  const request = new Request('https://preview.invalid/api/preview/refresh', { headers: { Authorization: 'Bearer session' } })
+  const result = await previewRebuildRoute(request, { ...env, ASSETS: { fetch() { throw new TypeError('sensitive diagnostic must not escape') } } }, fetcher)
+  const payload = await result.json()
+  assert.equal(result.status, 503)
+  assert.equal(payload.code, 'REFRESH_SNAPSHOT_STATUS')
+  assert.equal(JSON.stringify(payload).includes('sensitive'), false)
+})
+
 test('SQL queue has durable locking, a six-per-day cap, narrow grants and metric/draft exclusions', async () => {
   const sql = await readFile(new URL('../supabase/preview_rebuild_v1.sql', import.meta.url), 'utf8')
   assert.match(sql, /enable row level security/)

@@ -24,7 +24,7 @@ export default function PreviewRefreshControl() {
         const response = await fetch('/api/preview/refresh', { headers: { Authorization: `Bearer ${session.access_token}` } })
         const result = await response.json()
         if (!active) return
-        if (!response.ok) throw new Error(result.error || 'Yenileme durumu okunamadi.')
+        if (!response.ok) throw new Error(`${result.error || 'Yenileme durumu okunamadi.'}${result.code ? ` (${result.code})` : ''}`)
         setState(result)
         if (['pending', 'starting', 'queued', 'waiting'].includes(result.status)) timer = setTimeout(poll, 10000)
       } catch (error) { if (active) setError(error.message) }
@@ -39,7 +39,7 @@ export default function PreviewRefreshControl() {
       if (!session?.access_token) throw new Error('Oturum bulunamadi.')
       const response = await fetch('/api/preview/refresh', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: '{}' })
       const result = await response.json()
-      if (!response.ok || ['failed', 'not_configured', 'new_code_push_required', 'snapshot_unavailable'].includes(result.state)) throw new Error(result.error || 'Yenileme baslatilamadi; durumunu kontrol etmeliyiz.')
+      if (!response.ok || ['failed', 'not_configured', 'new_code_push_required', 'snapshot_unavailable'].includes(result.state)) throw new Error(`${result.error || 'Yenileme baslatilamadi; durumunu kontrol etmeliyiz.'}${result.code ? ` (${result.code})` : ''}`)
       setState({ status: 'queued' }); setPollKey(key => key + 1)
     } catch (error) { setError(error.message) }
     finally { setBusy(false) }

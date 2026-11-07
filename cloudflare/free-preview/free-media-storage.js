@@ -15,7 +15,7 @@ export async function storeFreeMedia(bytes, type, env, fetcher = fetch) {
   const reserved = await rpc('konsey_reserve_free_media', { p_key: key, p_size: bytes.length, p_sha256: sha256 })
   if (reserved !== true) return reply('Ucretsiz gorsel alani sinirina ulasildi. Yeni yuklemeler durduruldu; ucretli depoya gecilmedi.', 507)
   const uploaded = await fetcher(`${base}/storage/v1/object/konsey-media-free/${key}`, {
-    method: 'POST', redirect: 'manual', headers: { ...headers, 'Content-Type': type, 'x-upsert': 'false', 'cache-control': '3600' }, body: bytes,
+    method: 'POST', redirect: 'manual', headers: { ...headers, 'Content-Type': type, 'x-upsert': 'false', 'cache-control': 'max-age=3600' }, body: bytes,
   })
   if (!uploaded.ok) { await uploaded.body?.cancel(); return reply('Ucretsiz depoya kayit yapilamadi; ucretli depoya gecilmedi.', 503) }
   await uploaded.body?.cancel()

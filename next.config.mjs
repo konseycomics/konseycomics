@@ -40,7 +40,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://ahygyeikgmyqhcsfpoin.supabase.co https://cdn.konseycomics.com https://lh3.googleusercontent.com",
+      "img-src 'self' data: blob: https://ahygyeikgmyqhcsfpoin.supabase.co https://cdn.konseycomics.com https://konseycomics-free-preview.konseycomics.workers.dev https://lh3.googleusercontent.com",
       "frame-src https://drive.google.com https://challenges.cloudflare.com",
       "connect-src 'self' https://ahygyeikgmyqhcsfpoin.supabase.co https://challenges.cloudflare.com wss://ahygyeikgmyqhcsfpoin.supabase.co",
     ].join('; '),

@@ -34,6 +34,7 @@ test('free storage reserves bytes atomically, cannot overwrite, then queues publ
   assert.equal(JSON.parse(calls[0].init.body).p_size, 3)
   assert.match(JSON.parse(calls[0].init.body).p_sha256, /^[a-f0-9]{64}$/)
   assert.equal(calls[1].init.headers['x-upsert'], 'false')
+  assert.equal(calls[1].init.headers['cache-control'], 'max-age=3600')
   for (const call of calls) assert.equal(call.init.redirect, 'manual')
 })
 

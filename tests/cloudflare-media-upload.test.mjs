@@ -5,7 +5,7 @@ import { uploadPreviewImage } from '../cloudflare/free-preview/media-upload.js'
 const user = '00000000-0000-4000-8000-000000000001'
 function fixture(role = 'kurucu', suspended = false) {
   const writes = []
-  const env = { NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', NEXT_PUBLIC_SUPABASE_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'private', MEDIA_PREVIEW: { async put(...args) { writes.push(args); return { key: args[0] } } } }
+  const env = { KONSEY_FREE_MEDIA: '0', NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', NEXT_PUBLIC_SUPABASE_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'private', MEDIA_PREVIEW: { async put(...args) { writes.push(args); return { key: args[0] } } } }
   const fetcher = async url => url.endsWith('/auth/v1/user') ? Response.json({ id: user }) : Response.json([{ rol: role, askiya_alindi: suspended }])
   return { env, fetcher, writes }
 }

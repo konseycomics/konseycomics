@@ -1,5 +1,11 @@
 # Media Free Migration - Preparation
 
+## Latest Owner Decision: Keep R2
+
+Owner rejected delayed publication and explicitly requested continuing with R2. Disable `KONSEY_FREE_MEDIA` and restore the existing `MEDIA_PREVIEW` R2 binding. Do not cancel R2, migrate CDN/DNS or upgrade any plan. Workers remains Free; existing R2 usage billing/overage exposure remains unchanged and must not be described as a hard-zero-cost service.
+
+Live ready-staging inventory was checked before reversal: zero objects, zero bytes. No user media depends on the delayed publication path. Keep backups, SQL staging bucket/ledger and inactive tools intact; do not delete data. CI should skip the inactive static-media check rather than require the archive to remain deployed.
+
 Owner requires no usage-based media billing, even if service must stop at a limit.
 
 ## Verified on 2026-11-07

@@ -2,6 +2,12 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
+const config = JSON.parse(await readFile('wrangler.jsonc', 'utf8'))
+if (config.vars.KONSEY_FREE_MEDIA !== '1') {
+  console.log('Delayed free media publication is disabled; uploads use the existing R2 bucket.')
+  process.exit(0)
+}
+
 const base = 'https://konseycomics-free-preview.konseycomics.workers.dev'
 const objects = JSON.parse(await readFile('cloudflare/media-static/archive-manifest.json', 'utf8')).objects
 const full = process.argv.includes('--full')

@@ -21,6 +21,10 @@ export default {
     if (pathname.startsWith('/_vinext/static-cache/') || pathname.startsWith('/_konsey_media/')) {
       return new Response('Not found', { status: 404, headers })
     }
+    if (pathname === '/api/public/leaderboard') {
+      const { publicLeaderboard } = await import('./public-leaderboard.js')
+      return publicLeaderboard(request, env, ctx, { cache: caches.default })
+    }
     const accountTests = env?.KONSEY_PREVIEW_ACCOUNTS === '1'
     const interactiveApi = allowsInteractiveApi(pathname, request.method, env)
     if (interactiveApi) {

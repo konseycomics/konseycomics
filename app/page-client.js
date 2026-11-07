@@ -476,7 +476,19 @@ function TurKart({ tur, count }) {
 }
 
 function LiderlikTablosu({ liderlik = {} }) {
-  const tumZamanlarListesi = liderlik?.tum || []
+  const [liveLeaderboard, setLiveLeaderboard] = useState(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/public/leaderboard', { signal: controller.signal, cache: 'no-store' })
+      .then(response => {
+        if (!response.ok) throw new Error('Leaderboard unavailable')
+        return response.json()
+      })
+      .then(data => { if (Array.isArray(data.tum)) setLiveLeaderboard(data) })
+      .catch(() => { /* Retain the existing ranking if a refresh is unavailable. */ })
+    return () => controller.abort()
+  }, [])
+  const tumZamanlarListesi = (liveLeaderboard || liderlik)?.tum || []
   const birinci = tumZamanlarListesi[0] || null
   const digerleri = Array.from({ length: 4 }, (_, index) => tumZamanlarListesi[index + 1] || null)
   const cerceveMap = {

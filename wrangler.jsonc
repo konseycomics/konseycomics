@@ -9,7 +9,8 @@
   "main": "cloudflare/free-preview/entry.js",
   "workers_dev": true,
   "preview_urls": false,
-  "vars": { "KONSEY_PREVIEW_ACCOUNTS": "1" },
+  "vars": { "KONSEY_PREVIEW_ACCOUNTS": "1", "KONSEY_PREVIEW_UPLOADS": "1" },
+  "r2_buckets": [{ "binding": "MEDIA_PREVIEW", "bucket_name": "konseycomics-media" }],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "assets": {
     "directory": "dist/client",

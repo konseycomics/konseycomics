@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { preparePreviewImage } from '../../cloudflare/free-preview/prepare-image'
 
 export const ADMIN_BG = '#050505'
 export const PANEL_BG = 'rgba(255,255,255,0.04)'
@@ -48,6 +49,9 @@ export function Msg({ text }) {
 export async function uploadAdminImage(file, { bucket, prefix, format = 'webp' }) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Oturum bulunamadı.')
+  if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+    file = await preparePreviewImage(file, { bucket, prefix, format })
+  }
 
   const formData = new FormData()
   formData.append('file', file)

@@ -6,7 +6,7 @@ const checks = [
   ['/api/auth/login', 'POST', 400],
   ['/api/auth/sync-profile', 'POST', 400],
   ['/api/auth/sync-profile', 'POST', 401, { accessToken: 'invalid-preview-test-token' }],
-  ['/api/media/upload', 'POST', 403],
+  ['/api/media/upload', 'POST', 401],
   ['/api/community/topics', 'POST', 403],
   ['/_vinext/static-cache/public-pages.json', 'GET', 404],
 ]

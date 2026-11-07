@@ -15,6 +15,10 @@ export default {
       let handler
       if (pathname === '/api/auth/login') handler = (await import('../../app/api/auth/login/route.js')).POST
       if (pathname === '/api/auth/sync-profile') handler = (await import('../../app/api/auth/sync-profile/route.js')).POST
+      if (pathname === '/api/media/upload' && env.KONSEY_PREVIEW_UPLOADS === '1') {
+        const { uploadPreviewImage } = await import('./media-upload.js')
+        handler = req => uploadPreviewImage(req, env)
+      }
       if (handler) {
         const result = await handler(request)
         const response = new Response(result.body, result)

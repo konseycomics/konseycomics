@@ -218,3 +218,32 @@ the real widget automatically completed and the page displayed "Guvenlik
 dogrulandi". No challenge was clicked, credentials entered, or login submitted.
 The widget is now verified to render and complete; full account login is still
 pending the user's own test.
+
+### Isolated administrator upload trial
+
+The user confirmed real login and registration, then explicitly approved granting
+the preview Worker write access to the existing media bucket for isolated tests.
+The MEDIA_PREVIEW binding points to konseycomics-media; no new bucket, paid plan,
+or R2 access-key transfer is required. R2 bindings are bucket-wide capabilities;
+the handler itself restricts all writes to randomly named preview-uploads keys,
+with a conditional put preventing overwrite. There is no delete or list endpoint.
+
+KONSEY_PREVIEW_UPLOADS enables only the media POST route. Supabase verifies the
+bearer session, then the server checks current role and suspension; only active
+founders/managers pass. Cross-origin browser requests, unknown categories, MIME
+signature mismatches and bodies over the bounded limit are rejected. SVG is not
+accepted. Input image processing uses browser-native decoding/canvas only on the
+exact preview hostname; PNG/JPEG/WebP are converted to JPEG/WebP, preserving the
+existing panel resize targets. Output is capped at 4 MB. Existing Vercel upload
+behavior is unchanged. Profile/forum uploads are still outside this trial.
+
+Local tests cover roles, missing/invalid auth, suspension, forged MIME, category
+traversal, origin, size and upstream failures; a separate real-browser canvas test
+checks conversion and dimensions. These tests use mocked storage only, not R2.
+Actual authenticated upload, CDN rendering and CPU behavior need a user test.
+Database writes/publication remain blocked, so upload preview must not be confused
+with successfully saving a series. Existing R2 billing/allowances still apply;
+this change does not impose an account-wide spending cap or guarantee zero fees.
+Upload-trial deployment: 9cc0d13b-1541-4d1c-84ee-648f155c4a5e. The 42 focused Node
+tests and browser image-conversion checks pass; compressed Worker size is 3058.31
+KiB. No real authenticated upload has been performed by the agent.

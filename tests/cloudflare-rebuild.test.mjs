@@ -29,7 +29,7 @@ test('only the trusted preview workflow can be rerun and each service receives o
   assert.deepEqual(claim.body, { p_deployed_revision: '1', p_force: true })
   assert.equal(calls.filter(c => c.url.endsWith('/rerun')).length, 1)
   for (const call of calls) {
-    assert.equal(call.options.redirect, 'error')
+    assert.equal(call.options.redirect, 'manual')
     assert.equal(call.options.headers.Authorization, call.url.startsWith('https://api.github.com/') ? 'Bearer github-private' : 'Bearer database-private')
   }
   assert.equal(calls.at(-1).body.p_result, 'queued')
@@ -82,10 +82,22 @@ test('build revision reads only the anonymous RPC and fails on broken refresh', 
   assert.equal(await getContentRevision(env, async (url, options) => {
     assert.ok(url.endsWith('/konsey_preview_revision'))
     assert.equal(options.headers.Authorization, 'Bearer anon')
+    assert.equal(options.redirect, 'manual')
     return Response.json('42')
   }), '42')
   await assert.rejects(getContentRevision(env, async () => new Response('', { status: 503 })))
   await assert.rejects(getContentRevision(env, async () => Response.json('invalid')))
+})
+
+test('redirect responses are rejected, not followed or reported as a queued build', async () => {
+  const { env, fetcher, calls } = fixture()
+  const result = await runPreviewRebuild(env, false, async (url, options) => {
+    if (url.startsWith('https://api.github.com/')) return new Response(null, { status: 302, headers: { Location: 'https://other.invalid/' } })
+    return fetcher(url, options)
+  })
+  assert.equal(result.state, 'failed')
+  assert.equal(calls.at(-1).body.p_result, 'error')
+  assert.equal(calls.some(c => c.url.startsWith('https://other.invalid/')), false)
 })
 
 test('refresh failures identify their phase without exposing error details or credentials', async () => {

@@ -7,7 +7,7 @@ const reply = (error, status) => Response.json({ error }, { status })
 
 async function rpc(env, name, args, fetcher) {
   const response = await fetcher(`${env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/rest/v1/rpc/${name}`, {
-    method: 'POST', redirect: 'error', headers: {
+    method: 'POST', redirect: 'manual', headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
       'Content-Type': 'application/json',
     }, body: JSON.stringify(args),
@@ -28,7 +28,7 @@ export async function runPreviewRebuild(env, force = false, fetcher = fetch) {
     claim = await rpc(env, 'konsey_preview_claim_rebuild', { p_deployed_revision: revision, p_force: force }, fetcher)
     if (!claim) return { state: 'idle' }
     const headers = { Authorization: `Bearer ${env.GITHUB_PREVIEW_ACTIONS_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10', 'User-Agent': 'KonseyComics-preview-rebuild' }
-    const listing = await fetcher(`${ROOT}/actions/workflows/cloudflare-free-preview.yml/runs?branch=${encodeURIComponent(BRANCH)}&event=push&per_page=1`, { headers, redirect: 'error' })
+    const listing = await fetcher(`${ROOT}/actions/workflows/cloudflare-free-preview.yml/runs?branch=${encodeURIComponent(BRANCH)}&event=push&per_page=1`, { headers, redirect: 'manual' })
     if (!listing.ok) throw new Error('Workflow lookup failed')
     const run = (await listing.json()).workflow_runs?.[0]
     const trustedPaths = [WORKFLOW, `${WORKFLOW}@${BRANCH}`, `${WORKFLOW}@refs/heads/${BRANCH}`]
@@ -40,7 +40,7 @@ export async function runPreviewRebuild(env, force = false, fetcher = fetch) {
       await finish('error', run.id)
       return { state: 'new_code_push_required' }
     }
-    const response = await fetcher(`${ROOT}/actions/runs/${run.id}/rerun`, { method: 'POST', headers, redirect: 'error' })
+    const response = await fetcher(`${ROOT}/actions/runs/${run.id}/rerun`, { method: 'POST', headers, redirect: 'manual' })
     if (!response.ok) throw new Error('Workflow trigger failed')
     await response.body?.cancel()
     await finish('queued', run.id)
@@ -63,7 +63,7 @@ export async function previewRebuildRoute(request, env, fetcher = fetch) {
       await boundedBody(request, 1024)
       phase = 'request_revision'
       const response = await fetcher(`${access.base}/rest/v1/rpc/konsey_preview_request_rebuild`, {
-        method: 'POST', redirect: 'error', headers: { ...access.headers, 'Content-Type': 'application/json' }, body: '{}',
+        method: 'POST', redirect: 'manual', headers: { ...access.headers, 'Content-Type': 'application/json' }, body: '{}',
       })
       if (!response.ok) return reply('Yenileme istegi kaydedilemedi.', 503)
       phase = 'revision_response'
@@ -75,7 +75,7 @@ export async function previewRebuildRoute(request, env, fetcher = fetch) {
     }
     phase = 'status_query'
     const response = await fetcher(`${access.base}/rest/v1/konsey_preview_rebuild?id=eq.true&select=revision,deployed_revision,status,attempts,last_run_id,last_error`, {
-      redirect: 'error', headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+      redirect: 'manual', headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
     })
     if (!response.ok) return reply('Yenileme durumu okunamadi.', 503)
     phase = 'status_response'

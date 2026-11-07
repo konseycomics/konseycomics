@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { copyFile, readFile, writeFile } from 'node:fs/promises'
 import { appIsrCacheKey } from 'vinext/internal/server/isr-cache'
 import config from '../next.config.mjs'
-import { restoreStaticAssets } from '../cloudflare/free-preview/asset-releases.mjs'
+import { checkpointStaticAssets, readAssetRelease, restoreStaticAssets } from '../cloudflare/free-preview/asset-releases.mjs'
 
 const manifest = JSON.parse(await readFile('dist/server/vinext-prerender.json', 'utf8'))
 const cache = JSON.parse(await readFile('dist/client/_vinext/static-cache/index.json', 'utf8'))
@@ -20,5 +20,6 @@ const headers = Object.fromEntries((await config.headers())[0].headers.map(({ ke
 await copyFile('app/icon.png', 'dist/client/icon.png')
 await writeFile('dist/client/_vinext/static-cache/public-pages.json', JSON.stringify({ routes, headers, buildId: manifest.buildId }))
 console.log(`Prepared direct HTML delivery for ${Object.keys(routes).length} public pages`)
-const retained = await restoreStaticAssets({ clientDir: 'dist/client', historyDir: '.cloudflare-static-history' })
+const retained = await restoreStaticAssets({ clientDir: 'dist/client', historyDir: '.next/cache/konsey-static-history' })
 console.log(`Retained static files from ${retained} previous preview builds`)
+await checkpointStaticAssets({ clientDir: 'dist/client', historyDir: '.next/cache/konsey-static-history', release: readAssetRelease(new URL('../.next/cache/konsey-asset-release.json', import.meta.url)) })

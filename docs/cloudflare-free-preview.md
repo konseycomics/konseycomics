@@ -295,3 +295,23 @@ and SQL contract assertions. SQL contract tests are not a live PostgreSQL execut
 the user must apply the SQL and test an authenticated save before success is claimed.
 Prepared deployment: 6af1a1fc-6f72-4c56-a9e2-e404c4873052; compressed size
 3060.56 KiB. No database migration or authenticated chapter insertion was performed.
+
+### Cloudflare Builds connection preparation
+
+The user confirmed chapter insertion, then approved pushing only the trial branch
+and connecting it to Cloudflare Builds. Main/domain cutover remains forbidden.
+Remote builds now export an exact three-key public-settings allowlist into an
+ignored deploy input; service-role, hook, API tokens and legacy admin values are
+never exported. deploy:vinext uses Wrangler with minification and no autoconfig.
+Previous compiled assets and release IDs now live under .next/cache, a supported
+Cloudflare Builds cache directory. Each successful build checkpoints its own assets
+for the following build; cache retention is best-effort and must be checked remotely.
+
+Dashboard connection settings: repository konseycomics/konseycomics; production
+branch codex/cloudflare-free-preview; root /; build npm run build:vinext; deploy
+npm run deploy:vinext; no other branch builds. Build variables need only
+NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY.
+Enable build caching. The private Supabase runtime secret is already on the Worker
+and is not needed by the anonymous public build. A git connection/deploy hook and
+a real remote build remain pending dashboard login/verification. A Git push alone
+does not enable automatic rebuilds on database publication or scheduled changes.

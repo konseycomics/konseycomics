@@ -6,3 +6,8 @@ export function validatePreviewBuildSettings(vars, env) {
     throw new Error('Account preview requires NEXT_PUBLIC_TURNSTILE_SITE_KEY at build time; do not deploy a login form without CAPTCHA.')
   }
 }
+
+export function publicPreviewSettings(env) {
+  return Object.fromEntries(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_KEY', 'NEXT_PUBLIC_TURNSTILE_SITE_KEY']
+    .filter(name => env[name]).map(name => [name, env[name]]))
+}

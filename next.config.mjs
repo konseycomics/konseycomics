@@ -1,6 +1,6 @@
 import { assetPrefixFor, readAssetRelease } from './cloudflare/free-preview/asset-releases.mjs'
 
-const previewRelease = readAssetRelease(new URL('./.dev.vars.asset-release.json', import.meta.url))
+const previewRelease = readAssetRelease(new URL('./.next/cache/konsey-asset-release.json', import.meta.url))
 
 /** @type {import('next').NextConfig} */
 

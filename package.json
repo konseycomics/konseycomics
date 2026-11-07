@@ -13,7 +13,7 @@
     "prebuild:vinext": "node scripts/check-cloudflare-build-env.mjs",
     "postbuild:vinext": "node scripts/check-cloudflare-prerender.mjs && node scripts/prepare-cloudflare-static-index.mjs",
     "start:vinext": "wrangler dev --config dist/server/wrangler.json",
-    "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json"
+    "deploy:vinext": "wrangler deploy --config dist/server/wrangler.json --secrets-file .dev.vars.build-public.json --no-autoconfig --minify"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

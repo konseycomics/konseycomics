@@ -1,7 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomBytes } from 'node:crypto'
 import { parseEnv } from 'node:util'
-import { validatePreviewBuildSettings } from '../cloudflare/free-preview/build-settings.mjs'
+import { publicPreviewSettings, validatePreviewBuildSettings } from '../cloudflare/free-preview/build-settings.mjs'
 import { checkpointStaticAssets, readAssetRelease } from '../cloudflare/free-preview/asset-releases.mjs'
 
 const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'))
@@ -11,8 +11,18 @@ try {
 } catch (error) {
   if (error.code !== 'ENOENT') throw error
 }
-validatePreviewBuildSettings(config.vars || {}, { ...localEnv, ...process.env })
-const releaseFile = new URL('../.dev.vars.asset-release.json', import.meta.url)
-await checkpointStaticAssets({ clientDir: 'dist/client', historyDir: '.cloudflare-static-history', release: readAssetRelease(releaseFile) })
+const buildEnv = { ...localEnv, ...process.env }
+validatePreviewBuildSettings(config.vars || {}, buildEnv)
+await writeFile(new URL('../.dev.vars.build-public.json', import.meta.url), JSON.stringify(publicPreviewSettings(buildEnv)), { mode: 0o600 })
+await mkdir('.next/cache', { recursive: true })
+const releaseFile = new URL('../.next/cache/konsey-asset-release.json', import.meta.url)
+const cachedRelease = readAssetRelease(releaseFile)
+const priorRelease = cachedRelease || readAssetRelease(new URL('../.dev.vars.asset-release.json', import.meta.url))
+// Migrate local history; Cloudflare Builds retains the supported Next.js cache directory.
+if (!cachedRelease) {
+  try { await cp('.cloudflare-static-history', '.next/cache/konsey-static-history', { recursive: true, force: false, preserveTimestamps: true }) }
+  catch (error) { if (error.code !== 'ENOENT') throw error }
+}
+await checkpointStaticAssets({ clientDir: 'dist/client', historyDir: '.next/cache/konsey-static-history', release: priorRelease })
 await writeFile(releaseFile, JSON.stringify({ id: randomBytes(8).toString('hex'), createdAt: new Date().toISOString() }), { mode: 0o600 })
 console.log('Public preview build settings validated; values are not logged.')

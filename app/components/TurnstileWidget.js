@@ -96,8 +96,8 @@ const TurnstileWidget = forwardRef(function TurnstileWidget(
           },
           })
         }
-        if (typeof turnstile.ready === 'function') turnstile.ready(render)
-        else render()
+        // The script load promise already waits for api.js; ready() rejects async scripts.
+        render()
       })
       .catch(() => {
         if (!active) return

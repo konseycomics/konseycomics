@@ -11,7 +11,7 @@ try {
     await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js*', route => failure ? route.abort() : route.fulfill({
       contentType: 'application/javascript',
       body: `window.turnstile = {
-        ready(callback) { setTimeout(callback, 30) },
+        ready() { throw Error('ready() is invalid with async/defer scripts') },
         render(container, options) {
           if (options.appearance !== 'always' || options.size !== 'flexible') throw Error('Incorrect widget options');
           container.textContent = 'Mock widget initialized';
@@ -24,7 +24,7 @@ try {
     await page.goto(`${base}/giris`, { waitUntil: 'domcontentloaded' })
     if (failure) await page.getByRole('alert').filter({ hasText: 'Güvenlik doğrulaması yüklenemedi' }).waitFor()
     else await page.getByText('Mock widget initialized', { exact: true }).waitFor()
-    console.log(failure ? 'Script failure is visible' : 'Deferred API readiness initializes the widget')
+    console.log(failure ? 'Script failure is visible' : 'Async script load initializes the widget without ready()')
     await context.close()
   }
 } finally { await browser.close() }

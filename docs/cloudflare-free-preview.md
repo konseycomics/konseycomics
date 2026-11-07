@@ -203,3 +203,18 @@ must be retried by the user on their own browser/phone. No CAPTCHA bypass,
 production domain change, new paid binding, or successful-upload claim was made.
 Compressed Worker size is 3056.62 KiB, close to the Free ceiling: further server
 additions must be size-checked. Publication refresh and uploads remain unfinished.
+
+### Turnstile async loader correction
+
+The in-app browser reproduced the blank widget and a ready() warning. Inspection
+of the current official api.js confirmed ready() throws error 3857 when the script
+was loaded with async/defer. The component already awaits the script load event,
+so it now calls render() directly rather than ready(render). The local regression
+fixture now throws from ready(), matching this vendor restriction; both rendering
+and visible script-failure tests pass without generating tokens or submitting auth.
+No backend verification or CAPTCHA configuration was weakened.
+Deployment b989924d-9aeb-478f-9f94-fa3d227780f3 was checked in the in-app browser:
+the real widget automatically completed and the page displayed "Guvenlik
+dogrulandi". No challenge was clicked, credentials entered, or login submitted.
+The widget is now verified to render and complete; full account login is still
+pending the user's own test.

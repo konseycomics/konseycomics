@@ -23,6 +23,10 @@ export default {
         const { createPreviewSeries } = await import('./draft-series.js')
         handler = req => createPreviewSeries(req, env)
       }
+      if (pathname === '/api/preview/chapters' && env.KONSEY_PREVIEW_DRAFTS === '1') {
+        const { createPreviewChapter } = await import('./draft-chapter.js')
+        handler = req => createPreviewChapter(req, env)
+      }
       if (handler) {
         const result = await handler(request)
         const response = new Response(result.body, result)

@@ -1351,6 +1351,7 @@ function SerilerSayfasi() {
 
 // ---- BÖLÜMLER ----
 function BolumlerSayfasi() {
+  const previewRequestId = useRef(null)
   function tarihInputDegeri(value) {
     if (!value) return ''
     const date = new Date(value)
@@ -1430,6 +1431,28 @@ function BolumlerSayfasi() {
 
   async function kaydet() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
+    if (yukleniyor) return
+    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+      setYukleniyor(true)
+      try {
+        if (duzenleId) throw new Error('Deneme ortaminda mevcut bolumler degistirilemez.')
+        if (!form.sayfa_gorselleri.length) throw new Error('Test icin en az bir sayfa gorseli yukle.')
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) throw new Error('Oturum bulunamadi.')
+        if (!previewRequestId.current) previewRequestId.current = crypto.randomUUID()
+        const response = await fetch('/api/preview/chapters', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ request_id: previewRequestId.current, seri_id: form.seri_id, sayi: Number(form.sayi), baslik: form.baslik, kapak_url: form.kapak_url, sayfalar: form.sayfa_gorselleri }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Test bolumu kaydedilemedi.')
+        previewRequestId.current = null
+        setMsg('Test bolumu ve sayfalari taslak olarak kaydedildi. Yayina alinmadi; bildirim gonderilmedi.')
+        setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi()
+      } catch (error) { setMsg(`Kayit tamamlanamadi: ${error.message}`) }
+      finally { setYukleniyor(false) }
+      return
+    }
     setYukleniyor(true)
     const pdfLink = form.pdf_indirme_link || form.indirme_link || null
     const yayinTarihi = form.yayin_durumu === 'taslak' ? null : form.yayin_durumu === 'yayinda' ? (form.yayin_tarihi || new Date().toISOString()) : form.yayin_tarihi ? new Date(form.yayin_tarihi).toISOString() : null

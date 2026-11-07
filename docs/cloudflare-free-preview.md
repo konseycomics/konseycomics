@@ -270,3 +270,28 @@ are covered again by the existing upload tests plus draft-specific security test
 Deployment 15b40300-0199-4708-ae33-a58c57f82c96 passed 46 focused tests and remote
 unauthenticated boundaries, including 401 for the draft endpoint. Compressed size
 is 3060.22 KiB. Positive draft insertion remains pending the user's manual test.
+
+### Test chapter draft transaction (SQL setup required)
+
+The user confirmed test-series insertion and requested chapter/page testing.
+POST /api/preview/chapters now forwards an allowlisted request to the invoker-RLS
+konsey_preview_chapter_draft RPC. The supplied migration is
+supabase/preview_chapter_draft_v1.sql; it has NOT been applied by the agent.
+The function checks active staff, locks only a draft preview-test/[TEST] parent,
+forces the chapter to draft with a null publication date, and inserts ordered
+page rows within the same transaction. Only isolated preview-uploads images and
+1-50 pages are accepted. No existing chapter update/delete, download links,
+notifications, slider changes or publication is enabled. Authenticated execution
+is granted; anonymous/public execution is revoked. SECURITY INVOKER preserves RLS.
+
+The panel's Bolumler > Yeni Bolum branch uses a retained UUID request identifier
+for safe retries. Repeated successful calls return the existing test chapter
+instead of inserting duplicate pages. Same-number chapters are rejected while
+holding the parent-row lock. A missing RPC returns an explicit setup-required
+error rather than a false success. The original non-preview save path is unchanged.
+
+50 focused Node tests pass, including RPC payload/role/size/URL/error boundaries
+and SQL contract assertions. SQL contract tests are not a live PostgreSQL execution;
+the user must apply the SQL and test an authenticated save before success is claimed.
+Prepared deployment: 6af1a1fc-6f72-4c56-a9e2-e404c4873052; compressed size
+3060.56 KiB. No database migration or authenticated chapter insertion was performed.

@@ -247,3 +247,26 @@ this change does not impose an account-wide spending cap or guarantee zero fees.
 Upload-trial deployment: 9cc0d13b-1541-4d1c-84ee-648f155c4a5e. The 42 focused Node
 tests and browser image-conversion checks pass; compressed Worker size is 3058.31
 KiB. No real authenticated upload has been performed by the agent.
+
+### New test-series draft insertion
+
+The user confirmed upload previews work and approved a narrow draft-save trial.
+Only POST /api/preview/series is enabled by KONSEY_PREVIEW_DRAFTS. The server
+verifies the session and current active staff role using the shared upload
+authorization helper. It then inserts through the caller's JWT/anon-key client,
+not the service-role key, preserving database write RLS. Payload fields are
+allowlisted; ID updates, relationships and caller publication flags are omitted.
+The server generates preview-test UUID slugs and [TEST] titles, forces taslak,
+null publication date and no featured placement. Only isolated preview upload
+cover URLs are accepted. The JSON body is bounded to 16 KB.
+
+The preview-only Seriler > Yeni Seri save path calls this endpoint and skips title,
+writer, artist and site-setting mutations. Existing-series edits still fail and
+direct database mutations remain blocked. Chapter creation, publishing-center
+saves, scheduling, real publication and automatic snapshot refresh are NOT enabled.
+No test record is created by automated tests; the next positive save requires the
+user's own active staff session. Shared authorization and bounded-body extraction
+are covered again by the existing upload tests plus draft-specific security tests.
+Deployment 15b40300-0199-4708-ae33-a58c57f82c96 passed 46 focused tests and remote
+unauthenticated boundaries, including 401 for the draft endpoint. Compressed size
+is 3060.22 KiB. Positive draft insertion remains pending the user's manual test.

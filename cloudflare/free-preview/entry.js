@@ -19,6 +19,10 @@ export default {
         const { uploadPreviewImage } = await import('./media-upload.js')
         handler = req => uploadPreviewImage(req, env)
       }
+      if (pathname === '/api/preview/series' && env.KONSEY_PREVIEW_DRAFTS === '1') {
+        const { createPreviewSeries } = await import('./draft-series.js')
+        handler = req => createPreviewSeries(req, env)
+      }
       if (handler) {
         const result = await handler(request)
         const response = new Response(result.body, result)

@@ -1031,6 +1031,20 @@ function SerilerSayfasi() {
     catch (error) { setMsg(error.message); return }
     setYukleniyor(true)
     try {
+    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+      if (duzenleId) throw new Error('Deneme ortaminda mevcut seriler degistirilemez. Yeni bir test serisi olustur.')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Oturum bulunamadi.')
+      const response = await fetch('/api/preview/series', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ baslik: form.baslik, ozet: form.ozet, tur: form.tur, kategori: form.kategori, kategori_id: form.kategori_id, kapak_url: form.kapak_url }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Test taslagi kaydedilemedi.')
+      setMsg(`Test taslagi kaydedildi: ${result.series.baslik}. Yayina alinmadi; iliskiler ve vitrin ayarlari degistirilmedi.`)
+      setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setDetayArkaOnizleme(null); setMod('liste'); fetchHepsi()
+      return
+    }
     const payload = { baslik:form.baslik, slug:form.slug||slugOlustur(form.baslik), tur:form.tur, kategori:form.kategori, kategori_id:form.kategori_id||null, eser_sahibi_id:form.eser_sahibi_id||null, ozet:form.ozet, durum:form.tur==='tek'?'Tek Sayılık':form.durum, kapak_url:form.kapak_url, turler:form.turler, yil:form.yil?parseInt(form.yil):null, one_cikan:form.one_cikan }
     let seriId = duzenleId
     if (duzenleId) {

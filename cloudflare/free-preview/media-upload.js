@@ -1,30 +1,9 @@
-import { canUseStaffPrivileges } from '../../app/lib/roles.js'
+import { authorizePreviewStaff, boundedBody } from './staff-request.js'
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024
 const MAX_BODY_BYTES = MAX_IMAGE_BYTES + 65536
 const BUCKETS = new Set(['kapaklar', 'bolum-kapaklari', 'site', 'avatarlar', 'forum'])
 const reply = (error, status) => Response.json({ error }, { status })
-
-async function boundedBody(request) {
-  if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) throw new RangeError()
-  const reader = request.body?.getReader()
-  if (!reader) return new Uint8Array()
-  const parts = []
-  let size = 0
-  try {
-    while (true) {
-      const { value, done } = await reader.read()
-      if (done) break
-      size += value.byteLength
-      if (size > MAX_BODY_BYTES) { await reader.cancel(); throw new RangeError() }
-      parts.push(value)
-    }
-  } finally { reader.releaseLock() }
-  const body = new Uint8Array(size)
-  let offset = 0
-  for (const part of parts) { body.set(part, offset); offset += part.length }
-  return body
-}
 
 function imageType(bytes) {
   if (bytes.length >= 12 && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return 'image/jpeg'
@@ -34,24 +13,13 @@ function imageType(bytes) {
 }
 
 export async function uploadPreviewImage(request, env, fetcher = fetch) {
-  const token = request.headers.get('authorization')?.match(/^Bearer (\S+)$/)?.[1]
-  if (!token) return reply('Oturum bulunamadi.', 401)
-  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return reply('Gecersiz kaynak.', 403)
-  if (!env.MEDIA_PREVIEW || !env.SUPABASE_SERVICE_ROLE_KEY || !env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_KEY) return reply('Test yukleme ayarlari hazir degil.', 503)
   try {
-    const base = env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')
-    const auth = await fetcher(`${base}/auth/v1/user`, { headers: { apikey: env.NEXT_PUBLIC_SUPABASE_KEY, Authorization: `Bearer ${token}` } })
-    if (auth.status === 401 || auth.status === 403) return reply('Oturum gecersiz.', 401)
-    if (!auth.ok) return reply('Oturum kontrol edilemedi.', 503)
-    const user = await auth.json()
-    if (!/^[a-f0-9-]{36}$/i.test(user.id || '')) return reply('Oturum gecersiz.', 401)
-    const query = new URLSearchParams({ select: 'rol,askiya_alindi', id: `eq.${user.id}` })
-    const profile = await fetcher(`${base}/rest/v1/profiller?${query}`, { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } })
-    if (!profile.ok) return reply('Yetki kontrol edilemedi.', 503)
-    const rows = await profile.json()
-    if (rows.length !== 1 || !canUseStaffPrivileges(rows[0])) return reply('Yalnizca kurucu ve yonetici yukleyebilir.', 403)
+    const access = await authorizePreviewStaff(request, env, fetcher)
+    if (access.error) return access.error
+    const { user } = access
+    if (!env.MEDIA_PREVIEW) return reply('Test yukleme ayarlari hazir degil.', 503)
     if (!request.headers.get('content-type')?.startsWith('multipart/form-data;')) return reply('Gecersiz yukleme.', 400)
-    const body = await boundedBody(request)
+    const body = await boundedBody(request, MAX_BODY_BYTES)
     const form = await new Response(body, { headers: { 'Content-Type': request.headers.get('content-type') } }).formData()
     const file = form.get('file')
     if (!BUCKETS.has(String(form.get('bucket')))) return reply('Gecersiz gorsel kategorisi.', 400)

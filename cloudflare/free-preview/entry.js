@@ -1,6 +1,11 @@
 let publicIndex
 
 export default {
+  async scheduled(controller, env, ctx) {
+    if (env.KONSEY_PREVIEW_REBUILD !== '1') return
+    const { runPreviewRebuild } = await import('./rebuild.js')
+    ctx.waitUntil(runPreviewRebuild(env))
+  },
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url)
     const headers = { 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'Cache-Control': 'no-store' }
@@ -11,6 +16,13 @@ export default {
       return new Response('Not found', { status: 404, headers })
     }
     const accountTests = env?.KONSEY_PREVIEW_ACCOUNTS === '1'
+    if (accountTests && pathname === '/api/preview/refresh' && ['GET', 'POST'].includes(request.method) && !request.headers.has('next-action')) {
+      const { previewRebuildRoute } = await import('./rebuild.js')
+      const result = await previewRebuildRoute(request, env)
+      const response = new Response(result.body, result)
+      for (const [key, value] of Object.entries(headers)) response.headers.set(key, value)
+      return response
+    }
     if (accountTests && request.method === 'POST' && !request.headers.has('next-action')) {
       let handler
       if (pathname === '/api/auth/login') handler = (await import('../../app/api/auth/login/route.js')).POST

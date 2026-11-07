@@ -351,3 +351,43 @@ The same remote unauthenticated checks passed again from the workspace. No paid
 budget, main branch, domain or DNS changes were made. No Actions schedule is active.
 Token expiration requires renewal after the selected 90-day period. The current
 pipeline is code-push deployment only, NOT automatic database-content publication.
+
+### Durable content-refresh trial
+
+The user explicitly approved a second fine-grained credential: only Actions
+read/write plus required Metadata read on konseycomics/konseycomics. They completed
+the GitHub token creation confirmation after an initial generic GitHub error.
+Expiration February 5, 2027. Its value was transferred directly into the preview
+Worker secret GITHUB_PREVIEW_ACTIONS_TOKEN, verified as Value encrypted, and was
+not logged, committed, copied to disk or added to any public build input.
+
+The user applied supabase/preview_rebuild_v1.sql. The anonymous revision RPC was
+checked from the workspace and returned "1". The new RLS-isolated singleton queue
+tracks published series/chapter/page changes and selected homepage/SEO settings;
+draft-only saves and view/rating counters do not request builds. Forum/topic writes
+and live ranking metrics are NOT tracked by this migration. Due scheduled comic
+releases are detected by the claim function, not by unauthenticated visitors.
+
+Cron polls every 10 minutes. Service-only row-locked claims debounce changes for
+two minutes, hold a 20-minute lease, and cap trigger attempts at six per UTC day.
+Busy workflows wait five minutes without consuming an attempt. No new paid
+storage/service binding was added. GitHub runs are checked for exact repository,
+preview branch, workflow path and push event before rerun; redirects are refused.
+Build-time anonymous revision checks before/after prerender reject content that
+changed during the build. The deployed immutable manifest records its revision;
+cron acknowledges only a matching deployed revision, never a mere accepted job.
+
+Staff can request a no-publication refresh through the preview-only panel control.
+GET/POST endpoints verify current staff and suspension; anonymous users cannot
+trigger rebuilds. Six-per-day budget/leases are enforced in PostgreSQL, not local
+Worker memory. All earlier write restrictions and real-publication blocks remain.
+
+This is a trial rerun mechanism: GitHub limits original runs to 30 days/50 reruns.
+The handler stops conservatively at 29 days/49 attempts and requests a new trusted
+code push. A permanent dispatch workflow on the default branch is a prerequisite
+for production cutover, requiring separate approval for that branch. No default
+branch change or permanent production-readiness claim is made here. Content removal
+and release visibility are asynchronous (poll interval + build), not instantaneous.
+Scheduled-release edge cases and real published-content changes remain unverified.
+
+59 focused tests passed; live positive refresh still needs manual staff action.

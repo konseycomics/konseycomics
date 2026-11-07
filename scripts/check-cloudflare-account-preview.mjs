@@ -9,6 +9,8 @@ const checks = [
   ['/api/media/upload', 'POST', 401],
   ['/api/preview/series', 'POST', 401],
   ['/api/preview/chapters', 'POST', 401],
+  ['/api/preview/refresh', 'GET', 401],
+  ['/api/preview/refresh', 'POST', 401],
   ['/api/community/topics', 'POST', 403],
   ['/_vinext/static-cache/public-pages.json', 'GET', 404],
 ]

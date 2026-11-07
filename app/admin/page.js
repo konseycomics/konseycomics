@@ -11,6 +11,7 @@ import { UnvanlarSayfasi } from './sections/titles'
 import { SeriesTitleField } from './sections/series-title-field'
 import { saveSeriesTitle, validateSeriesTitle } from '../lib/seriesTitle'
 import { canManageSection, canUseStaffPrivileges, isFounder } from '../lib/roles'
+import PreviewRefreshControl from '../../cloudflare/free-preview/refresh-control'
 
 function BarChart({ data, renk = '#111', yukseklik = 160 }) {
   if (!data || data.length === 0) return <div style={{ color: '#aaa', fontSize: '13px', padding: '20px 0' }}>Veri yok</div>
@@ -243,6 +244,7 @@ export default function Admin() {
           </div>
         </div>
         <div style={{ padding: '28px 28px 48px', overflow: 'auto' }}>
+          <PreviewRefreshControl />
           {aktif === 'istatistik' && isFounder(rol) && <IstatistikSayfasi />}
           {aktif === 'okuma' && isFounder(rol) && <OkumaSayilariSayfasi />}
           {aktif === 'yayin' && <YayinMerkeziSayfasi />}

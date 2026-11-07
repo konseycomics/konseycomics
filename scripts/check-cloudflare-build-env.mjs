@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { parseEnv } from 'node:util'
 import { publicPreviewSettings, validatePreviewBuildSettings } from '../cloudflare/free-preview/build-settings.mjs'
 import { checkpointStaticAssets, readAssetRelease } from '../cloudflare/free-preview/asset-releases.mjs'
+import { getContentRevision } from '../cloudflare/free-preview/content-revision.mjs'
 
 const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'))
 let localEnv = {}
@@ -24,5 +25,6 @@ if (!cachedRelease) {
   catch (error) { if (error.code !== 'ENOENT') throw error }
 }
 await checkpointStaticAssets({ clientDir: 'dist/client', historyDir: '.next/cache/konsey-static-history', release: priorRelease })
-await writeFile(releaseFile, JSON.stringify({ id: randomBytes(8).toString('hex'), createdAt: new Date().toISOString() }), { mode: 0o600 })
+const contentRevision = config.vars.KONSEY_PREVIEW_REBUILD === '1' ? await getContentRevision(buildEnv) : null
+await writeFile(releaseFile, JSON.stringify({ id: randomBytes(8).toString('hex'), createdAt: new Date().toISOString(), contentRevision }), { mode: 0o600 })
 console.log('Public preview build settings validated; values are not logged.')

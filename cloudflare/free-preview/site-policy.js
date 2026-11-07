@@ -4,7 +4,7 @@ export function isProductionHost(hostname, env) {
 
 export function siteResponseHeaders(request, env) {
   const { hostname, pathname } = new URL(request.url)
-  const privatePath = /^\/(api|admin|auth|giris|sifre-sifirla)(\/|$)/.test(pathname) || pathname === '/profil/duzenle'
+  const privatePath = /^\/(api|admin|auth|giris|sifre-sifirla|_vinext|_konsey_media)(\/|$)/.test(pathname) || pathname === '/profil/duzenle'
   return {
     ...(!isProductionHost(hostname, env) || privatePath ? { 'X-Robots-Tag': 'noindex, nofollow, noarchive' } : {}),
     'Cache-Control': 'no-store',

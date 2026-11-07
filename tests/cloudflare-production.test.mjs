@@ -10,7 +10,7 @@ test('only the explicit live www host is indexable and private routes stay noind
     assert.match(siteResponseHeaders(new Request(`https://${host}/seriler`), env)['X-Robots-Tag'], /noindex/)
   }
   assert.equal(siteResponseHeaders(new Request('https://www.konseycomics.com/seriler'), env)['X-Robots-Tag'], undefined)
-  for (const path of ['/api/media/upload', '/admin', '/auth/callback', '/giris', '/profil/duzenle']) {
+  for (const path of ['/api/media/upload', '/admin', '/auth/callback', '/giris', '/profil/duzenle', '/_vinext/static-cache/public-pages.json', '/_konsey_media/index.json']) {
     assert.match(siteResponseHeaders(new Request(`https://www.konseycomics.com${path}`), env)['X-Robots-Tag'], /noindex/)
   }
 })

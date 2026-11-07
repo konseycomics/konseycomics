@@ -17,7 +17,7 @@ export async function uploadPreviewImage(request, env, fetcher = fetch) {
     const access = await authorizePreviewStaff(request, env, fetcher, env.KONSEY_PREVIEW_INTERACTIVE === '1')
     if (access.error) return access.error
     const { user } = access
-    if (!env.MEDIA_PREVIEW) return reply('Test yukleme ayarlari hazir degil.', 503)
+    if (env.KONSEY_FREE_MEDIA !== '1' && !env.MEDIA_PREVIEW) return reply('Test yukleme ayarlari hazir degil.', 503)
     if (!request.headers.get('content-type')?.startsWith('multipart/form-data;')) return reply('Gecersiz yukleme.', 400)
     const body = await boundedBody(request, MAX_BODY_BYTES)
     const form = await new Response(body, { headers: { 'Content-Type': request.headers.get('content-type') } }).formData()
@@ -30,6 +30,10 @@ export async function uploadPreviewImage(request, env, fetcher = fetch) {
     const bytes = new Uint8Array(await file.arrayBuffer())
     const type = imageType(bytes)
     if (!type || type !== file.type) return reply('Yalnizca JPEG ve WebP gorseller yuklenebilir.', 400)
+    if (env.KONSEY_FREE_MEDIA === '1') {
+      const { storeFreeMedia } = await import('./free-media-storage.js')
+      return await storeFreeMedia(bytes, type, env, fetcher)
+    }
     // Test uploads cannot target or overwrite production keys, even with crafted input.
     const key = `preview-uploads/${crypto.randomUUID()}.${type === 'image/webp' ? 'webp' : 'jpg'}`
     const stored = await env.MEDIA_PREVIEW.put(key, bytes, {

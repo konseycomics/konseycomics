@@ -11,7 +11,7 @@
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "prebuild:vinext": "node scripts/check-cloudflare-build-env.mjs",
-    "postbuild:vinext": "node scripts/check-cloudflare-prerender.mjs && node scripts/prepare-cloudflare-static-index.mjs",
+    "postbuild:vinext": "node scripts/check-cloudflare-prerender.mjs && node scripts/prepare-cloudflare-static-index.mjs && node scripts/prepare-free-media.mjs",
     "start:vinext": "wrangler dev --config dist/server/wrangler.json",
     "deploy:vinext": "wrangler deploy --config dist/server/wrangler.json --secrets-file .dev.vars.build-public.json --no-autoconfig --minify"
   },

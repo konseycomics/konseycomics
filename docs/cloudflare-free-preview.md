@@ -315,3 +315,29 @@ Enable build caching. The private Supabase runtime secret is already on the Work
 and is not needed by the anonymous public build. A git connection/deploy hook and
 a real remote build remain pending dashboard login/verification. A Git push alone
 does not enable automatic rebuilds on database publication or scheduled changes.
+
+### Scoped GitHub Actions alternative
+
+Cloudflare's integrated Builds dialog requested broad account/zone/storage access;
+it was cancelled without creating that user token or connecting the repository.
+Official documentation confirms integrated Builds currently supports user tokens,
+not account-owned granular tokens. The user approved the alternative: a scoped
+Individual Workers Editor token for only konseycomics-free-preview, transferred
+directly from the masked dashboard field to repository secret
+CLOUDFLARE_PREVIEW_API_TOKEN. A 90-day expiry was selected. No token value was
+logged, written to disk or committed. The Worker editor scope cannot create/delete
+Workers or modify other Workers/domain routes.
+
+GitHub personal billing was inspected: GitHub Free, Actions included compute
+$0 used/$12 included, storage 0/0.5 GB, and an existing account Actions budget of
+$0 with Usage blocked for paid usage. Budgets/payment settings were not changed.
+The three public build variables were added as repository variables; no Supabase
+service-role value was transferred to GitHub.
+
+The new branch-only Actions workflow uses standard Ubuntu, a 15-minute job limit,
+read-only Git permissions, pinned official actions, trusted-branch checks and
+scoped credentials only on the deploy step. It caches public assets only and
+uploads no artifacts. There is no schedule, fork trigger or default-branch change.
+52 focused local tests pass. A successful remote run is still required before
+claiming the pipeline works. Database-triggered rebuilds and scheduling remain
+separate unfinished work; a push-only workflow does not implement them.

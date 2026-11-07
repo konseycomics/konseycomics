@@ -1,5 +1,17 @@
 # Cloudflare Free Preview
 
+## Interactive Testing Update - 2026-11-07
+
+Owner approved normal operations on the preview host. Earlier sections below are a chronological record, not the current access policy.
+
+- Interactive browser builds no longer suppress authenticated Supabase writes; caller JWT and existing database RLS still apply. No grants or policies were broadened.
+- Panel series/chapter forms use their normal create, edit, publication and scheduling flows rather than the isolated draft-only endpoints. These are real shared-database changes, not disposable preview copies.
+- An explicit API allowlist enables existing forum, comments, notifications, views and leaderboard handlers. Private handlers require an active authenticated profile before dispatch and retain their own ownership/staff checks. Unknown APIs, Instagram and Server Actions remain blocked.
+- Forum pages are dynamic to avoid freezing replies or rejecting newly created topics until a rebuild. Their CPU suitability on Workers Free must be tested; do not infer production capacity from static comic-page tests.
+- R2 writes still use unique `preview-uploads/` keys with conditional creation. Active members may upload only forum/profile images; covers remain staff-only. Browser conversion avoids the unavailable Sharp runtime. Existing R2 billing is unchanged, not a guaranteed zero-cost hard cap.
+- Comic catalog snapshots still update through the existing capped rebuild queue (up to six starts/day, ten-minute polling). This remains a trial rerun pipeline, not the permanent production deployment arrangement.
+- Main branch, DNS, production hosting and paid plans remain untouched. Positive forum/publication/profile tests are for the owner to perform next; anonymous boundary checks alone do not establish those flows work.
+
 Date: 2026-11-05. Branch: `codex/cloudflare-free-preview`.
 
 This is a read-only compatibility and CPU-limit experiment, not a production migration.

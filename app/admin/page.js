@@ -1033,7 +1033,7 @@ function SerilerSayfasi() {
     catch (error) { setMsg(error.message); return }
     setYukleniyor(true)
     try {
-    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev' && process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE !== '1') {
       if (duzenleId) throw new Error('Deneme ortaminda mevcut seriler degistirilemez. Yeni bir test serisi olustur.')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) throw new Error('Oturum bulunamadi.')
@@ -1434,7 +1434,7 @@ function BolumlerSayfasi() {
   async function kaydet() {
     if (!form.seri_id||!form.sayi||!form.baslik) { setMsg('❌ Seri, sayı ve başlık zorunlu!'); return }
     if (yukleniyor) return
-    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+    if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev' && process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE !== '1') {
       setYukleniyor(true)
       try {
         if (duzenleId) throw new Error('Deneme ortaminda mevcut bolumler degistirilemez.')
@@ -1474,13 +1474,22 @@ function BolumlerSayfasi() {
       yayin_durumu:form.yayin_durumu,
       yayin_tarihi:yayinTarihi
     }
+    try {
     let bolumId = duzenleId
-    if (duzenleId) await supabase.from('bolumler').update(payload).eq('id',duzenleId)
+    if (duzenleId) {
+      const { error } = await supabase.from('bolumler').update(payload).eq('id',duzenleId).select('id').single()
+      if (error) throw error
+    }
     else {
-      const { data } = await supabase.from('bolumler').insert([payload]).select().single()
+      const { data, error } = await supabase.from('bolumler').insert([payload]).select().single()
+      if (error) throw error
       bolumId = data?.id
+      setDuzenleId(bolumId)
+    }
+    if (bolumId) await kaydetBolumSayfalari(bolumId, form.sayfa_gorselleri)
+    if (!duzenleId && bolumId) {
       const seriBaslik = seriler.find((item) => item.id === form.seri_id)?.baslik
-      if (data?.id && seriBaslik) {
+      if (seriBaslik && form.yayin_durumu !== 'taslak') {
         await takipcilereYeniBolumBildirimGonder({
           seriId: form.seri_id,
           seriBaslik,
@@ -1490,9 +1499,11 @@ function BolumlerSayfasi() {
         })
       }
     }
-    if (bolumId) await kaydetBolumSayfalari(bolumId, form.sayfa_gorselleri)
     setMsg(duzenleId?'✅ Güncellendi!':'✅ Bölüm eklendi!')
     setForm(bos); setDuzenleId(null); setKapakOnizleme(null); setMod('liste'); fetchHepsi(); setYukleniyor(false)
+    } catch (error) {
+      setMsg(`❌ Kayit tamamlanamadi: ${error.message}. Formu yeniden kaydedebilirsin.`)
+    } finally { setYukleniyor(false) }
   }
 
   async function sil(id) {

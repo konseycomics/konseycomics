@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { staticAssetsAdapter } from "@vinext/cloudflare/cache/static-assets-adapter";
 
 export default defineConfig({
+  define: { 'process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE': JSON.stringify('1') },
   resolve: {
     alias: {
       "next/link": fileURLToPath(new URL("./cloudflare/free-preview/link.jsx", import.meta.url)),

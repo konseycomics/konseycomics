@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getAuthRedirectUrl, supabase } from '../../lib/supabase'
+import { prepareInteractiveImage } from '../../../cloudflare/free-preview/prepare-image'
 import { getCaptchaErrorMessage, isCaptchaEnabled, mapAuthError, validatePassword } from '../../lib/authSecurity'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
@@ -31,6 +32,8 @@ function buildBannerMeta(src, x, y, z) {
 async function uploadProfileImage(file, prefix) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Oturum bulunamadı.')
+
+  file = await prepareInteractiveImage(file, { bucket: 'avatarlar', prefix })
 
   const formData = new FormData()
   formData.append('file', file)

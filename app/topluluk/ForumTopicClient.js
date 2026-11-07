@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, BarChart3, Clock3, Eye, Flag, Heart, ImageIcon, Lock, MessageSquare, Pin, Reply, Send, ShieldAlert, Trash2, Unlock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { prepareInteractiveImage } from '../../cloudflare/free-preview/prepare-image'
 import { getForumForCategory } from '../lib/forumConfig'
 import ForumAuthModal from './ForumAuthModal'
 import ForumReportModal from './ForumReportModal'
@@ -158,6 +159,8 @@ export default function ForumTopicClient({ topic, initialReplies = [] }) {
     setUploading(true)
     const { data: { session } } = await supabase.auth.getSession()
     const formData = new FormData()
+    try { file = await prepareInteractiveImage(file, { bucket: 'forum', prefix: 'yanit' }) }
+    catch (error) { setUploading(false); setMessage(error.message); return }
     formData.append('file', file)
     formData.append('bucket', 'forum')
     formData.append('prefix', 'yanit')

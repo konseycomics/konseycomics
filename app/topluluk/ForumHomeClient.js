@@ -22,6 +22,7 @@ import {
   Users,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { prepareInteractiveImage } from '../../cloudflare/free-preview/prepare-image'
 import { FORUMS, FORUM_SECTIONS, getForumBySlug, topicBelongsToForum } from '../lib/forumConfig'
 import ForumAuthModal from './ForumAuthModal'
 
@@ -180,6 +181,8 @@ export default function ForumHomeClient({ initialTopics = [], planetPosts = [], 
     setMessage('Görsel hazırlanıyor...')
     const { data: { session } } = await supabase.auth.getSession()
     const formData = new FormData()
+    try { file = await prepareInteractiveImage(file, { bucket: 'forum', prefix: 'konu' }) }
+    catch (error) { setUploading(false); setMessage(error.message); return }
     formData.append('file', file)
     formData.append('bucket', 'forum')
     formData.append('prefix', 'konu')

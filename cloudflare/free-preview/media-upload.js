@@ -14,7 +14,7 @@ function imageType(bytes) {
 
 export async function uploadPreviewImage(request, env, fetcher = fetch) {
   try {
-    const access = await authorizePreviewStaff(request, env, fetcher)
+    const access = await authorizePreviewStaff(request, env, fetcher, env.KONSEY_PREVIEW_INTERACTIVE === '1')
     if (access.error) return access.error
     const { user } = access
     if (!env.MEDIA_PREVIEW) return reply('Test yukleme ayarlari hazir degil.', 503)
@@ -23,6 +23,8 @@ export async function uploadPreviewImage(request, env, fetcher = fetch) {
     const form = await new Response(body, { headers: { 'Content-Type': request.headers.get('content-type') } }).formData()
     const file = form.get('file')
     if (!BUCKETS.has(String(form.get('bucket')))) return reply('Gecersiz gorsel kategorisi.', 400)
+    const memberUpload = form.get('bucket') === 'forum' || form.get('bucket') === 'avatarlar' && ['avatar', 'banner'].includes(form.get('prefix'))
+    if (!access.isStaff && !memberUpload) return reply('Bu gorsel kategorisi icin yetkin yok.', 403)
     if (!file || typeof file.arrayBuffer !== 'function' || file.size === 0) return reply('Gorsel bulunamadi.', 400)
     if (file.size > MAX_IMAGE_BYTES) return reply('Islenmis gorsel en fazla 4 MB olabilir.', 413)
     const bytes = new Uint8Array(await file.arrayBuffer())

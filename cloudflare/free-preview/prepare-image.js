@@ -1,3 +1,8 @@
+export async function prepareInteractiveImage(file, options) {
+  if (typeof window === 'undefined' || window.location.hostname !== 'konseycomics-free-preview.konseycomics.workers.dev') return file
+  return preparePreviewImage(file, { ...options, format: 'webp' })
+}
+
 export async function preparePreviewImage(file, { bucket, prefix, format }) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Test yuklemesinde JPEG, PNG veya WebP sec.')
   if (file.size > 10 * 1024 * 1024) throw new Error('Gorsel en fazla 10 MB olabilir.')

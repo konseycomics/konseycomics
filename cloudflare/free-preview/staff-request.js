@@ -2,7 +2,7 @@ import { canUseStaffPrivileges } from '../../app/lib/roles.js'
 
 const reply = (error, status) => Response.json({ error }, { status })
 
-export async function authorizePreviewStaff(request, env, fetcher = fetch) {
+export async function authorizePreviewStaff(request, env, fetcher = fetch, allowMember = false) {
   const token = request.headers.get('authorization')?.match(/^Bearer (\S+)$/)?.[1]
   if (!token) return { error: reply('Oturum bulunamadi.', 401) }
   if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return { error: reply('Gecersiz kaynak.', 403) }
@@ -17,8 +17,8 @@ export async function authorizePreviewStaff(request, env, fetcher = fetch) {
   const profile = await fetcher(`${base}/rest/v1/profiller?${query}`, { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } })
   if (!profile.ok) return { error: reply('Yetki kontrol edilemedi.', 503) }
   const rows = await profile.json()
-  if (rows.length !== 1 || !canUseStaffPrivileges(rows[0])) return { error: reply('Yalnizca kurucu ve yonetici islem yapabilir.', 403) }
-  return { user, base, headers: { apikey: env.NEXT_PUBLIC_SUPABASE_KEY, Authorization: `Bearer ${token}` } }
+  if (rows.length !== 1 || rows[0].askiya_alindi || (!allowMember && !canUseStaffPrivileges(rows[0]))) return { error: reply('Bu islem icin yetkin yok.', 403) }
+  return { user, isStaff: canUseStaffPrivileges(rows[0]), base, headers: { apikey: env.NEXT_PUBLIC_SUPABASE_KEY, Authorization: `Bearer ${token}` } }
 }
 
 export async function boundedBody(request, limit) {

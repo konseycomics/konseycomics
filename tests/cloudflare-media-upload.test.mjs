@@ -45,6 +45,20 @@ test('missing or invalid authentication cannot write', async () => {
   assert.equal(writes.length, 0)
 })
 
+test('interactive members can upload forum images but never staff covers, and suspended users stay blocked', async () => {
+  for (const [role, suspended, bucket, expected] of [
+    ['okuyucu', false, 'forum', 200], ['cevirmeni', false, 'forum', 200],
+    ['okuyucu', false, 'kapaklar', 403], ['okuyucu', true, 'forum', 403],
+    ['kurucu', true, 'forum', 403],
+  ]) {
+    const { env, fetcher, writes } = fixture(role, suspended)
+    env.KONSEY_PREVIEW_INTERACTIVE = '1'
+    const response = await uploadPreviewImage(request({ bucket }), env, fetcher)
+    assert.equal(response.status, expected)
+    assert.equal(writes.length, expected === 200 ? 1 : 0)
+  }
+})
+
 test('invalid MIME, forged content, bucket and origin are rejected', async () => {
   const { env, fetcher, writes } = fixture()
   for (const options of [{ type: 'image/svg+xml' }, { bytes: new TextEncoder().encode('<svg>bad</svg>') }, { bucket: '../site' }]) {

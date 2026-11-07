@@ -1,3 +1,6 @@
+import { allowsInteractiveApi, isLiveForum, needsInteractiveSession } from './interactive-policy.js'
+import { authorizePreviewStaff, boundedBody } from './staff-request.js'
+
 let publicIndex
 
 export default {
@@ -16,6 +19,29 @@ export default {
       return new Response('Not found', { status: 404, headers })
     }
     const accountTests = env?.KONSEY_PREVIEW_ACCOUNTS === '1'
+    const interactiveApi = allowsInteractiveApi(pathname, request.method, env)
+    if (interactiveApi) {
+      const origin = request.headers.get('origin')
+      if (request.headers.has('next-action') || origin && origin !== new URL(request.url).origin) {
+        return Response.json({ error: 'Forbidden.' }, { status: 403, headers })
+      }
+      if (needsInteractiveSession(pathname)) {
+        const access = await authorizePreviewStaff(request, env, fetch, true)
+        if (access.error) {
+          const response = new Response(access.error.body, access.error)
+          for (const [key, value] of Object.entries(headers)) response.headers.set(key, value)
+          return response
+        }
+      }
+      if (request.method === 'POST') {
+        try {
+          const body = await boundedBody(request, 128 * 1024)
+          request = new Request(request.url, { method: request.method, headers: request.headers, body })
+        } catch {
+          return Response.json({ error: 'Istek boyutu siniri asildi.' }, { status: 413, headers })
+        }
+      }
+    }
     if (accountTests && pathname === '/api/preview/refresh' && ['GET', 'POST'].includes(request.method) && !request.headers.has('next-action')) {
       const { previewRebuildRoute } = await import('./rebuild.js')
       const result = await previewRebuildRoute(request, env)
@@ -48,11 +74,11 @@ export default {
       }
     }
     const blocked = /^\/api(\/|$)/.test(pathname) || (!accountTests && (/^\/(admin|auth|giris|sifre-sifirla)(\/|$)/.test(pathname) || pathname === '/profil/duzenle'))
-    if (blocked || !['GET', 'HEAD'].includes(request.method) || request.headers.has('next-action')) {
+    if (((blocked || !['GET', 'HEAD'].includes(request.method)) && !interactiveApi) || request.headers.has('next-action')) {
       return new Response('This read-only free-tier preview does not allow account changes or uploads.', { status: 403, headers })
     }
     const isRsc = request.headers.get('rsc') === '1' || request.headers.get('accept')?.includes('text/x-component') || new URL(request.url).searchParams.has('_rsc')
-    if (env?.ASSETS && process.env.VINEXT_PRERENDER !== '1' && !isRsc && !request.headers.has('authorization') && !request.headers.has('cookie') && !pathname.startsWith('/_next/')) {
+    if (env?.ASSETS && process.env.VINEXT_PRERENDER !== '1' && !isLiveForum(pathname, env) && !isRsc && !request.headers.has('authorization') && !request.headers.has('cookie') && !pathname.startsWith('/_next/')) {
       if (!publicIndex) {
         const indexResponse = await env.ASSETS.fetch('https://vinext.invalid/_vinext/static-cache/public-pages.json')
         if (indexResponse.ok) publicIndex = await indexResponse.json()
@@ -74,7 +100,7 @@ export default {
       if (key === 'Cache-Control' && process.env.VINEXT_PRERENDER === '1') continue
       response.headers.set(key, value)
     }
-    response.headers.set('X-Konsey-Preview', 'read-only-free-tier')
+    response.headers.set('X-Konsey-Preview', env.KONSEY_PREVIEW_INTERACTIVE === '1' ? 'interactive-free-tier' : 'read-only-free-tier')
     return response
   },
 }

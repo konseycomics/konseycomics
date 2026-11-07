@@ -391,3 +391,17 @@ and release visibility are asynchronous (poll interval + build), not instantaneo
 Scheduled-release edge cases and real published-content changes remain unverified.
 
 59 focused tests passed; live positive refresh still needs manual staff action.
+
+Deployment follow-up: the first GitHub attempt for 5552dc4 passed build/tests but
+Wrangler failed downloading dashboard bindings/routes/services metadata. Adding
+the runtime secret via the dashboard had marked last_deployed_from=dash; Wrangler
+then attempted account-level route/domain metadata reads unavailable to the scoped
+token. No permissions were broadened. A reviewed local CLI deploy using existing
+authorization succeeded (c8c492cc-2967-47a2-9a58-742f52b20186, cron */10 active),
+then GitHub run 42378572432 attempt 2 succeeded with the original scoped deploy
+token in 2m02s. Future dashboard changes may need the same reviewed CLI reconciliation
+until the tooling supports granular metadata reads. Public snapshot revision 1
+was validated; anonymous table reads, rebuild claims and manual requests all return
+401. Remote refresh GET/POST without auth also return 401. The user has been asked
+to press the staff refresh control once for the final real trigger/ack test.
+Verified GitHub deployment version: 711f29fb-3066-4388-bb2d-5e721dca5c17.

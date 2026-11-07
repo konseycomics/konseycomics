@@ -20,6 +20,7 @@ test('apex redirects canonically without losing paths or query strings', () => {
   assert.equal(result.status, 308)
   assert.equal(result.headers.get('location'), 'https://www.konseycomics.com/seriler?q=dc')
   assert.equal(productionRedirect(new Request('https://www.konseycomics.com/seriler'), env), null)
+  assert.equal(productionRedirect(new Request('http://www.konseycomics.com/giris'), env).headers.get('location'), 'https://www.konseycomics.com/giris')
 })
 
 test('live robots allows public crawling while trial robots stays closed', async () => {

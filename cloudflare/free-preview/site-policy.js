@@ -13,7 +13,8 @@ export function siteResponseHeaders(request, env) {
 
 export function productionRedirect(request, env) {
   const url = new URL(request.url)
-  if (env.KONSEY_PRODUCTION !== '1' || url.hostname !== 'konseycomics.com') return null
+  if (env.KONSEY_PRODUCTION !== '1' || !['konseycomics.com', 'www.konseycomics.com'].includes(url.hostname)) return null
+  if (url.hostname === 'www.konseycomics.com' && url.protocol === 'https:') return null
   url.protocol = 'https:'
   url.hostname = 'www.konseycomics.com'
   return Response.redirect(url.href, 308)

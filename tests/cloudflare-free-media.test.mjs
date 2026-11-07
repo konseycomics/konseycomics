@@ -53,3 +53,9 @@ test('staging SQL restricts private counters and RPCs while exposing only ready 
   assert.doesNotMatch(sql, /grant.*(?:insert|update).*to (?:anon|authenticated)/i)
   assert.doesNotMatch(sql, /delete from|drop table|alter table storage/i)
 })
+
+test('activated media configuration removes the R2 binding entirely', async () => {
+  const config = JSON.parse(await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8'))
+  assert.equal(config.vars.KONSEY_FREE_MEDIA, '1')
+  assert.equal(config.r2_buckets, undefined)
+})

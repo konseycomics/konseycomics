@@ -33,3 +33,21 @@ Commands accept `--env-file` pointing to the owner's existing local configuratio
 - Feature remains OFF until the owner applies SQL and an authenticated upload test passes. `KONSEY_FREE_MEDIA` has not been added to live config; R2 remains active. Asked owner to run the SQL file. Do not claim billing risk removed.
 - Existing six-starts/day rebuild cap still applies: delays can exceed a few minutes once that cap is exhausted. This restriction must be clearly disclosed or redesigned within GitHub's existing zero-paid-usage budget before wider use.
 - No automatic staging cleanup is implemented. The cumulative cap eventually stops new uploads; approved cleanup/reclamation or another free publication pipeline is needed for long-term operation. Never silently reset the ledger while retained files remain in storage.
+
+## SQL Applied and Seed Build Verified - Awaiting Plan Confirmation
+
+- Owner ran `free_media_staging_v1.sql`, result `Free media staging ready`.
+- Live anonymous probes: public ready-media view returns 200 with zero rows; private budget/object tables and both mutation RPCs return 401. No upload was created by these probes.
+- Source inventory rechecked: still 2,006 objects, 457,816,040 bytes.
+- Local config now enables `KONSEY_FREE_MEDIA` and removes the R2 binding. This config has NOT been deployed or pushed.
+- Local full build succeeded, copying and hash-verifying all 2,006 legacy images into `dist/client` alongside the site. Added final content-revision check after media preparation. 76 focused tests pass.
+- Supabase dashboard in IAB redirected to sign-in. Asked owner to confirm current Free plan and Storage Size in their already-open browser. Do NOT enable new uploads before confirming free-only staging; no paid-plan assumption is acceptable for this task.
+- Hold initial local deployment and Git push until plan confirmed. First deployment must seed the public free source before CI can fetch it. Existing R2/production URLs remain unchanged and usage-billed in the meantime.
+
+## Free Plan Confirmed and Initial Seed Deployed
+
+- Supabase dashboard confirmed current Free plan, no overage billing, storage 0.376/1 GB, database 0.061/0.5 GB, uncached egress 0.288/5 GB, cached egress 0/5 GB; no exceeded quota. Billing cycle 29 Oct-29 Nov 2026. UI figures can lag refresh.
+- Local deployment succeeded: `f0045ee5-1d2c-47c1-acad-07cf8c3863b5`. `KONSEY_FREE_MEDIA=1`; only ASSETS and existing vars/secrets, no R2 binding. Existing encrypted secrets preserved. No plan or DNS changes.
+- All legacy images seeded into the existing preview Worker's static Assets; this unlocks CI's R2-free source for future builds. Full remote checksum verification and CI rebuild are being checked next.
+- New upload positive test is still pending. Owner must upload a small new test image, then verify the ready-media ledger and eventual static publication. Do not cancel R2 or claim all billing risks removed before this succeeds and CDN cutover is verified.
+- Existing `cdn.konseycomics.com` remains attached to R2. Legacy image URLs still use that CDN until cutover; R2 subscription/storage remains usage-billed. New free upload URLs point to the preview Worker's free-uploads path.

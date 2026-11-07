@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { safeAssetPath, validateStaticInventory } from './r2-static-archive.mjs'
+import { getContentRevision } from '../cloudflare/free-preview/content-revision.mjs'
 
 const SOURCE = 'https://konseycomics-free-preview.konseycomics.workers.dev'
 const MANIFEST = 'cloudflare/media-static/archive-manifest.json'
@@ -108,6 +109,10 @@ async function main() {
     }
   }
   await Promise.all(Array.from({ length: 6 }, () => copyWorker()))
+  const release = JSON.parse(await readFile('.next/cache/konsey-asset-release.json', 'utf8'))
+  if (release.contentRevision !== null && release.contentRevision !== undefined && await getContentRevision(env) !== release.contentRevision) {
+    throw new Error('Content changed during media preparation; retry instead of publishing inconsistent snapshots')
+  }
   await mkdir(`${clientDir}/_konsey_media`, { recursive: true })
   await writeFile(`${clientDir}/_konsey_media/index.json`, JSON.stringify({ version: 1, objects }))
   console.log(`Prepared ${objects.length} verified images for free static delivery. No R2 fallback.`)

@@ -1,3 +1,7 @@
+import { assetPrefixFor, readAssetRelease } from './cloudflare/free-preview/asset-releases.mjs'
+
+const previewRelease = readAssetRelease(new URL('./.dev.vars.asset-release.json', import.meta.url))
+
 /** @type {import('next').NextConfig} */
 
 const securityHeaders = [
@@ -44,6 +48,7 @@ const securityHeaders = [
 ]
 
 const nextConfig = {
+  ...(previewRelease ? { assetPrefix: assetPrefixFor(previewRelease.id), deploymentId: previewRelease.id } : {}),
   images: {
     minimumCacheTTL: 86400,
     remotePatterns: [

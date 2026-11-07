@@ -173,3 +173,33 @@ controlled tab also reported a failed dynamic import, although the referenced
 asset exists locally and returns HTTP 200 remotely. A clean-browser test and
 deployment asset-cache/version checks are still required; do not call the full
 login flow verified.
+
+### November 7: preview page loading / asset versions
+
+The user confirmed the inaccessible URL was the preview, not the production
+domain. Their controlled Chrome login tab reproduced a failed dynamic import
+for `DB0J34oy.js`. The remote file and its transitive imports returned 200 and
+matched the previous local build, so cache/version skew was investigated rather
+than claiming a missing remote file was established.
+
+Builds now assign a single generated release ID before bundling and use that ID
+as the local asset prefix and deployment ID. Public compiled assets from the
+previous three builds are retained; HTML snapshots and server files are never
+included in this history. The ignored history directory and release file stay
+local. Wrangler's old-asset-ttl flag is not used: its implementation concerns
+legacy Workers Sites rather than the Static Assets binding used here.
+
+Deployment `c2681e02-702d-48c9-aaca-df7618e9ca1d` passed 37 focused tests,
+local and remote desktop/mobile public browser checks, local mocked Turnstile
+loader tests, and remote unauthenticated account boundaries. Both retained legacy
+and current prefixed assets return 200. The local account boundary test cannot
+complete profile-sync checks without the deliberately absent local service key;
+the remote checks passed using the existing Worker secret.
+
+Reloading the originally broken Chrome tab now keeps the login form visible
+without another dynamic-import failure. Turnstile still reports a visible load
+failure in that controlled browser. Real manual sign-in remains unverified and
+must be retried by the user on their own browser/phone. No CAPTCHA bypass,
+production domain change, new paid binding, or successful-upload claim was made.
+Compressed Worker size is 3056.62 KiB, close to the Free ceiling: further server
+additions must be size-checked. Publication refresh and uploads remain unfinished.

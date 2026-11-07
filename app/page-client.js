@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { isRecentlyAddedSeries } from './lib/seriesBadges'
 import { relativeTime } from './lib/relativeTime'
 import { supabase } from './lib/supabase'
+import { publicBrowser } from './lib/publicBrowser'
+import { loadLiveHome } from './lib/liveCatalog'
 import { ArrowRight, BookOpen, Eye, MessageSquare, Pin, Users } from 'lucide-react'
 
 const SERI_TURLERI = [
@@ -969,7 +971,16 @@ function IndependentWorksSection() {
   )
 }
 
-export default function Home({ seriler = [], bolumler = [], siteAyarlari = {}, liderlik = {}, forumTopics = [], renderedAt = null }) {
+export default function Home({ seriler: initialSeries = [], bolumler: initialChapters = [], siteAyarlari: initialSettings = {}, liderlik = {}, forumTopics = [], renderedAt = null }) {
+  const [catalog, setCatalog] = useState(() => ({ seriler: initialSeries, bolumler: initialChapters, siteAyarlari: initialSettings }))
+  const { seriler, bolumler, siteAyarlari } = catalog
+  useEffect(() => {
+    let active = true
+    loadLiveHome(publicBrowser).then(latest => {
+      if (active) setCatalog(latest)
+    }).catch(() => { /* Keep the usable snapshot during a temporary outage. */ })
+    return () => { active = false }
+  }, [])
   const [currentTime, setCurrentTime] = useState(null)
   useEffect(() => {
     const updateTime = () => setCurrentTime(Date.now())

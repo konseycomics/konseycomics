@@ -6,10 +6,10 @@ import Link from 'next/link'
 import { Search, X, ArrowDown, RotateCcw, BookOpen, Star, Clock3, TrendingUp, MessageSquare, Eye } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { supabase } from '../lib/supabase'
-import { ARCHIVE_FORMATS, archiveCategory, archiveFormat, archiveFilters, filterArchive, isArchiveSeries } from '../lib/seriesArchive'
+import { publicBrowser } from '../lib/publicBrowser'
+import { loadLiveCatalog } from '../lib/liveCatalog'
+import { ARCHIVE_FORMATS, archiveCategory, archiveFormat, archiveFilters, filterArchive } from '../lib/seriesArchive'
 import { isRecentlyAddedSeries } from '../lib/seriesBadges'
-import { isPublished } from '../lib/seoRules'
 import './series-archive.css'
 
 const PAGE_SIZE = 24
@@ -68,20 +68,19 @@ export default function SeriesArchive({ initialData }) {
   }
 
   useEffect(() => {
-    if (initialData && retry === 0) return
     let active = true
     async function load() {
-      const [series, genres] = await Promise.all([
-        supabase.from('seriler').select('id, baslik, slug, ozet, kapak_url, tur, turler, kategori, durum, yil, created_at, ortalama_puan, puan_sayisi, goruntuleme_sayisi, yayin_durumu, yayin_tarihi, kategoriler(isim), bolumler(count)').order('created_at', { ascending: false }),
-        supabase.from('turler').select('id, isim').order('isim'),
-      ])
-      if (!active) return
-      setError(!!(series.error || genres.error) && !hasPublicData.current)
-      if (!series.error && !genres.error) {
-        setData({ series: (series.data || []).filter(row => isPublished(row) && isArchiveSeries(row)), genres: genres.data || [] })
+      try {
+        const latest = await loadLiveCatalog(publicBrowser)
+        if (!active) return
+        setData(latest)
+        setError(false)
         hasPublicData.current = true
+      } catch {
+        if (active) setError(!hasPublicData.current)
+      } finally {
+        if (active) setLoading(false)
       }
-      setLoading(false)
     }
     load()
     return () => { active = false }

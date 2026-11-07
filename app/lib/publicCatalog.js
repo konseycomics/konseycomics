@@ -16,7 +16,9 @@ export const getPublicCatalog = unstable_cache(async () => {
   return { series: series.filter(row => isPublished(row) && isArchiveSeries(row)), genres }
 }, ['public-series-catalog-v1'], { revalidate: 60 })
 
-export const getPublicSeries = cache(unstable_cache(async (slug) => {
+// Static pages retain their build snapshot; runtime requests for newly published
+// URLs must not reuse a cached missing series or an outdated chapter list.
+export const getPublicSeries = cache(async (slug) => {
   const db = createSupabaseServerClient()
   const { data: series, error } = await db.from('seriler').select(SERIES_FIELDS).eq('slug', slug).maybeSingle()
   if (error) throw new Error(`Public series query failed: ${error.code}`)
@@ -30,9 +32,9 @@ export const getPublicSeries = cache(unstable_cache(async (slug) => {
   ])
   if (ownerError) throw new Error(`Public creator query failed: ${ownerError.code}`)
   return { series, chapters: chapters.filter(row => isPublished(row)), authors: authors.map(row => row.yazarlar?.isim).filter(Boolean), artists: artists.map(row => row.cizerler?.isim).filter(Boolean), genres: genres.map(row => row.isim), owner }
-}, ['public-series-detail-v1'], { revalidate: 60 }))
+})
 
-export const getPublicReader = cache(unstable_cache(async (slug, number) => {
+export const getPublicReader = cache(async (slug, number) => {
   const payload = await getPublicSeries(slug)
   return loadPublicReaderData(createSupabaseServerClient(), payload, number)
-}, ['public-reader-v1'], { revalidate: 60 }))
+})

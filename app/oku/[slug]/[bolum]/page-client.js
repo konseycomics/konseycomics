@@ -3,6 +3,8 @@ import { useParams } from 'next/navigation'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../../lib/supabase'
+import { publicBrowser } from '../../../lib/publicBrowser'
+import { fetchAllRows, isPublished } from '../../../lib/seoRules'
 import Navbar from '../../../components/Navbar'
 import Footer from '../../../components/Footer'
 import ReaderOverlay from '../../../components/ReaderOverlay'
@@ -35,7 +37,16 @@ export default function Okuyucu({ initialData }) {
   const seriData = initialData.series
   const detayAyar = initialData.settings
   const okumaSayfalari = initialData.pages
-  const tumBolumler = initialData.chapters
+  const [tumBolumler, setTumBolumler] = useState(initialData.chapters)
+  useEffect(() => {
+    let active = true
+    fetchAllRows(publicBrowser.from('bolumler')
+      .select('id, seri_id, sayi, baslik, yayin_durumu, yayin_tarihi')
+      .eq('seri_id', initialData.series.id).order('sayi').order('id'))
+      .then(rows => { if (active) setTumBolumler(rows.filter(row => isPublished(row))) })
+      .catch(() => { /* Preserve chapter navigation if the refresh fails. */ })
+    return () => { active = false }
+  }, [initialData.series.id])
   const [iframeHata, setIframeHata] = useState(false)
   const tamEkranAktif = false
   const okumaTakipRef = useRef(null)

@@ -18,6 +18,14 @@ Owner authorized publishing the existing tested Cloudflare application on the ma
 - Apex and HTTP requests redirect 308 to canonical HTTPS www, preserving path/query.
 - Block direct internal snapshot/media-index requests. Preserve Search Console verification file through static asset fallback.
 - Public nonpersonal snapshots also serve visitors with cookies; no authentication/role data is embedded in those snapshots. Authorization-bearing requests and live forum bypass that path.
+
+### Publication freshness
+
+- Home and archive hydrate with their fast static snapshot, then refresh public lists directly from Supabase on every page mount. Publishing visibility no longer waits for the background deployment. No polling, new paid service or per-visit full-page server rendering is introduced.
+- Refreshes use a separate anonymous client with session persistence and URL-session detection disabled. Published/due-scheduled content only; failures preserve the existing usable snapshot. Lists paginate beyond the database row limit.
+- Reader chapter navigation also refreshes on mount without resetting page position or zoom. Runtime series/reader loaders no longer retain cached missing content or old chapter lists across requests; existing static pages remain fast.
+- Static HTML, metadata and sitemap still follow the background build queue and its existing limits. This change is immediate visitor-side freshness, not instant regeneration of search-engine snapshots.
+- Verified locally: 85 unit tests; successful production build (107 prerendered routes); isolated headless-browser checks injected a new publication absent from the build into home/archive responses, verified it appeared and a draft did not, with zero page errors. These checks did not write to the database.
 - Restore existing first-party Supabase visitor tracker on www only, without Vercel Analytics/Speed Insights. Trial visits remain uncounted.
 - Image preprocessing now follows the Cloudflare build mode on both preview and production hosts, not a preview-only hostname check. Existing role/auth checks and R2 uploads remain intact.
 

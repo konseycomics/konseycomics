@@ -6,6 +6,8 @@ Owner rejected delayed publication and explicitly requested continuing with R2. 
 
 Live ready-staging inventory was checked before reversal: zero objects, zero bytes. No user media depends on the delayed publication path. Keep backups, SQL staging bucket/ledger and inactive tools intact; do not delete data. CI should skip the inactive static-media check rather than require the archive to remain deployed.
 
+Restoration deployed successfully: commit `e2cad4e`, GitHub run `42412469105`, Success in 2m11s. All 76 focused tests passed, including the explicit disabled-free-staging/R2 binding configuration and instant R2 upload unit tests. Live auth boundaries passed in CI; a new authenticated upload after this restoration was not performed by the agent. R2 remains subscribed and `cdn.konseycomics.com` is unchanged. No main-domain cutover or paid-plan upgrade occurred.
+
 Owner requires no usage-based media billing, even if service must stop at a limit.
 
 ## Verified on 2026-11-07

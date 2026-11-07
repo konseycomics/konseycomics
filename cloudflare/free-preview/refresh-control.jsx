@@ -12,7 +12,7 @@ export default function PreviewRefreshControl() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [pollKey, setPollKey] = useState(0)
-  useEffect(() => { setVisible(window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') }, [])
+  useEffect(() => { setVisible(['konseycomics-free-preview.konseycomics.workers.dev', 'www.konseycomics.com', 'konseycomics.com'].includes(window.location.hostname)) }, [])
   useEffect(() => {
     if (!visible) return
     let active = true

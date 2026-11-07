@@ -28,23 +28,27 @@ export async function runPreviewRebuild(env, force = false, fetcher = fetch) {
     claim = await rpc(env, 'konsey_preview_claim_rebuild', { p_deployed_revision: revision, p_force: force }, fetcher)
     if (!claim) return { state: 'idle' }
     const headers = { Authorization: `Bearer ${env.GITHUB_PREVIEW_ACTIONS_TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10', 'User-Agent': 'KonseyComics-preview-rebuild' }
-    const listing = await fetcher(`${ROOT}/actions/workflows/cloudflare-free-preview.yml/runs?branch=${encodeURIComponent(BRANCH)}&event=push&per_page=1`, { headers, redirect: 'manual' })
+    const dispatch = env.KONSEY_REBUILD_DISPATCH === '1'
+    const listing = await fetcher(`${ROOT}/actions/workflows/cloudflare-free-preview.yml/runs?branch=${encodeURIComponent(BRANCH)}${dispatch ? '' : '&event=push'}&per_page=1`, { headers, redirect: 'manual' })
     if (!listing.ok) throw new Error('Workflow lookup failed')
     const run = (await listing.json()).workflow_runs?.[0]
     const trustedPaths = [WORKFLOW, `${WORKFLOW}@${BRANCH}`, `${WORKFLOW}@refs/heads/${BRANCH}`]
     if (!run || !Number.isSafeInteger(run.id) || run.id <= 0 || run.head_branch !== BRANCH || !trustedPaths.includes(run.path)
-      || run.head_repository?.full_name !== 'konseycomics/konseycomics' || run.event !== 'push') throw new Error('Untrusted workflow run')
+      || run.head_repository?.full_name !== 'konseycomics/konseycomics' || !(dispatch ? ['push', 'workflow_dispatch'] : ['push']).includes(run.event)) throw new Error('Untrusted workflow run')
     if (run.status !== 'completed') { await finish('busy', run.id); return { state: 'busy', runId: run.id } }
     // GitHub only permits reruns within 30 days of the original run.
-    if (!Number.isFinite(Date.parse(run.created_at)) || Date.now() - Date.parse(run.created_at) > 29 * 86400000 || Number(run.run_attempt || 1) >= 49) {
+    if (!dispatch && (!Number.isFinite(Date.parse(run.created_at)) || Date.now() - Date.parse(run.created_at) > 29 * 86400000 || Number(run.run_attempt || 1) >= 49)) {
       await finish('error', run.id)
       return { state: 'new_code_push_required' }
     }
-    const response = await fetcher(`${ROOT}/actions/runs/${run.id}/rerun`, { method: 'POST', headers, redirect: 'manual' })
+    const response = await fetcher(dispatch ? `${ROOT}/actions/workflows/cloudflare-free-preview.yml/dispatches` : `${ROOT}/actions/runs/${run.id}/rerun`, {
+      method: 'POST', headers: { ...headers, ...(dispatch ? { 'Content-Type': 'application/json' } : {}) }, redirect: 'manual',
+      ...(dispatch ? { body: JSON.stringify({ ref: BRANCH }) } : {}),
+    })
     if (!response.ok) throw new Error('Workflow trigger failed')
     await response.body?.cancel()
-    await finish('queued', run.id)
-    return { state: 'queued', runId: run.id }
+    await finish('queued', dispatch ? null : run.id)
+    return { state: 'queued', runId: dispatch ? null : run.id }
   } catch {
     if (claim) { try { await finish('error') } catch {} }
     console.warn('[preview-rebuild] Request failed; durable retry and daily limit remain in effect.')

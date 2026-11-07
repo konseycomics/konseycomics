@@ -1,5 +1,6 @@
 import { allowsInteractiveApi, isLiveForum, needsInteractiveSession } from './interactive-policy.js'
 import { authorizePreviewStaff, boundedBody } from './staff-request.js'
+import { productionRedirect, robotsText, siteResponseHeaders } from './site-policy.js'
 
 let publicIndex
 
@@ -10,12 +11,14 @@ export default {
     ctx.waitUntil(runPreviewRebuild(env))
   },
   async fetch(request, env, ctx) {
+    const redirect = productionRedirect(request, env)
+    if (redirect) return redirect
     const { pathname } = new URL(request.url)
-    const headers = { 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'Cache-Control': 'no-store' }
+    const headers = siteResponseHeaders(request, env)
     if (pathname === '/robots.txt') {
-      return new Response('User-agent: *\nDisallow: /\n', { headers: { ...headers, 'Content-Type': 'text/plain' } })
+      return new Response(robotsText(request, env), { headers: { ...headers, 'Content-Type': 'text/plain' } })
     }
-    if (pathname.startsWith('/_vinext/static-cache/')) {
+    if (pathname.startsWith('/_vinext/static-cache/') || pathname.startsWith('/_konsey_media/')) {
       return new Response('Not found', { status: 404, headers })
     }
     const accountTests = env?.KONSEY_PREVIEW_ACCOUNTS === '1'
@@ -78,7 +81,7 @@ export default {
       return new Response('This read-only free-tier preview does not allow account changes or uploads.', { status: 403, headers })
     }
     const isRsc = request.headers.get('rsc') === '1' || request.headers.get('accept')?.includes('text/x-component') || new URL(request.url).searchParams.has('_rsc')
-    if (env?.ASSETS && process.env.VINEXT_PRERENDER !== '1' && !isLiveForum(pathname, env) && !isRsc && !request.headers.has('authorization') && !request.headers.has('cookie') && !pathname.startsWith('/_next/')) {
+    if (env?.ASSETS && process.env.VINEXT_PRERENDER !== '1' && !isLiveForum(pathname, env) && !isRsc && !request.headers.has('authorization') && !pathname.startsWith('/_next/')) {
       if (!publicIndex) {
         const indexResponse = await env.ASSETS.fetch('https://vinext.invalid/_vinext/static-cache/public-pages.json')
         if (indexResponse.ok) publicIndex = await indexResponse.json()
@@ -87,11 +90,22 @@ export default {
       if (snapshot) {
         const asset = await env.ASSETS.fetch(`https://vinext.invalid${snapshot.asset}`)
         if (!asset.ok) return new Response('Preview snapshot unavailable', { status: 503, headers })
-        return new Response(request.method === 'HEAD' ? null : asset.body, {
+        const response = new Response(request.method === 'HEAD' ? null : asset.body, {
           status: snapshot.status,
           headers: { ...publicIndex.headers, ...snapshot.headers, ...headers, 'Content-Type': 'text/html; charset=utf-8', 'X-Konsey-Preview': 'read-only-free-tier', 'X-Konsey-Delivery': 'static-html' },
         })
+        if (!headers['X-Robots-Tag']) response.headers.delete('X-Robots-Tag')
+        return response
       }
+    }
+    if (env.ASSETS && !isRsc && ['GET', 'HEAD'].includes(request.method) && !pathname.startsWith('/api/')) {
+      const asset = await env.ASSETS.fetch(new Request(`https://vinext.invalid${pathname}`, { method: request.method }))
+      if (asset.ok) {
+        const response = new Response(request.method === 'HEAD' ? null : asset.body, asset)
+        for (const [key, value] of Object.entries(headers)) response.headers.set(key, value)
+        return response
+      }
+      await asset.body?.cancel()
     }
     const { default: app } = await import('vinext/server/fetch-handler')
     const result = await app.fetch(request, env, ctx)
@@ -101,6 +115,7 @@ export default {
       response.headers.set(key, value)
     }
     response.headers.set('X-Konsey-Preview', env.KONSEY_PREVIEW_INTERACTIVE === '1' ? 'interactive-free-tier' : 'read-only-free-tier')
+    if (!headers['X-Robots-Tag']) response.headers.delete('X-Robots-Tag')
     return response
   },
 }

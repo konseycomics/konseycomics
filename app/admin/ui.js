@@ -49,7 +49,7 @@ export function Msg({ text }) {
 export async function uploadAdminImage(file, { bucket, prefix, format = 'webp' }) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session?.access_token) throw new Error('Oturum bulunamadı.')
-  if (window.location.hostname === 'konseycomics-free-preview.konseycomics.workers.dev') {
+  if (process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE === '1') {
     file = await preparePreviewImage(file, { bucket, prefix, format })
   }
 

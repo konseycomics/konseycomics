@@ -41,6 +41,26 @@ test('a durable denied claim means no GitHub calls, covering concurrent leases a
   assert.equal(calls.length, 1)
 })
 
+test('permanent dispatch targets only the deployment branch and is not limited by rerun age or attempts', async () => {
+  const { env, fetcher, calls } = fixture({ run: { event: 'workflow_dispatch', created_at: '2000-01-01T00:00:00Z', run_attempt: 99 } })
+  env.KONSEY_REBUILD_DISPATCH = '1'
+  let dispatch
+  const result = await runPreviewRebuild(env, false, async (url, options) => {
+    if (url.endsWith('/dispatches')) {
+      dispatch = { url, options }
+      return new Response(null, { status: 204 })
+    }
+    return fetcher(url, options)
+  })
+  assert.deepEqual(result, { state: 'queued', runId: null })
+  assert.equal(dispatch.url, 'https://api.github.com/repos/konseycomics/konseycomics/actions/workflows/cloudflare-free-preview.yml/dispatches')
+  assert.deepEqual(JSON.parse(dispatch.options.body), { ref: 'codex/cloudflare-free-preview' })
+  assert.equal(dispatch.options.redirect, 'manual')
+  assert.equal(dispatch.options.headers.Authorization, 'Bearer github-private')
+  assert.equal(calls.some(call => call.url.endsWith('/rerun')), false)
+  assert.equal(calls.at(-1).body.p_run_id, null)
+})
+
 test('active runs are not duplicated and invalid workflow identities fail closed', async () => {
   const busy = fixture({ run: { status: 'in_progress' } })
   assert.equal((await runPreviewRebuild(busy.env, false, busy.fetcher)).state, 'busy')

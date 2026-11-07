@@ -9,7 +9,7 @@
   "main": "cloudflare/free-preview/entry.js",
   "workers_dev": true,
   "preview_urls": false,
-  "vars": { "KONSEY_PREVIEW_ACCOUNTS": "1", "KONSEY_PREVIEW_UPLOADS": "1", "KONSEY_PREVIEW_DRAFTS": "1", "KONSEY_PREVIEW_REBUILD": "1", "KONSEY_PREVIEW_INTERACTIVE": "1", "KONSEY_FREE_MEDIA": "0" },
+  "vars": { "KONSEY_PREVIEW_ACCOUNTS": "1", "KONSEY_PREVIEW_UPLOADS": "1", "KONSEY_PREVIEW_DRAFTS": "1", "KONSEY_PREVIEW_REBUILD": "1", "KONSEY_PREVIEW_INTERACTIVE": "1", "KONSEY_FREE_MEDIA": "0", "KONSEY_PRODUCTION": "1", "KONSEY_REBUILD_DISPATCH": "1" },
   "triggers": { "crons": ["*/10 * * * *"] },
   "r2_buckets": [{ "binding": "MEDIA_PREVIEW", "bucket_name": "konseycomics-media" }],
   "observability": { "enabled": true, "head_sampling_rate": 1 },

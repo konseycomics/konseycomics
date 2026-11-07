@@ -1,5 +1,5 @@
 export async function prepareInteractiveImage(file, options) {
-  if (typeof window === 'undefined' || window.location.hostname !== 'konseycomics-free-preview.konseycomics.workers.dev') return file
+  if (typeof window === 'undefined' || process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE !== '1') return file
   return preparePreviewImage(file, { ...options, format: 'webp' })
 }
 

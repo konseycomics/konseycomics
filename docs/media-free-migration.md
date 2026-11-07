@@ -51,3 +51,13 @@ Commands accept `--env-file` pointing to the owner's existing local configuratio
 - All legacy images seeded into the existing preview Worker's static Assets; this unlocks CI's R2-free source for future builds. Full remote checksum verification and CI rebuild are being checked next.
 - New upload positive test is still pending. Owner must upload a small new test image, then verify the ready-media ledger and eventual static publication. Do not cancel R2 or claim all billing risks removed before this succeeds and CDN cutover is verified.
 - Existing `cdn.konseycomics.com` remains attached to R2. Legacy image URLs still use that CDN until cutover; R2 subscription/storage remains usage-billed. New free upload URLs point to the preview Worker's free-uploads path.
+
+## Remote Verification and CI Complete
+
+- Full remote image verification succeeded at `2026-11-07T20:07:31.225Z`: all 2,006 originals, 457,816,040 bytes, matched expected SHA-256 from the free preview static delivery. Proof stored in ignored `.media-migration/r2-static-archive/remote-verification.json`.
+- GitHub run `42409268091` (commit `eb12ddc`) succeeded in 3m1s, including preparing media from the public free source with no R2 binding/credentials.
+- Fixed storage upload cache-control to match the installed Supabase SDK (`max-age=3600`). Added only the exact free image host to image CSP for eventual main-domain compatibility.
+- GitHub run `42409422924` (commit `9eaa9a1`) succeeded in 3m52s total / 2m36s deploy job. CI includes auth boundaries and sampled static image hash checks. No paid services/budgets/plans changed.
+- Unknown `free-uploads` path returns 404, allowing the builder's explicit Supabase staging fallback for not-yet-published media. `_konsey_media/index.json` is not publicly served (404).
+- Awaiting owner positive test: reload preview panel, upload one small real image, report result. Then inspect ready-media view and publication queue, wait for automatic build and verify new image content hash. Do not claim this flow verified before test.
+- Main domain, CDN attachment and R2 subscription are still unchanged. Zero R2 billing risk is NOT established until verified CDN cutover and safe R2 cancellation/removal are complete.

@@ -1,0 +1,14 @@
+name: Cloudflare Free Preview
+
+# Register dispatches on main; guarded deployments run from the deployment branch.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  registration-only:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Select codex/cloudflare-free-preview to deploy."

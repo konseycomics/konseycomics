@@ -1,6 +1,7 @@
 import { Bebas_Neue, DM_Sans } from 'next/font/google'
 import './globals.css'
 import { jsonLdScript } from './lib/seo'
+import ZiyaretTracker from './components/ZiyaretTracker'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -76,6 +77,7 @@ export default function RootLayout({ children }) {
           sameAs: ['https://www.instagram.com/konseycomics/'],
           description: 'Kâr amacı gütmeyen Türkçe çizgi roman fansub platformu. Bağımsız yerli eserleri, eser sahiplerinin üretimi olarak dijital ortamda yayımlar.',
         })} />
+        <ZiyaretTracker />
         {children}
       </body>
     </html>

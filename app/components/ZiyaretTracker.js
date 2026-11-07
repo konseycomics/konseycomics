@@ -7,6 +7,7 @@ import { getOturumId, getZiyaretciId } from '../lib/visitorTracking'
 export default function ZiyaretTracker() {
   const pathname = usePathname()
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_PREVIEW_INTERACTIVE === '1' && window.location.hostname !== 'www.konseycomics.com') return
     const track = async () => {
       try {
         const oturum_id = getOturumId()
